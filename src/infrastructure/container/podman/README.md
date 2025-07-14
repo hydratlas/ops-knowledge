@@ -87,28 +87,13 @@ uname -r
 sudo apt-get update
 
 # Podmanをインストール
-sudo apt-get install -y podman
-
-# 関連パッケージのインストール（推奨）
-sudo apt-get install -y podman-compose containers-storage
+sudo apt-get install -y podman podman-compose containers-storage
 ```
 
 **RHEL/CentOS/AlmaLinux/Rocky Linux系でのインストール：**
 ```bash
 # Podmanをインストール
-sudo dnf install -y podman
-
-# 関連パッケージのインストール（推奨）
-sudo dnf install -y podman-compose containers-common
-```
-
-**Fedora系でのインストール：**
-```bash
-# Podmanをインストール
-sudo dnf install -y podman
-
-# 開発ツールのインストール（オプション）
-sudo dnf install -y podman-remote podman-docker
+sudo dnf install -y podman podman-compose containers-storage
 ```
 
 #### ステップ3: 設定
