@@ -14,7 +14,7 @@ else
   echo "Error: Could not confirm that the OS is Ubuntu or Debian."
 fi &&
 sudo apt-get install -U -y ca-certificates &&
-wget -q -O - "https://download.docker.com/linux/${DISTRIBUTION_NAME}/gpg" | \
+wget -4 -O - "https://download.docker.com/linux/${DISTRIBUTION_NAME}/gpg" | \
   sudo tee /etc/apt/keyrings/docker.asc > /dev/null &&
 sudo tee "/etc/apt/sources.list.d/docker.sources" > /dev/null << EOF
 Types: deb

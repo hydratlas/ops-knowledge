@@ -12,7 +12,6 @@ sudo update-grub
 ```bash
 sudo apt-get install -y meld inkscape dconf-editor grsync nautilus-image-converter keepassxc transmission-gtk git gpg libreoffice libreoffice-l10n-ja &&
 sudo snap install chromium gimp discord slack &&
-sudo snap install codium --classic
 ```
 
 ## 各ディレクトリを英語化（各ユーザー）
@@ -206,3 +205,19 @@ tesseract image.png output -l jpn_vert
 sudo snap install tesseract &&
 sudo snap remove tesseract
 ```
+
+## 開発環境
+```bash
+wget -4 -q -O - "https://packages.microsoft.com/keys/microsoft.asc" | gpg --dearmor | \
+  sudo tee /etc/apt/keyrings/packages.microsoft.gpg > /dev/null &&
+sudo tee "/etc/apt/sources.list.d/vscode.sources" > /dev/null << EOF &&
+Types: deb
+URIs: https://packages.microsoft.com/repos/code
+Suites: stable
+Components: main
+Architectures: amd64 arm64 armhf
+Signed-By: /etc/apt/keyrings/packages.microsoft.gpg
+EOF
+sudo apt-get update && sudo apt-get install -y code
+```
+コマンドパレットに`ext install MS-CEINTL.vscode-language-pack-ja`と入力すると、日本語パッケージをインストールできる。その後、コマンドパレットに`Configure Display Language`と入力すると日本語に切り替えられる。
