@@ -266,7 +266,7 @@ podman rm -a
 podman rmi -a
 
 # 4. Podmanのアンインストール
-sudo apt-get remove --purge -y podman docker-compose
+sudo apt-get remove --purge -y podman containers-storage docker-compose-plugin
 
 # 5. 設定ファイルの削除
 sudo rm -rf /etc/containers
