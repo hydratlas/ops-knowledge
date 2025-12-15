@@ -94,7 +94,43 @@ QUADLET_USER="cloudflared" &&
 USER_COMMENT="Cloudflare Tunnel rootless user"
 ```
 
-この先は、[podman_rootless_quadlet_base](../../infrastructure/container/podman_rootless_quadlet_base/README.md)を参照してユーザー作成とディレクトリ準備を行います。
+##### システムユーザーのセットアップ
+
+システムユーザーを作成し、ルートレスコンテナ用のsubuid/subgidを割り当てます：
+
+```bash
+# ユーザーの作成（subuid/subgid付き）
+USER_SHELL="/usr/sbin/nologin"  # 必要に応じて変更可能
+sudo useradd --system --user-group --add-subids-for-system --shell "${USER_SHELL}" --comment "Cloudflare Tunnel rootless user" "cloudflared"
+
+# systemd-journalグループへの追加
+sudo usermod -aG systemd-journal "cloudflared"
+
+# ユーザーのホームディレクトリーの取得
+QUADLET_HOME=$(getent passwd "cloudflared" | cut -d: -f6)
+```
+
+ユーザーがログインしていなくてもサービスを実行できるようにsystemd lingeringを有効化します：
+
+```bash
+# lingeringを有効化
+sudo loginctl enable-linger "cloudflared"
+```
+
+Quadletとコンテナストレージ用のディレクトリを作成します：
+
+```bash
+# 必要なディレクトリを作成
+sudo mkdir -p "${QUADLET_HOME}/.config/cloudflared" &&
+sudo mkdir -p "${QUADLET_HOME}/.config/containers/systemd" &&
+sudo mkdir -p "${QUADLET_HOME}/.local/share/containers/storage"
+
+# 所有権の設定
+sudo chown -R "cloudflared:cloudflared" "${QUADLET_HOME}"
+
+# パーミッションの設定
+sudo chmod -R 755 "${QUADLET_HOME}"
+```
 
 #### ステップ2: インストール
 
