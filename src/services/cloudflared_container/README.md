@@ -105,9 +105,6 @@ sudo useradd --system --user-group --add-subids-for-system --shell "${USER_SHELL
 
 # systemd-journalグループへの追加
 sudo usermod -aG systemd-journal "cloudflared"
-
-# ユーザーのホームディレクトリーの取得
-QUADLET_HOME=$(getent passwd "cloudflared" | cut -d: -f6)
 ```
 
 ユーザーがログインしていなくてもサービスを実行できるようにsystemd lingeringを有効化します：
@@ -120,6 +117,9 @@ sudo loginctl enable-linger "cloudflared"
 Quadletとコンテナストレージ用のディレクトリを作成します：
 
 ```bash
+# ユーザーのホームディレクトリーの取得
+QUADLET_HOME=$(getent passwd "cloudflared" | cut -d: -f6)
+
 # 必要なディレクトリを作成
 sudo mkdir -p "${QUADLET_HOME}/.config/cloudflared" &&
 sudo mkdir -p "${QUADLET_HOME}/.config/containers/systemd" &&
