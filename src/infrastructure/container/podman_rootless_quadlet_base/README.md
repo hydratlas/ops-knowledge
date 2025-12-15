@@ -135,11 +135,11 @@ sudo chown -R "${QUADLET_USER}:${QUADLET_USER}" "${QUADLET_HOME}"
 sudo chmod -R 755 "${QUADLET_HOME}"
 ```
 
-#### ステップ2: インストール
+#### ステップ2: Podmanのインストール
 
 Podmanのインストールは各ディストリビューションのパッケージマネージャーを使用してください。
 
-#### ステップ3: 設定
+#### ステップ3: Podman Quadletの設定
 
 ##### Quadletファイルなどの配置
 
@@ -189,7 +189,7 @@ QUADLET_USER="myapp"
 
 <!-- このファイルはgomplateで処理されます。デリミタ: 三重角括弧 -->
 
-Systemd関係コマンド：
+サービス操作：
 
 ```bash
 # サービスの状態確認
@@ -211,7 +211,11 @@ sudo -u ${QUADLET_USER} \
 sudo -u ${QUADLET_USER} \
   XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" \
   systemctl --user start "${APP_NAME}.service"
+```
 
+ログ確認：
+
+```bash
 # サービスのログの確認（最新の100行）
 sudo -u ${QUADLET_USER} \
   journalctl --user -u "${APP_NAME}.service" --no-pager -n 100
@@ -219,21 +223,9 @@ sudo -u ${QUADLET_USER} \
 # サービスのログの確認（リアルタイム表示）
 sudo -u ${QUADLET_USER} \
   journalctl --user -u "${APP_NAME}.service" -f
-
-# 自動更新タイマーの状態確認
-sudo -u ${QUADLET_USER} \
-  XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" \
-  systemctl --user status podman-auto-update.timer
-
-# 自動更新のログ確認
-sudo -u ${QUADLET_USER} \
-  journalctl --user -u podman-auto-update.service
 ```
 
-
-<!-- このファイルはgomplateで処理されます。デリミタ: 三重角括弧 -->
-
-Podman関係コマンド：
+コンテナ確認：
 
 ```bash
 # コンテナの状態確認
@@ -246,12 +238,7 @@ sudo -u ${QUADLET_USER} podman ps -a
 sudo -u ${QUADLET_USER} podman images
 ```
 
-
-### トラブルシューティング
-
-<!-- このファイルはgomplateで処理されます。デリミタ: 三重角括弧 -->
-
-設定の確認：
+設定・環境確認：
 
 ```bash
 # subuid/subgidの確認
@@ -264,7 +251,7 @@ loginctl show-user "${QUADLET_USER}" --property=Linger
 id "${QUADLET_USER}"
 ```
 
-Quadletファイルの確認：
+Quadletファイル管理：
 
 ```bash
 # ファイルの存在確認
@@ -281,6 +268,19 @@ sudo -u ${QUADLET_USER} \
   systemctl --user daemon-reload
 ```
 
+自動更新：
+
+```bash
+# 自動更新タイマーの状態確認
+sudo -u ${QUADLET_USER} \
+  XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" \
+  systemctl --user status podman-auto-update.timer
+
+# 自動更新のログ確認
+sudo -u ${QUADLET_USER} \
+  journalctl --user -u podman-auto-update.service
+```
+
 
 ### メンテナンス
 
@@ -293,9 +293,9 @@ sudo -u ${QUADLET_USER} \
 - `{home}/.config/containers/systemd/` - Quadletファイル配置場所
 - `{home}/.local/share/containers/storage/` - コンテナストレージ
 
-#### バックアップ
-
 <!-- このファイルはgomplateで処理されます。デリミタ: 三重角括弧 -->
+
+バックアップ：
 
 ```bash
 # 設定ファイルとQuadletファイルのバックアップ
@@ -304,18 +304,7 @@ sudo tar -czf ${APP_NAME}-backup-$(date +%Y%m%d).tar.gz \
     /home/${QUADLET_USER}/.config/containers/systemd
 ```
 
-
-#### アップデート
-
 手動更新：
-```bash
-# イメージの更新
-sudo -u ${QUADLET_USER} podman auto-update
-```
-
-または個別にイメージを指定して更新：
-
-<!-- このファイルはgomplateで処理されます。デリミタ: 三重角括弧 -->
 
 ```bash
 # 手動でのイメージ更新
@@ -329,6 +318,12 @@ sudo -u ${QUADLET_USER} \
 
 自動更新は`podman-auto-update.timer`により定期的に実行されます。
 
+
+`podman auto-update`コマンドで、AutoUpdate=registryが設定された全コンテナを一括更新することもできます：
+
+```bash
+sudo -u ${QUADLET_USER} podman auto-update
+```
 
 ## アンインストール（手動）
 

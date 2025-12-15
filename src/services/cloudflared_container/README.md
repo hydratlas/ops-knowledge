@@ -134,9 +134,11 @@ sudo chown -R "cloudflared:cloudflared" "${QUADLET_HOME}"
 sudo chmod -R 755 "${QUADLET_HOME}"
 ```
 
-#### ステップ2: インストール
+#### ステップ2: Podmanのインストール
 
-##### 非特権ユーザーが ICMP Echo（ping）を実行可能にするカーネルパラメータの設定
+Podmanのインストールは各ディストリビューションのパッケージマネージャーを使用してください。
+
+非特権ユーザーが ICMP Echo（ping）を実行可能にするカーネルパラメータの設定：
 
 ```bash
 # sysctlでping権限の設定
@@ -148,9 +150,7 @@ EOF
 sudo sysctl --system
 ```
 
-Podmanのインストールは各ディストリビューションのパッケージマネージャーを使用してください。
-
-#### ステップ3: 設定
+#### ステップ3: Podman Quadletの設定
 
 ##### 環境変数ファイルの作成
 
@@ -237,7 +237,7 @@ sudo -u cloudflared \
 
 <!-- このファイルはgomplateで処理されます。デリミタ: 三重角括弧 -->
 
-Systemd関係コマンド：
+サービス操作：
 
 ```bash
 # サービスの状態確認
@@ -259,7 +259,11 @@ sudo -u cloudflared \
 sudo -u cloudflared \
   XDG_RUNTIME_DIR="/run/user/$(id -u cloudflared)" \
   systemctl --user start "cloudflared.service"
+```
 
+ログ確認：
+
+```bash
 # サービスのログの確認（最新の100行）
 sudo -u cloudflared \
   journalctl --user -u "cloudflared.service" --no-pager -n 100
@@ -267,54 +271,22 @@ sudo -u cloudflared \
 # サービスのログの確認（リアルタイム表示）
 sudo -u cloudflared \
   journalctl --user -u "cloudflared.service" -f
-
-# 自動更新タイマーの状態確認
-sudo -u cloudflared \
-  XDG_RUNTIME_DIR="/run/user/$(id -u cloudflared)" \
-  systemctl --user status podman-auto-update.timer
-
-# 自動更新のログ確認
-sudo -u cloudflared \
-  journalctl --user -u podman-auto-update.service
 ```
 
-
-<!-- このファイルはgomplateで処理されます。デリミタ: 三重角括弧 -->
-
-Podman関係コマンド：
+コンテナ確認：
 
 ```bash
 # コンテナの状態確認
-sudo -u ${QUADLET_USER} podman ps
+sudo -u cloudflared podman ps
 
 # すべてのコンテナを表示（停止中も含む）
-sudo -u ${QUADLET_USER} podman ps -a
+sudo -u cloudflared podman ps -a
 
 # コンテナイメージの一覧
-sudo -u ${QUADLET_USER} podman images
+sudo -u cloudflared podman images
 ```
 
-
-cloudflared固有の操作：
-```bash
-# トンネルステータスの確認
-sudo -u cloudflared podman exec cloudflared cloudflared tunnel info
-```
-
-### トラブルシューティング
-
-cloudflared固有の確認：
-```bash
-# 環境変数ファイルの確認（トークンが設定されているか）
-sudo cat /home/cloudflared/.config/cloudflared/cloudflared.env
-
-# Cloudflareへの接続確認
-ping -c 4 cloudflare.com
-```
-
-<!-- このファイルはgomplateで処理されます。デリミタ: 三重角括弧 -->
-
-設定の確認：
+設定・環境確認：
 
 ```bash
 # subuid/subgidの確認
@@ -327,7 +299,7 @@ loginctl show-user "cloudflared" --property=Linger
 id "cloudflared"
 ```
 
-Quadletファイルの確認：
+Quadletファイル管理：
 
 ```bash
 # ファイルの存在確認
@@ -344,12 +316,37 @@ sudo -u cloudflared \
   systemctl --user daemon-reload
 ```
 
+自動更新：
+
+```bash
+# 自動更新タイマーの状態確認
+sudo -u cloudflared \
+  XDG_RUNTIME_DIR="/run/user/$(id -u cloudflared)" \
+  systemctl --user status podman-auto-update.timer
+
+# 自動更新のログ確認
+sudo -u cloudflared \
+  journalctl --user -u podman-auto-update.service
+```
+
+
+cloudflared固有の操作：
+```bash
+# トンネルステータスの確認
+sudo -u cloudflared podman exec cloudflared cloudflared tunnel info
+
+# Cloudflareへの接続確認
+ping -c 4 cloudflare.com
+
+# 環境変数ファイルの確認（トークンが設定されているか）
+sudo cat /home/cloudflared/.config/cloudflared/cloudflared.env
+```
 
 ### メンテナンス
 
-#### バックアップ
-
 <!-- このファイルはgomplateで処理されます。デリミタ: 三重角括弧 -->
+
+バックアップ：
 
 ```bash
 # 設定ファイルとQuadletファイルのバックアップ
@@ -358,10 +355,7 @@ sudo tar -czf cloudflared-backup-$(date +%Y%m%d).tar.gz \
     /home/cloudflared/.config/containers/systemd
 ```
 
-
-#### アップデート
-
-<!-- このファイルはgomplateで処理されます。デリミタ: 三重角括弧 -->
+手動更新：
 
 ```bash
 # 手動でのイメージ更新
