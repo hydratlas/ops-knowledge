@@ -85,58 +85,25 @@ Rootless Podman Quadletの共通セットアップを提供する基本ロール
 
 #### ステップ1: 環境準備
 
-##### 専用ユーザーの作成
+##### 変数の設定
 
-システムユーザーを作成し、ルートレスコンテナ用のsubuid/subgidを割り当てます：
+まず、使用する変数を設定します：
 
 ```bash
-# アプリケーション名とユーザー名を設定
 APP_NAME="myapp"
 QUADLET_USER="myapp"
 USER_COMMENT="My Application rootless user"
-
-# ユーザーの作成（subuid/subgid付き）
-USER_SHELL="/usr/sbin/nologin"  # 必要に応じて変更可能
-sudo useradd --system --user-group --add-subids-for-system --shell ${USER_SHELL} --comment "${USER_COMMENT}" ${QUADLET_USER}
-
-# systemd-journalグループへの追加
-sudo usermod -aG systemd-journal ${QUADLET_USER}
-
-# ユーザーのホームディレクトリーの取得
-QUADLET_HOME=$(getent passwd ${QUADLET_USER} | cut -d: -f6)
 ```
 
-##### systemd lingeringの有効化
+##### システムユーザーのセットアップ
 
-ユーザーがログインしていなくてもサービスを実行できるようにします：
-
-```bash
-# lingeringを有効化
-sudo loginctl enable-linger ${QUADLET_USER}
-```
+{{ tmpl.Inline (include "partials/quadlet-system-user-setup.md") (dict "quadletUser" "$QUADLET_USER" "userComment" "$USER_COMMENT" "appName" "$APP_NAME") }}
 
 #### ステップ2: インストール
 
 Podmanのインストールは各ディストリビューションのパッケージマネージャーを使用してください。
 
 #### ステップ3: 設定
-
-##### 必要なディレクトリ構造の作成
-
-Quadletとコンテナストレージ用のディレクトリを作成します：
-
-```bash
-# 必要なディレクトリを作成
-sudo mkdir -p ${QUADLET_HOME}/.config/${APP_NAME} &&
-sudo mkdir -p ${QUADLET_HOME}/.config/containers/systemd &&
-sudo mkdir -p ${QUADLET_HOME}/.local/share/containers/storage
-
-# 所有権の設定
-sudo chown -R ${QUADLET_USER}:${QUADLET_USER} ${QUADLET_HOME}
-
-# パーミッションの設定
-sudo chmod -R 755 ${QUADLET_HOME}
-```
 
 ##### Quadletファイルなどの配置
 

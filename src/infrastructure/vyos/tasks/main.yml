@@ -6,3 +6,4 @@
   vyos.vyos.vyos_config:
     match: none
     lines: "{{ vyos_final_config }}"
+    save: true
