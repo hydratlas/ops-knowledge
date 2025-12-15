@@ -225,6 +225,8 @@ sudo -u cloudflared XDG_RUNTIME_DIR="/run/user/$(id -u cloudflared)" systemctl -
 
 ### 基本操作
 
+Systemd関係コマンド：
+
 ```bash
 # サービスの状態確認
 sudo -u cloudflared XDG_RUNTIME_DIR="/run/user/$(id -u cloudflared)" systemctl --user status "cloudflared.service"
@@ -237,26 +239,32 @@ sudo -u cloudflared XDG_RUNTIME_DIR="/run/user/$(id -u cloudflared)" systemctl -
 
 # サービスの開始
 sudo -u cloudflared XDG_RUNTIME_DIR="/run/user/$(id -u cloudflared)" systemctl --user start "cloudflared.service"
-```
 
-
-### ログとモニタリング
-
-```bash
 # サービスのログの確認（最新の100行）
 sudo -u cloudflared journalctl --user -u "cloudflared.service" --no-pager -n 100
 
 # サービスのログの確認（リアルタイム表示）
 sudo -u cloudflared journalctl --user -u "cloudflared.service" -f
 
-# コンテナの状態確認
-sudo -u cloudflared podman ps --filter name=cloudflared
-
 # 自動更新タイマーの状態確認
 sudo -u cloudflared XDG_RUNTIME_DIR="/run/user/$(id -u cloudflared)" systemctl --user status podman-auto-update.timer
 
 # 自動更新のログ確認
 sudo -u cloudflared journalctl --user -u podman-auto-update.service
+```
+
+
+Podman関係コマンド：
+
+```bash
+# コンテナの状態確認
+sudo -u ${QUADLET_USER} podman ps
+
+# すべてのコンテナを表示（停止中も含む）
+sudo -u ${QUADLET_USER} podman ps -a
+
+# コンテナイメージの一覧
+sudo -u ${QUADLET_USER} podman images
 ```
 
 
@@ -267,32 +275,45 @@ sudo -u cloudflared podman exec cloudflared cloudflared tunnel info
 
 ### トラブルシューティング
 
-#### サービスが起動しない場合
-
-1. トークンの確認
+cloudflared固有の確認：
 ```bash
 # 環境変数ファイルの確認（トークンが設定されているか）
 sudo cat /home/cloudflared/.config/cloudflared/cloudflared.env
-```
 
-2. ネットワーク接続の確認
-```bash
 # Cloudflareへの接続確認
 ping -c 4 cloudflare.com
 ```
 
-3. コンテナイメージの確認
+設定の確認：
+
 ```bash
-sudo -u cloudflared podman images | grep cloudflared
+# subuid/subgidの確認
+grep cloudflared /etc/subuid /etc/subgid
+
+# lingeringの確認
+loginctl show-user cloudflared --property=Linger
+
+# ユーザー情報の確認
+id cloudflared
 ```
 
-4. 詳細なログの確認
+Quadletファイルの確認：
+
 ```bash
-# 起動時のエラーメッセージを確認
-sudo -u cloudflared journalctl --user -u cloudflared.service --no-pager -n 200
+# ファイルの存在確認
+ls -la /home/cloudflared/.config/containers/systemd/
+
+# 構文確認
+sudo -u cloudflared \
+  XDG_RUNTIME_DIR="/run/user/$(id -u cloudflared)" \
+  /usr/libexec/podman/quadlet --dryrun --user
+
+# Systemdのリロード
+sudo -u cloudflared \
+  XDG_RUNTIME_DIR="/run/user/$(id -u cloudflared)" \
+  systemctl --user daemon-reload
 ```
 
-その他のcloudflared固有のコマンド以外は、[podman_rootless_quadlet_base](../../infrastructure/container/podman_rootless_quadlet_base/README.md)を参照してください。
 
 ### メンテナンス
 

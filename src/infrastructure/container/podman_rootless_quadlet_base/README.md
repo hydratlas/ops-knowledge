@@ -171,13 +171,13 @@ sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" sys
 ## 運用管理
 
 ### 基本操作
-
-#### systemd関係コマンド
 ```bash
 # アプリケーション名とユーザー名を設定
 APP_NAME="myapp"
 QUADLET_USER="myapp"
 ```
+
+Systemd関係コマンド：
 
 ```bash
 # サービスの状態確認
@@ -191,10 +191,22 @@ sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" sys
 
 # サービスの開始
 sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" systemctl --user start "${APP_NAME}.service"
+
+# サービスのログの確認（最新の100行）
+sudo -u ${QUADLET_USER} journalctl --user -u "${APP_NAME}.service" --no-pager -n 100
+
+# サービスのログの確認（リアルタイム表示）
+sudo -u ${QUADLET_USER} journalctl --user -u "${APP_NAME}.service" -f
+
+# 自動更新タイマーの状態確認
+sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" systemctl --user status podman-auto-update.timer
+
+# 自動更新のログ確認
+sudo -u ${QUADLET_USER} journalctl --user -u podman-auto-update.service
 ```
 
 
-#### podman関係コマンド
+Podman関係コマンド：
 
 ```bash
 # コンテナの状態確認
@@ -208,29 +220,9 @@ sudo -u ${QUADLET_USER} podman images
 ```
 
 
-### ログとモニタリング
-
-```bash
-# サービスのログの確認（最新の100行）
-sudo -u ${QUADLET_USER} journalctl --user -u "${APP_NAME}.service" --no-pager -n 100
-
-# サービスのログの確認（リアルタイム表示）
-sudo -u ${QUADLET_USER} journalctl --user -u "${APP_NAME}.service" -f
-
-# コンテナの状態確認
-sudo -u ${QUADLET_USER} podman ps --filter name=${APP_NAME}
-
-# 自動更新タイマーの状態確認
-sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" systemctl --user status podman-auto-update.timer
-
-# 自動更新のログ確認
-sudo -u ${QUADLET_USER} journalctl --user -u podman-auto-update.service
-```
-
-
 ### トラブルシューティング
 
-#### 設定の確認
+設定の確認：
 
 ```bash
 # subuid/subgidの確認
@@ -243,22 +235,21 @@ loginctl show-user ${QUADLET_USER} --property=Linger
 id ${QUADLET_USER}
 ```
 
-#### サービスが起動しない場合
+Quadletファイルの確認：
 
-1. Quadletファイルの構文確認
 ```bash
 # ファイルの存在確認
 ls -la /home/${QUADLET_USER}/.config/containers/systemd/
-```
 
-2. systemdのリロード
-```bash
-sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" systemctl --user daemon-reload
-```
+# 構文確認
+sudo -u ${QUADLET_USER} \
+  XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" \
+  /usr/libexec/podman/quadlet --dryrun --user
 
-3. 詳細なエラーログの確認
-```bash
-sudo -u ${QUADLET_USER} journalctl --user -u "${APP_NAME}.service" --no-pager -n 200
+# Systemdのリロード
+sudo -u ${QUADLET_USER} \
+  XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" \
+  systemctl --user daemon-reload
 ```
 
 
