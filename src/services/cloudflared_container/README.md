@@ -203,7 +203,23 @@ sudo chown cloudflared:cloudflared /home/cloudflared/.config/containers/systemd/
 
 #### ステップ4: 起動と有効化
 
-[podman_rootless_quadlet_base](../../infrastructure/container/podman_rootless_quadlet_base/README.md)を参照してサービスを起動します。
+Quadletから生成されたサービスファイルを認識させるため、systemdユーザーデーモンをリロードしてから、サービスを起動します：
+
+```bash
+# systemdユーザーデーモンのリロード
+sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" systemctl --user daemon-reload
+
+# サービスの起動
+sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" systemctl --user start "${APP_NAME}.service"
+```
+
+podman-auto-update.timerの起動と有効化によって、コンテナイメージの自動更新を有効にします：
+
+```bash
+# タイマーの起動と有効化
+sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" systemctl --user enable --now podman-auto-update.timer
+```
+
 
 ## 運用管理
 
