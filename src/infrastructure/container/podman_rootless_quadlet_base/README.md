@@ -102,32 +102,32 @@ USER_COMMENT="My Application rootless user"
 ```bash
 # ユーザーの作成（subuid/subgid付き）
 USER_SHELL="/usr/sbin/nologin"  # 必要に応じて変更可能
-sudo useradd --system --user-group --add-subids-for-system --shell "${USER_SHELL}" --comment "$USER_COMMENT" "$QUADLET_USER"
+sudo useradd --system --user-group --add-subids-for-system --shell "${USER_SHELL}" --comment "${USER_COMMENT}" "${QUADLET_USER}"
 
 # systemd-journalグループへの追加
-sudo usermod -aG systemd-journal "$QUADLET_USER"
+sudo usermod -aG systemd-journal "${QUADLET_USER}"
 
 # ユーザーのホームディレクトリーの取得
-QUADLET_HOME=$(getent passwd "$QUADLET_USER" | cut -d: -f6)
+QUADLET_HOME=$(getent passwd "${QUADLET_USER}" | cut -d: -f6)
 ```
 
 ユーザーがログインしていなくてもサービスを実行できるようにsystemd lingeringを有効化します：
 
 ```bash
 # lingeringを有効化
-sudo loginctl enable-linger "$QUADLET_USER"
+sudo loginctl enable-linger "${QUADLET_USER}"
 ```
 
 Quadletとコンテナストレージ用のディレクトリを作成します：
 
 ```bash
 # 必要なディレクトリを作成
-sudo mkdir -p "${QUADLET_HOME}/.config/$APP_NAME" &&
+sudo mkdir -p "${QUADLET_HOME}/.config/${APP_NAME}" &&
 sudo mkdir -p "${QUADLET_HOME}/.config/containers/systemd" &&
 sudo mkdir -p "${QUADLET_HOME}/.local/share/containers/storage"
 
 # 所有権の設定
-sudo chown -R "$QUADLET_USER:$QUADLET_USER" "${QUADLET_HOME}"
+sudo chown -R "${QUADLET_USER}:${QUADLET_USER}" "${QUADLET_HOME}"
 
 # パーミッションの設定
 sudo chmod -R 755 "${QUADLET_HOME}"
