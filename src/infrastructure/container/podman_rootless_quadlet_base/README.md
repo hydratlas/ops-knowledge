@@ -177,7 +177,9 @@ sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" sys
 # アプリケーション名とユーザー名を設定
 APP_NAME="myapp"
 QUADLET_USER="myapp"
+```
 
+```bash
 # サービスの状態確認
 sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" systemctl --user status "${APP_NAME}.service"
 
@@ -191,7 +193,9 @@ sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" sys
 sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" systemctl --user start "${APP_NAME}.service"
 ```
 
+
 #### podman関係コマンド
+
 ```bash
 # コンテナの状態確認
 sudo -u ${QUADLET_USER} podman ps
@@ -203,6 +207,7 @@ sudo -u ${QUADLET_USER} podman ps -a
 sudo -u ${QUADLET_USER} podman images
 ```
 
+
 ### ログとモニタリング
 
 ```bash
@@ -212,12 +217,16 @@ sudo -u ${QUADLET_USER} journalctl --user -u "${APP_NAME}.service" --no-pager -n
 # サービスのログの確認（リアルタイム表示）
 sudo -u ${QUADLET_USER} journalctl --user -u "${APP_NAME}.service" -f
 
+# コンテナの状態確認
+sudo -u ${QUADLET_USER} podman ps --filter name=${APP_NAME}
+
 # 自動更新タイマーの状態確認
 sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" systemctl --user status podman-auto-update.timer
 
 # 自動更新のログ確認
 sudo -u ${QUADLET_USER} journalctl --user -u podman-auto-update.service
 ```
+
 
 ### トラブルシューティング
 
@@ -252,6 +261,7 @@ sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" sys
 sudo -u ${QUADLET_USER} journalctl --user -u "${APP_NAME}.service" --no-pager -n 200
 ```
 
+
 ### メンテナンス
 
 #### ディレクトリ構造
@@ -272,23 +282,37 @@ sudo tar -czf ${APP_NAME}-backup-$(date +%Y%m%d).tar.gz \
     /home/${QUADLET_USER}/.config/containers/systemd
 ```
 
-#### アップデート
 
-自動更新が有効な場合、`podman-auto-update.timer`により定期的にコンテナイメージが更新されます。
+#### アップデート
 
 手動更新：
 ```bash
 # イメージの更新
 sudo -u ${QUADLET_USER} podman auto-update
+```
 
-# または個別に
+または個別にイメージを指定して更新：
+
+```bash
+# 手動でのイメージ更新
 sudo -u ${QUADLET_USER} podman pull <image-name>
+
+# サービスの再起動
 sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" systemctl --user restart "${APP_NAME}.service"
 ```
+
+自動更新は`podman-auto-update.timer`により定期的に実行されます。
+
 
 ## アンインストール（手動）
 
 以下の手順でRootless Podman Quadlet環境を削除します。
+
+```bash
+# 追加のQuadletファイルの削除（必要に応じて）
+sudo rm -f "/home/${QUADLET_USER}/.config/containers/systemd/${APP_NAME}.network"
+sudo rm -f "/home/${QUADLET_USER}/.config/containers/systemd/${APP_NAME}.volume"
+```
 
 ```bash
 # 1. サービスの停止
@@ -298,28 +322,26 @@ sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR=/run/user/$(id -u ${QUADLET_USER}) syste
 sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR=/run/user/$(id -u ${QUADLET_USER}) systemctl --user disable --now podman-auto-update.timer
 
 # 3. Quadletコンテナ定義ファイルの削除
-sudo rm -f "/home/${QUADLET_USER}/.config/containers/systemd/${APP_NAME}.container"
-sudo rm -f "/home/${QUADLET_USER}/.config/containers/systemd/${APP_NAME}.network"
-sudo rm -f "/home/${QUADLET_USER}/.config/containers/systemd/${APP_NAME}.volume"
+sudo rm -f /home/${QUADLET_USER}/.config/containers/systemd/${APP_NAME}.container
 
 # 4. systemdユーザーデーモンのリロード
 sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR=/run/user/$(id -u ${QUADLET_USER}) systemctl --user daemon-reload
 
-# 5. コンテナイメージの削除（オプション）
-sudo -u ${QUADLET_USER} podman image prune -a
+# 5. コンテナイメージの削除
+sudo -u ${QUADLET_USER} podman rmi <image-name>
 
 # 6. アプリケーション設定の削除
 # 警告: この操作により、アプリケーション固有の設定がすべて削除されます
-sudo rm -rf "/home/${QUADLET_USER}/.config/${APP_NAME}"
+sudo rm -rf /home/${QUADLET_USER}/.config/${APP_NAME}
 
 # 7. lingeringを無効化
 sudo loginctl disable-linger ${QUADLET_USER}
 
-# 8. ユーザーの削除（オプション）
+# 8. ユーザーの削除
 # 警告: このユーザーのホームディレクトリとすべてのデータが削除されます
-# 警告: 他のアプリケーションがこのユーザーを使用していないことを確認してください
-# sudo userdel -r ${QUADLET_USER}
+sudo userdel -r ${QUADLET_USER}
 ```
+
 
 ## 参考
 

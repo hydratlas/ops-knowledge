@@ -207,17 +207,17 @@ Quadletから生成されたサービスファイルを認識させるため、s
 
 ```bash
 # systemdユーザーデーモンのリロード
-sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" systemctl --user daemon-reload
+sudo -u cloudflared XDG_RUNTIME_DIR="/run/user/$(id -u cloudflared)" systemctl --user daemon-reload
 
 # サービスの起動
-sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" systemctl --user start "${APP_NAME}.service"
+sudo -u cloudflared XDG_RUNTIME_DIR="/run/user/$(id -u cloudflared)" systemctl --user start "cloudflared.service"
 ```
 
 podman-auto-update.timerの起動と有効化によって、コンテナイメージの自動更新を有効にします：
 
 ```bash
 # タイマーの起動と有効化
-sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" systemctl --user enable --now podman-auto-update.timer
+sudo -u cloudflared XDG_RUNTIME_DIR="/run/user/$(id -u cloudflared)" systemctl --user enable --now podman-auto-update.timer
 ```
 
 
@@ -227,30 +227,40 @@ sudo -u ${QUADLET_USER} XDG_RUNTIME_DIR="/run/user/$(id -u ${QUADLET_USER})" sys
 
 ```bash
 # サービスの状態確認
-sudo -u cloudflared systemctl --user status cloudflared.service
+sudo -u cloudflared XDG_RUNTIME_DIR="/run/user/$(id -u cloudflared)" systemctl --user status "cloudflared.service"
 
 # サービスの再起動
-sudo -u cloudflared XDG_RUNTIME_DIR=/run/user/$(id -u cloudflared) systemctl --user restart cloudflared.service
+sudo -u cloudflared XDG_RUNTIME_DIR="/run/user/$(id -u cloudflared)" systemctl --user restart "cloudflared.service"
 
 # サービスの停止
-sudo -u cloudflared XDG_RUNTIME_DIR=/run/user/$(id -u cloudflared) systemctl --user stop cloudflared.service
+sudo -u cloudflared XDG_RUNTIME_DIR="/run/user/$(id -u cloudflared)" systemctl --user stop "cloudflared.service"
 
 # サービスの開始
-sudo -u cloudflared XDG_RUNTIME_DIR=/run/user/$(id -u cloudflared) systemctl --user start cloudflared.service
+sudo -u cloudflared XDG_RUNTIME_DIR="/run/user/$(id -u cloudflared)" systemctl --user start "cloudflared.service"
 ```
+
 
 ### ログとモニタリング
 
 ```bash
-# ログの確認（最新の100行）
-sudo -u cloudflared journalctl --user -u cloudflared.service --no-pager -n 100
+# サービスのログの確認（最新の100行）
+sudo -u cloudflared journalctl --user -u "cloudflared.service" --no-pager -n 100
 
-# ログの確認（リアルタイム表示）
-sudo -u cloudflared journalctl --user -u cloudflared.service -f
+# サービスのログの確認（リアルタイム表示）
+sudo -u cloudflared journalctl --user -u "cloudflared.service" -f
 
 # コンテナの状態確認
 sudo -u cloudflared podman ps --filter name=cloudflared
 
+# 自動更新タイマーの状態確認
+sudo -u cloudflared XDG_RUNTIME_DIR="/run/user/$(id -u cloudflared)" systemctl --user status podman-auto-update.timer
+
+# 自動更新のログ確認
+sudo -u cloudflared journalctl --user -u podman-auto-update.service
+```
+
+
+```bash
 # トンネルステータスの確認
 sudo -u cloudflared podman exec cloudflared cloudflared tunnel info
 ```
@@ -289,10 +299,12 @@ sudo -u cloudflared journalctl --user -u cloudflared.service --no-pager -n 200
 #### バックアップ
 
 ```bash
-# 設定ファイルのバックアップ
+# 設定ファイルとQuadletファイルのバックアップ
 sudo tar -czf cloudflared-backup-$(date +%Y%m%d).tar.gz \
-    /home/cloudflared/.config/cloudflared
+    /home/cloudflared/.config/cloudflared \
+    /home/cloudflared/.config/containers/systemd
 ```
+
 
 #### アップデート
 
@@ -301,10 +313,11 @@ sudo tar -czf cloudflared-backup-$(date +%Y%m%d).tar.gz \
 sudo -u cloudflared podman pull docker.io/cloudflare/cloudflared:latest
 
 # サービスの再起動
-sudo -u cloudflared XDG_RUNTIME_DIR=/run/user/$(id -u cloudflared) systemctl --user restart cloudflared.service
+sudo -u cloudflared XDG_RUNTIME_DIR="/run/user/$(id -u cloudflared)" systemctl --user restart "cloudflared.service"
 ```
 
 自動更新は`podman-auto-update.timer`により定期的に実行されます。
+
 
 ## アンインストール（手動）
 
@@ -314,29 +327,35 @@ sudo -u cloudflared XDG_RUNTIME_DIR=/run/user/$(id -u cloudflared) systemctl --u
 # 1. サービスの停止
 sudo -u cloudflared XDG_RUNTIME_DIR=/run/user/$(id -u cloudflared) systemctl --user stop cloudflared.service
 
-# 2. Quadletファイルの削除
+# 2. 自動更新タイマーの停止と無効化
+sudo -u cloudflared XDG_RUNTIME_DIR=/run/user/$(id -u cloudflared) systemctl --user disable --now podman-auto-update.timer
+
+# 3. Quadletコンテナ定義ファイルの削除
 sudo rm -f /home/cloudflared/.config/containers/systemd/cloudflared.container
 
-# 3. systemdデーモンのリロード
+# 4. systemdユーザーデーモンのリロード
 sudo -u cloudflared XDG_RUNTIME_DIR=/run/user/$(id -u cloudflared) systemctl --user daemon-reload
 
-# 4. コンテナイメージの削除
+# 5. コンテナイメージの削除
 sudo -u cloudflared podman rmi docker.io/cloudflare/cloudflared:latest
 
-# 5. 環境変数ファイルの削除
-# 警告: この操作により、トンネルトークンが削除されます
+# 6. アプリケーション設定の削除
+# 警告: この操作により、アプリケーション固有の設定がすべて削除されます
 sudo rm -rf /home/cloudflared/.config/cloudflared
 
-# 6. ping権限設定の削除（他のサービスが使用していない場合）
-sudo rm -f /etc/sysctl.d/99-ping-group-range.conf
-sudo sysctl --system
-
-# 7. lingeringの無効化
+# 7. lingeringを無効化
 sudo loginctl disable-linger cloudflared
 
 # 8. ユーザーの削除
 # 警告: このユーザーのホームディレクトリとすべてのデータが削除されます
 sudo userdel -r cloudflared
+```
+
+
+```bash
+# 9. ping権限設定の削除（他のサービスが使用していない場合）
+sudo rm -f /etc/sysctl.d/99-ping-group-range.conf
+sudo sysctl --system
 ```
 
 ## 参考
