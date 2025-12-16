@@ -82,16 +82,49 @@
 
 #### ステップ1: 環境準備
 
+<!-- このファイルはgomplateで処理されます。デリミタ: 三重角括弧 -->
+
+システムユーザーを作成し、ルートレスコンテナ用のsubuid/subgidを割り当てます：
+
 ```bash
-# アプリケーション名とユーザー名を設定
-APP_NAME="loki" &&
-QUADLET_USER="monitoring" &&
-USER_COMMENT="Grafana Loki rootless user"
+# ユーザーの作成（subuid/subgid付き）
+USER_SHELL="/usr/sbin/nologin"  # 必要に応じて変更可能
+sudo useradd --system --user-group --add-subids-for-system --shell "${USER_SHELL}" --comment "Grafana Loki rootless user" "monitoring"
+
+# systemd-journalグループへの追加
+sudo usermod -aG systemd-journal "monitoring"
 ```
 
-この先の基本セットアップは、[podman_rootless_quadlet_base](../../../infrastructure/container/podman_rootless_quadlet_base/README.md)を参照してください。
+ユーザーがログインしていなくてもサービスを実行できるようにsystemd lingeringを有効化します：
 
-#### ステップ2: ネットワーク設定
+```bash
+# lingeringを有効化
+sudo loginctl enable-linger "monitoring"
+```
+
+Quadletとコンテナストレージ用のディレクトリを作成します：
+
+```bash
+# ユーザーのホームディレクトリーの取得
+QUADLET_HOME="$(getent passwd "monitoring" | cut -d: -f6)"
+
+# 必要なディレクトリを作成
+sudo mkdir -p "${QUADLET_HOME}/.config/loki" &&
+sudo mkdir -p "${QUADLET_HOME}/.config/containers/systemd" &&
+sudo mkdir -p "${QUADLET_HOME}/.local/share/containers/storage"
+
+# 所有権の設定
+sudo chown -R "monitoring:monitoring" "${QUADLET_HOME}"
+
+# パーミッションの設定
+sudo chmod -R 755 "${QUADLET_HOME}"
+```
+
+#### ステップ2: Podmanのインストール
+
+Podmanのインストールは各ディストリビューションのパッケージマネージャーを使用してください。
+
+#### ステップ3: ネットワーク設定
 
 ```bash
 # ネットワークファイルの作成
@@ -106,7 +139,7 @@ EOF
 fi
 ```
 
-#### ステップ3: 設定ファイルの作成
+#### ステップ4: 設定ファイルの作成
 
 ```bash
 # 設定ディレクトリの作成
@@ -157,7 +190,7 @@ analytics:
 EOF
 ```
 
-#### ステップ4: Quadletコンテナの設定
+#### ステップ5: Quadletコンテナの設定
 
 ```bash
 # データディレクトリの作成
@@ -197,24 +230,150 @@ EOF
 sudo chmod 644 /home/monitoring/.config/containers/systemd/loki.container
 ```
 
-#### ステップ5: サービスの起動と有効化
+#### ステップ6: サービスの起動と有効化
 
-サービスおよびタイマーの起動と有効化については、[podman_rootless_quadlet_base](../../../infrastructure/container/podman_rootless_quadlet_base/README.md)を参照してください。
+<!-- このファイルはgomplateで処理されます。デリミタ: 三重角括弧 -->
+
+Quadletから生成されたサービスファイルを認識させるため、systemdユーザーデーモンをリロードしてから、サービスを起動します：
+
+```bash
+# systemdユーザーデーモンのリロード
+sudo -u monitoring \
+  XDG_RUNTIME_DIR="/run/user/$(id -u monitoring)" \
+  systemctl --user daemon-reload
+
+# サービスの起動
+sudo -u monitoring \
+  XDG_RUNTIME_DIR="/run/user/$(id -u monitoring)" \
+  systemctl --user start "loki.service"
+```
+
+podman-auto-update.timerの起動と有効化によって、コンテナイメージの自動更新を有効にします：
+
+```bash
+# タイマーの起動と有効化
+sudo -u monitoring \
+  XDG_RUNTIME_DIR="/run/user/$(id -u monitoring)" \
+  systemctl --user enable --now podman-auto-update.timer
+```
+
 
 ## 運用管理
 
 ### 基本操作
 
-サービスの起動・停止・再起動などの基本的なsystemdコマンドについては、[podman_rootless_quadlet_base](../../../infrastructure/container/podman_rootless_quadlet_base/README.md#基本操作)を参照してください。
+<!-- このファイルはgomplateで処理されます。デリミタ: 三重角括弧 -->
+
+サービス操作：
 
 ```bash
-# Loki固有のサービス状態確認
-sudo -u monitoring systemctl --user status loki.service
+# サービスの状態確認
+sudo -u "monitoring" \
+  XDG_RUNTIME_DIR="/run/user/$(id -u monitoring)" \
+  systemctl --user status "loki.service"
+
+# サービスの再起動
+sudo -u "monitoring" \
+  XDG_RUNTIME_DIR="/run/user/$(id -u monitoring)" \
+  systemctl --user restart "loki.service"
+
+# サービスの停止
+sudo -u "monitoring" \
+  XDG_RUNTIME_DIR="/run/user/$(id -u monitoring)" \
+  systemctl --user stop "loki.service"
+
+# サービスの開始
+sudo -u "monitoring" \
+  XDG_RUNTIME_DIR="/run/user/$(id -u monitoring)" \
+  systemctl --user start "loki.service"
 ```
 
-### ログとモニタリング
+ログ確認：
 
-ログ確認やコンテナ状態確認の基本的なコマンドは、[podman_rootless_quadlet_base](../../../infrastructure/container/podman_rootless_quadlet_base/README.md#ログとモニタリング)を参照してください。
+```bash
+# サービスのログの確認（最新の100行）
+sudo -u "monitoring" \
+  journalctl --user -u "loki.service" --no-pager -n 100
+
+# サービスのログの確認（リアルタイム表示）
+sudo -u "monitoring" \
+  journalctl --user -u "loki.service" -f
+```
+
+コンテナ確認：
+
+```bash
+# コンテナの状態確認
+sudo -u "monitoring" podman ps
+
+# すべてのコンテナを表示（停止中も含む）
+sudo -u "monitoring" podman ps -a
+
+# コンテナの詳細情報
+sudo -u "monitoring" podman inspect loki
+
+# コンテナイメージの一覧
+sudo -u "monitoring" podman images
+
+# 古いコンテナイメージのクリーンアップ
+sudo -u "monitoring" podman image prune -f
+```
+
+設定・環境確認：
+
+```bash
+# subuid/subgidの確認
+grep "monitoring" /etc/subuid /etc/subgid
+
+# lingeringの確認
+loginctl show-user "monitoring" --property=Linger
+
+# ユーザー情報の確認
+id "monitoring"
+```
+
+Quadletファイル管理：
+
+```bash
+# ユーザーのホームディレクトリーの取得
+QUADLET_HOME="$(getent passwd "monitoring" | cut -d: -f6)"
+
+# ファイルの存在確認
+ls -la "${QUADLET_HOME}/monitoring/.config/containers/systemd/"
+
+# 構文確認
+sudo -u "monitoring" \
+  XDG_RUNTIME_DIR="/run/user/$(id -u monitoring)" \
+  /usr/libexec/podman/quadlet --dryrun --user
+
+# Systemdのリロード
+sudo -u "monitoring" \
+  XDG_RUNTIME_DIR="/run/user/$(id -u monitoring)" \
+  systemctl --user daemon-reload
+```
+
+自動更新：
+
+```bash
+# 自動更新タイマーの状態確認
+sudo -u "monitoring" \
+  XDG_RUNTIME_DIR="/run/user/$(id -u monitoring)" \
+  systemctl --user status podman-auto-update.timer
+
+# 自動更新のログ確認
+sudo -u "monitoring" \
+  journalctl --user -u podman-auto-update.service
+```
+
+作成されるディレクトリ：
+- `/home/monitoring/` - ユーザーのホームディレクトリ
+- `/home/monitoring/.config/` - 設定ディレクトリ
+- `/home/monitoring/.config/loki/` - アプリケーション固有の設定
+- `/home/monitoring/.config/containers/systemd/` - Quadletファイル配置場所
+- `/home/monitoring/.local/share/containers/storage/` - コンテナストレージ
+
+
+Loki固有の操作：
 
 ```bash
 # Loki固有のサービス状態確認
@@ -251,56 +410,95 @@ sudo -u monitoring podman run --rm -v /home/monitoring/.config/loki/loki.yaml:/l
 
 ### メンテナンス
 
+<!-- このファイルはgomplateで処理されます。デリミタ: 三重角括弧 -->
+
+バックアップ：
+
+```bash
+# ユーザーのホームディレクトリーの取得
+QUADLET_HOME="$(getent passwd "monitoring" | cut -d: -f6)"
+
+# 設定ファイルとQuadletファイルのバックアップ
+sudo tar -czf "loki-backup-$(date +%Y%m%d).tar.gz" \
+    "${QUADLET_HOME}/monitoring/.config/loki" \
+    "${QUADLET_HOME}/monitoring/.config/containers/systemd"
+```
+
+手動更新：
+
+```bash
+# 手動でのイメージ更新
+sudo -u "monitoring" podman pull docker.io/grafana/loki:latest
+
+# サービスの再起動
+sudo -u "monitoring" \
+  XDG_RUNTIME_DIR="/run/user/$(id -u monitoring)" \
+  systemctl --user restart "loki.service"
+```
+
+自動更新は`podman-auto-update.timer`により定期的に実行されます。
+
+
+Loki固有のメンテナンス：
+
 ```bash
 # データのバックアップ
 sudo -u monitoring tar czf loki-backup-$(date +%Y%m%d).tar.gz -C /home/monitoring/.local/share loki
-
-# コンテナイメージの更新
-sudo -u monitoring podman pull docker.io/grafana/loki:latest
-sudo -u monitoring XDG_RUNTIME_DIR=/run/user/$(id -u monitoring) systemctl --user restart loki.service
-
-# 古いイメージのクリーンアップ
-sudo -u monitoring podman image prune -f
-
-# 古いログチャンクの手動削除（保持期間を超えたもの）
-# 注意: 通常は自動的に削除されるため、手動削除は推奨されません
 ```
 
 ## アンインストール（手動）
 
+以下の手順でLokiを完全に削除します。
+
+<!-- このファイルはgomplateで処理されます。デリミタ: 三重角括弧 -->
+
 ```bash
-# 1. サービスの停止と無効化
-sudo -u monitoring XDG_RUNTIME_DIR=/run/user/$(id -u monitoring) systemctl --user stop loki.service
-sudo -u monitoring XDG_RUNTIME_DIR=/run/user/$(id -u monitoring) systemctl --user disable loki.service
+# 0. ユーザーのホームディレクトリーの取得
+QUADLET_HOME="$(getent passwd "monitoring" | cut -d: -f6)"
 
-# 2. Quadlet設定ファイルの削除
-sudo rm -f /home/monitoring/.config/containers/systemd/loki.container
+# 1. サービスの停止
+sudo -u "monitoring" \
+  XDG_RUNTIME_DIR="/run/user/$(id -u "monitoring")" \
+  systemctl --user stop "loki.service"
 
-# 3. systemdデーモンのリロード
-sudo -u monitoring XDG_RUNTIME_DIR=/run/user/$(id -u monitoring) systemctl --user daemon-reload
+# 2. 自動更新タイマーの停止と無効化
+sudo -u "monitoring" \
+  XDG_RUNTIME_DIR="/run/user/$(id -u "monitoring")" \
+  systemctl --user disable --now podman-auto-update.timer
 
-# 4. コンテナとイメージの削除
-sudo -u monitoring podman rm -f loki || true
-sudo -u monitoring podman rmi docker.io/grafana/loki:latest || true
+# 3. Quadletコンテナ定義ファイルの削除
+sudo rm -f \
+  "${QUADLET_HOME}/monitoring/.config/containers/systemd/loki.container"
 
-# 5. ネットワークの削除（他のサービスで使用していない場合）
+# 4. systemdユーザーデーモンのリロード
+sudo -u "monitoring" \
+  XDG_RUNTIME_DIR="/run/user/$(id -u "monitoring")" \
+  systemctl --user daemon-reload
+
+# 5. コンテナイメージの削除
+sudo -u "monitoring" podman rmi "docker.io/grafana/loki:latest"
+
+# 6. アプリケーション設定の削除
+# 警告: この操作により、アプリケーション固有の設定がすべて削除されます
+sudo rm -rf "${QUADLET_HOME}/monitoring/.config/loki"
+
+# 7. lingeringを無効化
+sudo loginctl disable-linger "monitoring"
+
+# 8. ユーザーの削除
+# 警告: このユーザーのホームディレクトリとすべてのデータが削除されます
+sudo userdel -r "monitoring"
+```
+
+
+```bash
+# 9. ネットワークの削除（他のサービスで使用していない場合）
 sudo -u monitoring podman network rm monitoring || true
 sudo rm -f /home/monitoring/.config/containers/systemd/monitoring.network
-
-# 6. 設定ファイルの削除
-sudo rm -rf /home/monitoring/.config/loki
-
-# 7. データディレクトリの削除（オプション - ログデータを保持する場合はスキップ）
-# 警告: この操作により全てのログデータが削除されます
-# sudo rm -rf /home/monitoring/.local/share/loki
-
-# 8. ユーザーの削除（他のサービスで使用していない場合）
-# 警告: monitoringユーザーのホームディレクトリも削除されます
-# sudo userdel -r monitoring
 ```
 
 ## 参考
 
 - [Grafana Loki公式ドキュメント](https://grafana.com/docs/loki/latest/)
 - [Loki設定リファレンス](https://grafana.com/docs/loki/latest/configuration/)
-- [Podman Rootless Quadlet Base](../../../infrastructure/container/podman_rootless_quadlet_base/README.md)
+- [Podman Quadlet Documentation](https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html)

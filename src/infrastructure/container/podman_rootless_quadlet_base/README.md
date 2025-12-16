@@ -234,8 +234,14 @@ sudo -u "${QUADLET_USER}" podman ps
 # すべてのコンテナを表示（停止中も含む）
 sudo -u "${QUADLET_USER}" podman ps -a
 
+# コンテナの詳細情報
+sudo -u "${QUADLET_USER}" podman inspect ${APP_NAME}
+
 # コンテナイメージの一覧
 sudo -u "${QUADLET_USER}" podman images
+
+# 古いコンテナイメージのクリーンアップ
+sudo -u "${QUADLET_USER}" podman image prune -f
 ```
 
 設定・環境確認：
