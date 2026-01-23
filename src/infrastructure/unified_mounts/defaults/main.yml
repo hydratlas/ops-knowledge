@@ -7,3 +7,11 @@ unified_mounts: []
 # パターン/セレクタ形式
 unified_mount_patterns: {}
 unified_mount_selectors: []
+
+# NFS stale file handle 自動再マウント機能
+# 有効化フラグ
+unified_mounts_stale_check_enabled: false
+# 監視間隔（systemd timer形式: 30s, 1min, 5min など）
+unified_mounts_stale_check_interval: "30s"
+# statコマンドのタイムアウト秒数
+unified_mounts_stale_check_timeout: 5

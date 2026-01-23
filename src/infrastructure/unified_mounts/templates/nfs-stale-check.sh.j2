@@ -1,0 +1,86 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# NFS stale file handle detection and auto-remount script
+
+set -euo pipefail
+
+TIMEOUT_SEC={{ unified_mounts_stale_check_timeout | default(5) }}
+LOG_TAG="nfs-stale-check"
+
+log_info() {
+    logger -t "$LOG_TAG" -p user.info "$1"
+}
+
+log_warn() {
+    logger -t "$LOG_TAG" -p user.warning "$1"
+}
+
+log_error() {
+    logger -t "$LOG_TAG" -p user.err "$1"
+}
+
+check_and_remount() {
+    local mount_path="$1"
+    local unit_name
+
+    # マウントパスからsystemdユニット名を生成
+    unit_name=$(echo "$mount_path" | sed 's|^/||' | tr '/' '-')
+
+    # automountが有効でない場合はスキップ
+    if ! systemctl is-enabled "${unit_name}.automount" &>/dev/null; then
+        return 0
+    fi
+
+    # マウントされていない場合はスキップ（automountがアイドルタイムアウトでアンマウントした場合）
+    if ! mountpoint -q "$mount_path" 2>/dev/null; then
+        return 0
+    fi
+
+    # statコマンドでアクセスを試みる（タイムアウト付き）
+    if timeout "$TIMEOUT_SEC" stat "$mount_path" &>/dev/null; then
+        return 0
+    fi
+
+    local exit_code=$?
+
+    # タイムアウト（exit code 124）またはエラーの場合
+    if [[ $exit_code -eq 124 ]]; then
+        log_warn "Timeout accessing $mount_path (${TIMEOUT_SEC}s), attempting remount"
+    else
+        log_warn "Error accessing $mount_path (exit code: $exit_code), attempting remount"
+    fi
+
+    # 遅延アンマウント
+    if umount -l "$mount_path" 2>/dev/null; then
+        log_info "Lazy unmount of $mount_path succeeded"
+    else
+        log_warn "Lazy unmount of $mount_path failed or not mounted"
+    fi
+
+    # automountユニットを再起動
+    if systemctl restart "${unit_name}.automount"; then
+        log_info "Restarted ${unit_name}.automount"
+    else
+        log_error "Failed to restart ${unit_name}.automount"
+        return 1
+    fi
+
+    return 0
+}
+
+main() {
+    local errors=0
+
+{% for mount in _unified_mounts_nfs_active | default([]) %}
+    check_and_remount "{{ mount.path }}" || ((errors++)) || true
+{% endfor %}
+
+    if [[ $errors -gt 0 ]]; then
+        log_error "Completed with $errors error(s)"
+        exit 1
+    fi
+
+    exit 0
+}
+
+main "$@"

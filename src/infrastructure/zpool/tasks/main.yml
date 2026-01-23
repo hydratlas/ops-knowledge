@@ -1,0 +1,63 @@
+---
+- name: Install ZFS packages
+  ansible.builtin.apt:
+    name: zfsutils-linux
+    state: present
+    update_cache: true
+  register: zfs_package_install
+
+- name: Reload systemd daemon after ZFS package installation
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: zfs_package_install.changed
+
+- name: Ensure ZFS kernel module is loaded
+  community.general.modprobe:
+    name: zfs
+    state: present
+
+- name: Check if ZFS pool exists
+  ansible.builtin.command:
+    cmd: /usr/sbin/zpool list -H -o name {{ zpool_name }}
+  register: zpool_check
+  changed_when: false
+  failed_when: false
+
+- name: Import ZFS pool (when not forcing)
+  ansible.builtin.command:
+    cmd: /usr/sbin/zpool import -f {{ zpool_name }}
+  register: zpool_import
+  changed_when: zpool_import.rc == 0
+  failed_when: false
+  when:
+    - not zpool_force
+    - zpool_check.rc != 0
+
+- name: Create ZFS pool (when forcing)
+  community.general.zpool:
+    name: "{{ zpool_name }}"
+    vdevs: "{{ zpool_vdevs }}"
+    pool_properties: "{{ zpool_properties }}"
+    filesystem_properties: "{{ zpool_filesystem_properties | combine({'mountpoint': zpool_mountpoint.path}) }}"
+    force: "{{ zpool_force }}"
+    state: present
+  when:
+    - zpool_force
+    - zpool_vdevs | length > 0
+    - zpool_check.rc != 0
+
+- name: Ensure mount point directory exists
+  ansible.builtin.file:
+    path: "{{ zpool_mountpoint.path }}"
+    state: directory
+    mode: "{{ zpool_mountpoint.mode }}"
+
+- name: Enable ZFS services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - zfs-import-cache
+    - zfs-mount
+    - zfs.target
