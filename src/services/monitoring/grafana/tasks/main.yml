@@ -1,0 +1,80 @@
+---
+- name: Include podman_rootless_quadlet_base role
+  ansible.builtin.include_tasks: "../../infrastructure/container/podman_rootless_quadlet_base/tasks/main.yml"
+  vars:
+    quadlet_user: "{{ grafana_user }}"
+    quadlet_user_comment: "{{ grafana_user_comment }}"
+    quadlet_app_name: "{{ grafana_app_name }}"
+
+- name: Set Grafana directory paths
+  ansible.builtin.set_fact:
+    grafana_data_dir: "{{ quadlet_home }}/.local/share/grafana"
+    grafana_provisioning_dir: "{{ quadlet_config_dir }}/provisioning"
+    grafana_datasources_dir: "{{ quadlet_config_dir }}/provisioning/datasources"
+    grafana_env_file: "{{ quadlet_config_dir }}/grafana.env"
+
+- name: Create additional Grafana directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_user }}"
+    mode: '0755'
+  loop:
+    - "{{ grafana_data_dir }}"
+    - "{{ grafana_provisioning_dir }}"
+    - "{{ grafana_datasources_dir }}"
+
+- name: Create monitoring network file
+  ansible.builtin.template:
+    src: monitoring.network.j2
+    dest: "{{ quadlet_systemd_dir }}/monitoring.network"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_user }}"
+    mode: '0644'
+
+- name: Create Grafana environment file
+  ansible.builtin.template:
+    src: grafana.env.j2
+    dest: "{{ grafana_env_file }}"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_user }}"
+    mode: '0600'
+  notify: restart grafana
+
+- name: Create datasource configuration files
+  ansible.builtin.template:
+    src: datasource.yaml.j2
+    dest: "{{ grafana_datasources_dir }}/{{ item.name }}.yaml"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_user }}"
+    mode: '0644'
+  loop: "{{ grafana_datasources }}"
+  notify: restart grafana
+
+- name: Create Grafana Quadlet container file
+  ansible.builtin.template:
+    src: grafana.container.j2
+    dest: "{{ quadlet_systemd_dir }}/grafana.container"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_user }}"
+    mode: '0644'
+  notify: reload systemd user daemon
+
+- name: Enable and start Grafana service
+  ansible.builtin.systemd:
+    name: grafana.service
+    enabled: yes
+    state: started
+    scope: user
+  become: yes
+  become_user: "{{ grafana_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ quadlet_uid }}"
+
+- name: Display Grafana admin credentials
+  ansible.builtin.debug:
+    msg: |
+      Grafana admin credentials:
+      Username: {{ grafana_admin_user }}
+      Password: {{ grafana_admin_password }}

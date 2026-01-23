@@ -1,0 +1,9 @@
+- name: Combine base, dhcp mapping, and custom config for VyOS
+  ansible.builtin.set_fact:
+    vyos_final_config: "{{ vyos_base_config + vyos_dhcp_mapping_config | default([]) + vyos_custom_config | default([]) }}"
+
+- name: Apply config to VyOS
+  vyos.vyos.vyos_config:
+    match: none
+    lines: "{{ vyos_final_config }}"
+    save: true

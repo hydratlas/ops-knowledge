@@ -1,0 +1,18 @@
+---
+- name: Check if lingering is enabled for each user
+  ansible.builtin.command:
+    cmd: loginctl show-user {{ item.name }} --property=Linger
+  register: linger_status
+  changed_when: false
+  failed_when: false
+  loop: "{{ cluster_user_list | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Enable lingering for users
+  ansible.builtin.command:
+    cmd: loginctl enable-linger {{ item.item.name }}
+  when: item.stdout != "Linger=yes"
+  loop: "{{ linger_status.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"

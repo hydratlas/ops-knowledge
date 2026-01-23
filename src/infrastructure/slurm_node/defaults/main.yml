@@ -1,0 +1,10 @@
+# Slurm compute node defaults
+slurm_controller_host: ""
+
+# Node features for partitioning (optional)
+# Example: "gpu,fast" or "cpu,slow"
+slurm_node_features: ""
+
+# Additional slurmd --conf options (optional)
+# Example: "RealMemory=80000 Gres=gpu:2"
+slurm_node_conf: ""

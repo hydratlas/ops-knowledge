@@ -1,0 +1,26 @@
+---
+- name: Import Grafana GPG key
+  ansible.builtin.rpm_key:
+    state: present
+    key: "{{ alloy_grafana_rpm_gpg_key_url }}"
+
+- name: Add Grafana repository
+  ansible.builtin.yum_repository:
+    name: grafana
+    description: Grafana
+    baseurl: "{{ alloy_grafana_rpm_repo_url }}"
+    repo_gpgcheck: yes
+    enabled: yes
+    gpgcheck: yes
+    gpgkey: "{{ alloy_grafana_rpm_gpg_key_url }}"
+    sslverify: yes
+    sslcacert: /etc/pki/tls/certs/ca-bundle.crt
+
+- name: Update repository cache
+  ansible.builtin.package:
+    update_cache: yes
+
+- name: Install Alloy
+  ansible.builtin.package:
+    name: alloy
+    state: present

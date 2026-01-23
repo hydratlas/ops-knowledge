@@ -1,0 +1,112 @@
+---
+# Tasks for keepalived role
+
+- name: Create keepalived check script users
+  ansible.builtin.user:
+    name: "{{ item.user | default('keepalived_script') }}"
+    system: true
+    shell: /usr/sbin/nologin
+    home: /nonexistent
+    create_home: false
+    comment: "Keepalived health check script user"
+  loop: "{{ keepalived_check_scripts }}"
+  when:
+    - item.create_script_user | default(true) | bool
+    - item.user is defined or true  # Always create default user if not specified
+
+- name: Install keepalived package (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name: keepalived
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Install keepalived package (RHEL/CentOS/Fedora)
+  ansible.builtin.dnf:
+    name: keepalived
+    state: present
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: Ensure keepalived configuration directory exists
+  ansible.builtin.file:
+    path: "{{ keepalived_base_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Ensure keepalived conf.d directory exists
+  ansible.builtin.file:
+    path: "{{ keepalived_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Ensure keepalived scripts directory exists
+  ansible.builtin.file:
+    path: "{{ keepalived_check_scripts_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Deploy check scripts
+  ansible.builtin.template:
+    src: "{{ item.template }}"
+    dest: "{{ keepalived_check_scripts_dir }}/{{ item.name }}"
+    owner: root
+    group: root
+    mode: '0755'
+  loop: "{{ keepalived_check_scripts }}"
+  when: keepalived_check_scripts | length > 0
+
+- name: Deploy main keepalived configuration
+  ansible.builtin.template:
+    src: keepalived.conf.j2
+    dest: "{{ keepalived_config_file }}"
+    owner: root
+    group: root
+    mode: '0644'
+    backup: true
+  notify: restart keepalived
+
+- name: Deploy global_defs configuration
+  ansible.builtin.template:
+    src: global_defs.conf.j2
+    dest: "{{ keepalived_config_dir }}/00-global_defs.conf"
+    owner: root
+    group: root
+    mode: '0644'
+    backup: true
+  notify: restart keepalived
+
+- name: Deploy VRRP scripts configuration
+  ansible.builtin.template:
+    src: vrrp_scripts.conf.j2
+    dest: "{{ keepalived_config_dir }}/10-vrrp_scripts.conf"
+    owner: root
+    group: root
+    mode: '0644'
+    backup: true
+  notify: restart keepalived
+  when: keepalived_check_scripts | length > 0
+
+- name: Deploy VRRP instance configurations
+  ansible.builtin.template:
+    src: vrrp_instances.conf.j2
+    dest: "{{ keepalived_config_dir }}/20-vrrp_instances.conf"
+    owner: root
+    group: root
+    mode: '0600'
+    backup: true
+  notify: restart keepalived
+  when: keepalived_vrrp_instances | length > 0
+
+- name: Enable and start keepalived service
+  ansible.builtin.systemd:
+    name: "{{ keepalived_service_name }}"
+    enabled: true
+    state: started
+    daemon_reload: true

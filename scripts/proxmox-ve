@@ -1,0 +1,89 @@
+#!/bin/bash
+image_downloader () {
+  set -eux
+  local IMAGE_URL="${1}"
+  local IMAGE_DIR="/var/lib/vz/template/iso"
+  local IMAGE_NAME="${IMAGE_URL%%[\?#]*}"
+  IMAGE_NAME="${IMAGE_NAME##*/}" # URLから取り出したファイル名（拡張子あり）
+  local IMAGE_STEM="${IMAGE_NAME%.*}" # ファイル名（拡張子なし）
+  IMAGE_NAME="${IMAGE_STEM}.img" # ファイル名（.img拡張子）
+  if [ ! -e "${IMAGE_DIR}/${IMAGE_NAME}" ]; then
+    wget -O "${IMAGE_DIR}/${IMAGE_NAME}" "${IMAGE_URL}" # ファイルが存在しなかったらダウンロード
+  fi
+  set +eux
+}
+vm_create () {
+  if [ ! -e "${4}" ]; then
+    echo "File does not exist: ${4}" >&2
+  else
+    set -eux
+    local VMID="${1}"
+    local STORAGE="${2}"
+    local SNIPPET_STORAGE="${3}"
+    local IMAGE_PATH="${4}"
+    local SIZE="${5}"
+    local CORES
+    CORES="$(LC_ALL=C.UTF-8 lscpu | awk '/Socket\(s\)/ { sockets = $2 } /Core\(s\) per socket/ { cores = $4 } END { print sockets * cores }')"
+    qm create "${VMID}" \
+      --cpu x86-64-v3 \
+      --cores "${CORES}" \
+      --scsi1 "${STORAGE}:0,import-from=${IMAGE_PATH},ssd=1" \
+      --machine q35 \
+      --bios ovmf --efidisk0 "${STORAGE}:0" \
+      --vga virtio \
+      --scsihw virtio-scsi-single \
+      --serial0 socket \
+      --ostype l26 \
+      --boot order='scsi1' \
+      --scsi0 "${STORAGE}:cloudinit,size=4M" \
+      --agent enabled=1 \
+      --cicustom "vendor=${SNIPPET_STORAGE}:snippets/qemu-guest-agent.yaml"
+    qm resize "${VMID}" scsi1 "${SIZE}"
+    qm set "${VMID}" --onboot 1
+    set +eux
+  fi
+}
+vm_start () {
+  set -eux
+  local VMID="${1}"
+  qm start "${VMID}"
+  while ! qm guest cmd "${VMID}" ping; do
+    sleep 1s
+  done
+  set +eux
+  echo "The virtual machine has started up and is now ready to log in!"
+}
+vm_exec_apt () {
+  set -eux
+  local VMID="${1}"
+  local SCRIPT
+  SCRIPT=$(cat << EOF
+tee -a "/etc/apt/apt.conf.d/99progressbar" << EOS > /dev/null
+Dpkg::Progress-Fancy "0";
+EOS
+EOF
+  )
+  qm guest exec "${VMID}" -- bash -c "${SCRIPT}" | jq -r '."out-data", ."err-data"'
+  set +eux
+}
+vm_exec_grub () {
+  set -eux
+  local VMID="${1}"
+  local SCRIPT=
+  SCRIPT=$(cat << EOF
+tee -a "/etc/default/grub" << EOS > /dev/null &&
+GRUB_CMDLINE_LINUX="quiet console=tty0 console=ttyS0,115200"
+GRUB_TERMINAL_INPUT="console serial"
+GRUB_TERMINAL_OUTPUT="gfxterm serial"
+GRUB_SERIAL_COMMAND="serial --unit=0 --speed=115200"
+EOS
+if hash update-grub 2>/dev/null; then
+  update-grub
+else
+  grub2-mkconfig -o /boot/grub2/grub.cfg
+fi
+EOF
+  )
+  qm guest exec "${VMID}" -- bash -c "${SCRIPT}" | jq -r '."out-data", ."err-data"'
+  set +eux
+}

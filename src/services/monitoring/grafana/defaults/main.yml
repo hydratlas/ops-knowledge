@@ -1,0 +1,44 @@
+---
+# Grafana user configuration
+grafana_user: "monitoring"
+grafana_user_comment: "Grafana rootless user"
+grafana_app_name: "grafana"
+
+# Container configuration
+grafana_container_image: "docker.io/grafana/grafana-oss:latest"
+grafana_container_name: "grafana"
+grafana_container_port: 3000
+
+# Network configuration
+grafana_network_name: "monitoring.network"
+
+# Service configuration
+grafana_service_description: "Grafana Service"
+grafana_service_restart: "always"
+grafana_service_restart_sec: 5
+
+# Directory paths - will be set after including podman_rootless_quadlet_base
+grafana_data_dir: ""
+grafana_provisioning_dir: ""
+grafana_datasources_dir: ""
+grafana_env_file: ""
+
+# Grafana configuration
+grafana_admin_user: "admin"
+# grafana_admin_password is defined in group_vars/all.yml (vault encrypted)
+grafana_allow_sign_up: false
+grafana_allow_org_create: false
+grafana_anonymous_enabled: true
+grafana_anonymous_org_role: "Viewer"
+
+# Datasource configuration
+grafana_datasources:
+  - name: prometheus
+    type: prometheus
+    access: proxy
+    url: "http://victoria-metrics:8428/"
+    isDefault: true
+  - name: loki
+    type: loki
+    access: proxy
+    url: "http://loki:3100/"

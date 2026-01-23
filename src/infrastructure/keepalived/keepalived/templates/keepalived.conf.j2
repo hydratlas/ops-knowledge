@@ -1,0 +1,7 @@
+! Configuration File for keepalived
+! {{ ansible_managed }}
+!
+! This file includes configuration from {{ keepalived_config_dir }}
+
+! Include all configuration files from conf.d directory
+include {{ keepalived_config_dir }}/*.conf

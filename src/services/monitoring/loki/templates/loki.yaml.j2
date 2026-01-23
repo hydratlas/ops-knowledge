@@ -1,0 +1,40 @@
+auth_enabled: {{ loki_auth_enabled | lower }}
+
+server:
+  http_listen_port: {{ loki_http_listen_port }}
+  http_listen_address: {{ loki_http_listen_address }}
+
+common:
+  instance_addr: {{ loki_instance_addr }}
+  path_prefix: {{ loki_path_prefix }}
+  storage:
+    filesystem:
+      chunks_directory: {{ loki_storage_filesystem_path }}
+      rules_directory: {{ loki_path_prefix }}/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  retention_period: 336h # 14 days
+  retention_stream:
+    - selector: '{appname="kernel"}'
+      period: 13140h # 1.5 year
+      priority: 1
+    - selector: '{level="error"}'
+      period: 1440h # 60 days
+      priority: 0
+
+analytics:
+  reporting_enabled: {{ loki_analytics_reporting_enabled | lower }}

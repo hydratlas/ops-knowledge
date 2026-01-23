@@ -1,0 +1,15 @@
+# Slurm database daemon configuration
+# Managed by Ansible - do not edit manually
+
+AuthType=auth/slurm
+DbdAddr={{ slurm_dbd_addr }}
+DbdHost={{ slurm_dbd_host }}
+SlurmUser=slurm
+DebugLevel=verbose
+LogFile=/var/log/slurm/slurmdbd.log
+PidFile=/run/slurm/slurmdbd.pid
+
+# MariaDB unix_socket authentication (no StorageHost/StoragePass needed)
+StorageType=accounting_storage/mysql
+StorageUser={{ slurm_db_user }}
+StorageLoc={{ slurm_db_name }}

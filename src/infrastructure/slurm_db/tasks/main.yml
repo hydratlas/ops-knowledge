@@ -1,0 +1,92 @@
+- name: Verify slurm_jwt_key is defined
+  ansible.builtin.assert:
+    that:
+      - slurm_jwt_key is defined
+      - slurm_jwt_key | length > 0
+    fail_msg: "slurm_jwt_key must be defined and non-empty (Base64 encoded, 32 bytes)"
+    quiet: true
+
+- name: Install MariaDB server
+  ansible.builtin.apt:
+    name:
+      - mariadb-server
+      - python3-pymysql
+    state: present
+
+- name: Deploy MariaDB configuration for Slurm
+  ansible.builtin.template:
+    src: mariadb-slurm.cnf.j2
+    dest: /etc/mysql/mariadb.conf.d/90-slurm.cnf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart mariadb
+
+- name: Start and enable MariaDB service
+  ansible.builtin.service:
+    name: mariadb
+    state: started
+    enabled: yes
+
+- name: Flush handlers to apply MariaDB config
+  ansible.builtin.meta: flush_handlers
+
+- name: Create slurm database
+  community.mysql.mysql_db:
+    name: "{{ slurm_db_name }}"
+    state: present
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: Create slurm database user with unix_socket authentication
+  community.mysql.mysql_user:
+    name: "{{ slurm_db_user }}"
+    plugin: unix_socket
+    priv: "{{ slurm_db_name }}.*:ALL"
+    host: localhost
+    state: present
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    column_case_sensitive: true
+
+- name: Install slurmdbd package
+  ansible.builtin.apt:
+    name:
+      - slurmdbd
+    state: present
+
+- name: Create slurm log directory
+  ansible.builtin.file:
+    path: /var/log/slurm
+    state: directory
+    owner: slurm
+    group: slurm
+    mode: '0755'
+
+- name: Deploy JWT key from variable
+  ansible.builtin.copy:
+    content: "{{ slurm_jwt_key | b64decode }}"
+    dest: /etc/slurm/slurm.key
+    owner: slurm
+    group: slurm
+    mode: '0600'
+  no_log: true
+
+- name: Deploy slurmdbd.conf
+  ansible.builtin.template:
+    src: slurmdbd.conf.j2
+    dest: /etc/slurm/slurmdbd.conf
+    owner: slurm
+    group: slurm
+    mode: '0600'
+  notify: Restart slurmdbd
+
+- name: Start and enable slurmdbd service
+  ansible.builtin.service:
+    name: slurmdbd
+    state: started
+    enabled: yes
+
+- name: Wait for slurmdbd to be ready
+  ansible.builtin.wait_for:
+    port: 6819
+    host: "{{ slurm_dbd_addr }}"
+    timeout: 30
