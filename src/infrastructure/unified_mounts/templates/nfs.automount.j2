@@ -10,7 +10,7 @@ DefaultDependencies=no
 [Automount]
 Where={{ item.path }}
 DirectoryMode=0755
-TimeoutIdleSec=600
+TimeoutIdleSec={{ unified_mounts_nfs_idle_timeout | default(60) }}
 
 [Install]
 WantedBy=multi-user.target

@@ -1,6 +1,7 @@
 #!/bin/bash
 # {{ ansible_managed }}
-# NFS stale file handle detection and auto-remount script
+# NFS stale file handle detection and forced unmount script
+# 再マウントは systemd automount の標準機能に委譲
 
 set -euo pipefail
 
@@ -15,72 +16,46 @@ log_warn() {
     logger -t "$LOG_TAG" -p user.warning "$1"
 }
 
-log_error() {
-    logger -t "$LOG_TAG" -p user.err "$1"
-}
-
-check_and_remount() {
+check_and_unmount() {
     local mount_path="$1"
     local unit_name
 
-    # マウントパスからsystemdユニット名を生成
     unit_name=$(echo "$mount_path" | sed 's|^/||' | tr '/' '-')
 
-    # automountが有効でない場合はスキップ
+    # automount が有効でない場合はスキップ
     if ! systemctl is-enabled "${unit_name}.automount" &>/dev/null; then
         return 0
     fi
 
-    # マウントされていない場合はスキップ（automountがアイドルタイムアウトでアンマウントした場合）
+    # マウントされていない場合はスキップ
     if ! mountpoint -q "$mount_path" 2>/dev/null; then
         return 0
     fi
 
-    # statコマンドでアクセスを試みる（タイムアウト付き）
+    # stat コマンドでアクセスを試みる
     if timeout "$TIMEOUT_SEC" stat "$mount_path" &>/dev/null; then
         return 0
     fi
 
-    local exit_code=$?
+    log_warn "Stale detected on $mount_path, forcing unmount"
 
-    # タイムアウト（exit code 124）またはエラーの場合
-    if [[ $exit_code -eq 124 ]]; then
-        log_warn "Timeout accessing $mount_path (${TIMEOUT_SEC}s), attempting remount"
-    else
-        log_warn "Error accessing $mount_path (exit code: $exit_code), attempting remount"
-    fi
+    # mount ユニットの failed 状態をリセット
+    systemctl reset-failed "${unit_name}.mount" 2>/dev/null || true
 
-    # 遅延アンマウント
+    # 強制アンマウント（再マウントは automount が自動実行）
     if umount -l "$mount_path" 2>/dev/null; then
-        log_info "Lazy unmount of $mount_path succeeded"
+        log_info "Forced unmount of $mount_path succeeded"
     else
-        log_warn "Lazy unmount of $mount_path failed or not mounted"
-    fi
-
-    # automountユニットを再起動
-    if systemctl restart "${unit_name}.automount"; then
-        log_info "Restarted ${unit_name}.automount"
-    else
-        log_error "Failed to restart ${unit_name}.automount"
-        return 1
+        log_warn "Forced unmount of $mount_path failed"
     fi
 
     return 0
 }
 
 main() {
-    local errors=0
-
 {% for mount in _unified_mounts_nfs_active | default([]) %}
-    check_and_remount "{{ mount.path }}" || ((errors++)) || true
+    check_and_unmount "{{ mount.path }}"
 {% endfor %}
-
-    if [[ $errors -gt 0 ]]; then
-        log_error "Completed with $errors error(s)"
-        exit 1
-    fi
-
-    exit 0
 }
 
 main "$@"
