@@ -28,7 +28,8 @@ check_and_unmount() {
     fi
 
     # マウントされていない場合はスキップ
-    if ! mountpoint -q "$mount_path" 2>/dev/null; then
+    # mountpoint -q は stale 状態で false を返すため、findmnt を使用
+    if ! findmnt -n "$mount_path" &>/dev/null; then
         return 0
     fi
 
