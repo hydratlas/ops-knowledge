@@ -69,6 +69,7 @@
 - name: Update apt cache after adding Docker repository
   ansible.builtin.apt:
     update_cache: yes
+    cache_valid_time: 3600
   when: ansible_os_family == "Debian"
 
 - name: Install Podman on Debian-based systems
