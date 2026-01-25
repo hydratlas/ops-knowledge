@@ -55,7 +55,7 @@
 
 基本的な使用例：
 ```yaml
-- hosts: computes
+- hosts: compute_hosts
   become: true
   vars:
     create_home_dirs:

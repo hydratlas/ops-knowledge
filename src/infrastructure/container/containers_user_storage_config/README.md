@@ -54,7 +54,7 @@ Podmanストレージ設定ロール（NFS環境用）
 
 基本的な使用例：
 ```yaml
-- hosts: nfs_home_servers
+- hosts: nfs_home_server_hosts
   become: true
   vars:
     cluster_user_list:
@@ -66,7 +66,7 @@ Podmanストレージ設定ロール（NFS環境用）
 
 カスタムパスを使用する例：
 ```yaml
-- hosts: nfs_home_servers
+- hosts: nfs_home_server_hosts
   become: true
   vars:
     containers_user_storage_config:
