@@ -5,7 +5,7 @@
   register: linger_status
   changed_when: false
   failed_when: false
-  loop: "{{ cluster_user_list | default([]) }}"
+  loop: "{{ shared_home_users | default([]) }}"
   loop_control:
     label: "{{ item.name }}"
 

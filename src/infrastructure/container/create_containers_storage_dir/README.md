@@ -40,10 +40,10 @@
 | 変数名 | デフォルト値 | 説明 |
 |--------|--------------|------|
 | `create_containers_storage_dir.home_base` | `/home` | ローカルホームディレクトリのベースパス |
-| `cluster_user_list` | `[]` | ユーザー情報のリスト |
-| `cluster_user_list[].name` | - | ユーザー名（必須） |
-| `cluster_user_list[].uid` | - | ユーザーID（必須） |
-| `cluster_user_list[].gid` | - | グループID（必須） |
+| `shared_home_users` | `[]` | ユーザー情報のリスト |
+| `shared_home_users[].name` | - | ユーザー名（必須） |
+| `shared_home_users[].uid` | - | ユーザーID（必須） |
+| `shared_home_users[].gid` | - | グループID（必須） |
 
 #### 依存関係
 - 推奨: `infrastructure.create_home_dirs`（ユーザーホームディレクトリの事前作成）
@@ -58,7 +58,7 @@
 - hosts: container_hosts
   become: true
   vars:
-    cluster_user_list:
+    shared_home_users:
       - { name: alice, uid: 1001, gid: 1001 }
       - { name: bob, uid: 1002, gid: 1002 }
   roles:
@@ -72,7 +72,7 @@
   vars:
     create_containers_storage_dir:
       home_base: /home
-    cluster_user_list:
+    shared_home_users:
       - { name: alice, uid: 1001, gid: 1001 }
       - { name: bob, uid: 1002, gid: 1002 }
       - { name: charlie, uid: 1003, gid: 1003 }

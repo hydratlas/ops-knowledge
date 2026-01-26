@@ -13,6 +13,6 @@
     owner: "{{ item.uid }}"
     group: "{{ item.gid }}"
     mode: "0700"
-  loop: "{{ cluster_user_list | default([]) }}"
+  loop: "{{ shared_home_users | default([]) }}"
   loop_control:
     label: "{{ item.name }}"

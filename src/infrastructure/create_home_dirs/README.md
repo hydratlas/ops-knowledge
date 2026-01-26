@@ -39,10 +39,10 @@
 | 変数名 | 説明 | デフォルト値 | 必須 |
 |--------|------|-------------|------|
 | `create_home_dirs.home_base` | ローカルホームディレクトリのベースパス | `/home` | いいえ |
-| `cluster_user_list` | ユーザー情報のリスト | `[]` | はい |
-| `cluster_user_list[].name` | ユーザー名 | - | はい |
-| `cluster_user_list[].uid` | ユーザーID | - | はい |
-| `cluster_user_list[].gid` | グループID | - | はい |
+| `shared_home_users` | ユーザー情報のリスト | `[]` | はい |
+| `shared_home_users[].name` | ユーザー名 | - | はい |
+| `shared_home_users[].uid` | ユーザーID | - | はい |
+| `shared_home_users[].gid` | グループID | - | はい |
 
 #### 依存関係
 なし
@@ -60,7 +60,7 @@
   vars:
     create_home_dirs:
       home_base: /home
-    cluster_user_list:
+    shared_home_users:
       - { name: alice, uid: 1001, gid: 1001 }
       - { name: bob, uid: 1002, gid: 1002 }
   roles:
@@ -74,7 +74,7 @@
   vars:
     create_home_dirs:
       home_base: /local/home
-    cluster_user_list:
+    shared_home_users:
       - { name: container_user, uid: 2001, gid: 2001 }
   roles:
     - infrastructure/create_home_dirs
@@ -117,7 +117,7 @@ sudo chmod 700 /home/bob
 複数ユーザーを一括処理する場合：
 ```bash
 # ユーザーリストを定義（名前:UID:GID形式）
-cat > /tmp/cluster_user_list.txt << 'EOF'
+cat > /tmp/shared_home_users.txt << 'EOF'
 alice:1001:1001
 bob:1002:1002
 carol:1003:1003
@@ -129,10 +129,10 @@ while IFS=: read -r username uid gid; do
     sudo chown "${uid}:${gid}" "/home/${username}"
     sudo chmod 700 "/home/${username}"
     echo "Created home directory for ${username}"
-done < /tmp/cluster_user_list.txt
+done < /tmp/shared_home_users.txt
 
 # 一時ファイルを削除
-rm /tmp/cluster_user_list.txt
+rm /tmp/shared_home_users.txt
 ```
 
 #### ステップ4: 作成したディレクトリの確認

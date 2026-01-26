@@ -41,8 +41,8 @@ Podmanストレージ設定ロール（NFS環境用）
 |--------|--------------|------|
 | `containers_user_storage_config.home_base` | `/nfs/home` | NFSホームディレクトリのベースパス |
 | `containers_user_storage_config.graphroot_home_base` | `/home` | ローカルストレージのベースパス |
-| `cluster_user_list` | `[]` | ユーザー情報のリスト |
-| `cluster_user_list[].name` | - | ユーザー名（必須） |
+| `shared_home_users` | `[]` | ユーザー情報のリスト |
+| `shared_home_users[].name` | - | ユーザー名（必須） |
 
 #### 依存関係
 なし
@@ -57,7 +57,7 @@ Podmanストレージ設定ロール（NFS環境用）
 - hosts: nfs_home_server_hosts
   become: true
   vars:
-    cluster_user_list:
+    shared_home_users:
       - { name: alice, uid: 1001, gid: 1001 }
       - { name: bob, uid: 1002, gid: 1002 }
   roles:
@@ -72,7 +72,7 @@ Podmanストレージ設定ロール（NFS環境用）
     containers_user_storage_config:
       home_base: /nfs/home
       graphroot_home_base: /home
-    cluster_user_list:
+    shared_home_users:
       - { name: alice, uid: 1001, gid: 1001 }
       - { name: bob, uid: 1002, gid: 1002 }
   roles:

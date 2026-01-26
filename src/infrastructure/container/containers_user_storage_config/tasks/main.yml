@@ -1,6 +1,6 @@
 - name: Skip if no users defined
   ansible.builtin.set_fact:
-    containers_user_list: "{{ cluster_user_list | default([]) }}"
+    containers_user_list: "{{ shared_home_users | default([]) }}"
 
 - name: Ensure container user storage config directories and files exist
   block:
