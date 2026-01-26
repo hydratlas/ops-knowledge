@@ -41,13 +41,13 @@ ZFS データセット（ファイルシステム）の作成と設定を行う 
 zfs_datasets:
   - name: home_pool/sato
     properties:
-      quota: 100G
+      quota: 107374182400
       mountpoint: /nfs/home/sato
     owner: sato
     mode: "0700"
   - name: home_pool/tanaka
     properties:
-      quota: 100G
+      quota: 107374182400
       mountpoint: /nfs/home/tanaka
     owner: tanaka
     mode: "0700"
@@ -62,16 +62,16 @@ zfs_datasets:
 
 `properties` には、ZFS がサポートするすべてのプロパティを指定できる：
 
-| プロパティ    | 説明                   | 例         |
-| ------------- | ---------------------- | ---------- |
-| `quota`       | データセットの容量制限 | `100G`     |
-| `reservation` | 予約容量               | `50G`      |
-| `mountpoint`  | マウントポイント       | `/data`    |
-| `compression` | 圧縮アルゴリズム       | `zstd`     |
-| `atime`       | アクセス時刻の記録     | `off`      |
-| `canmount`    | マウント可否           | `on`       |
-| `recordsize`  | レコードサイズ         | `128K`     |
-| `sync`        | 同期書き込みの動作     | `standard` |
+| プロパティ    | 説明                   | 例             |
+| ------------- | ---------------------- | -------------- |
+| `quota`       | データセットの容量制限 | `107374182400` |
+| `reservation` | 予約容量               | `50G`          |
+| `mountpoint`  | マウントポイント       | `/data`        |
+| `compression` | 圧縮アルゴリズム       | `zstd`         |
+| `atime`       | アクセス時刻の記録     | `off`          |
+| `canmount`    | マウント可否           | `on`           |
+| `recordsize`  | レコードサイズ         | `128K`         |
+| `sync`        | 同期書き込みの動作     | `standard`     |
 
 ## 使用方法
 
@@ -91,7 +91,7 @@ ansible-playbook -i environments/beyond/inventory.yml site.yml --limit zfs_datas
 1. データセットを作成する
 
    ```bash
-   zfs create -o quota=100G -o mountpoint=/nfs/home/username home_pool/username
+   zfs create -o quota=107374182400 -o mountpoint=/nfs/home/username home_pool/username
    ```
 
 2. 所有者を設定する

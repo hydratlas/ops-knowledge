@@ -13,16 +13,11 @@
     update_cache: yes
   when: ansible_os_family == "Debian"
 
-- name: Get distribution ID
-  ansible.builtin.shell: |
-    grep -oP '(?<=^ID=).+(?=$)' /etc/os-release | tr -d '"'
-  register: distribution_id
-  changed_when: false
-  when: ansible_os_family == "Debian"
-
-- name: Set distribution name for Docker repository
+- name: Set Docker repository variables
   ansible.builtin.set_fact:
-    distribution_name: "{{ 'ubuntu' if distribution_id.stdout == 'ubuntu' else 'debian' }}"
+    docker_distribution_name: "{{ 'ubuntu' if ansible_distribution == 'Ubuntu' else 'debian' }}"
+    docker_distribution_codename: "{{ ansible_distribution_release }}"
+    docker_architecture: "{{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}"
   when: ansible_os_family == "Debian"
 
 - name: Ensure /etc/apt/keyrings directory exists
@@ -34,23 +29,10 @@
 
 - name: Add Docker GPG key
   ansible.builtin.get_url:
-    url: "https://download.docker.com/linux/{{ distribution_name }}/gpg"
+    url: "https://download.docker.com/linux/{{ docker_distribution_name }}/gpg"
     dest: /etc/apt/keyrings/docker.asc
     mode: '0644'
     force: true
-  when: ansible_os_family == "Debian"
-
-- name: Get distribution codename
-  ansible.builtin.shell: |
-    grep -oP '(?<=^VERSION_CODENAME=).+(?=$)' /etc/os-release
-  register: distribution_codename
-  changed_when: false
-  when: ansible_os_family == "Debian"
-
-- name: Get system architecture
-  ansible.builtin.command: dpkg --print-architecture
-  register: system_architecture
-  changed_when: false
   when: ansible_os_family == "Debian"
 
 - name: Add Docker repository
@@ -58,11 +40,11 @@
     dest: /etc/apt/sources.list.d/docker.sources
     content: |
       Types: deb
-      URIs: https://download.docker.com/linux/{{ distribution_name }}
-      Suites: {{ distribution_codename.stdout }}
+      URIs: https://download.docker.com/linux/{{ docker_distribution_name }}
+      Suites: {{ docker_distribution_codename }}
       Components: stable
       Signed-By: /etc/apt/keyrings/docker.asc
-      Architectures: {{ system_architecture.stdout }}
+      Architectures: {{ docker_architecture }}
     mode: '0644'
   when: ansible_os_family == "Debian"
 

@@ -56,4 +56,4 @@
   ansible.builtin.systemd:
     name: slurmd
     state: restarted
-  when: hostvars[groups['slurm_ctrl_hosts'][0]]['slurm_config_changed'] | default(false)
+  when: hostvars[groups['role_slurm_ctrl'][0]]['slurm_config_changed'] | default(false)
