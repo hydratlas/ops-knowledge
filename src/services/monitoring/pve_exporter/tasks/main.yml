@@ -1,11 +1,20 @@
 ---
-- name: Validate required PVE connection variables
+- name: Validate pve_exporter_pve_targets is defined
   ansible.builtin.assert:
     that:
-      - pve_exporter_pve_user is defined and pve_exporter_pve_user != ""
-      - pve_exporter_pve_token_name is defined and pve_exporter_pve_token_name != ""
-      - pve_exporter_pve_token_value is defined and pve_exporter_pve_token_value != ""
-    fail_msg: "pve_exporter_pve_user, pve_exporter_pve_token_name, and pve_exporter_pve_token_value must be defined"
+      - pve_exporter_pve_targets | default({}) | length > 0
+    fail_msg: "pve_exporter_pve_targets must be defined with at least one target"
+
+- name: Validate each target has required fields
+  ansible.builtin.assert:
+    that:
+      - item.value.user is defined and item.value.user != ""
+      - item.value.token_name is defined and item.value.token_name != ""
+      - item.value.token_value is defined and item.value.token_value != ""
+    fail_msg: "Target '{{ item.key }}' must have 'user', 'token_name', and 'token_value' defined"
+  loop: "{{ pve_exporter_pve_targets | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
 
 - name: Include podman_rootless_quadlet_base role
   ansible.builtin.include_role:
@@ -36,6 +45,14 @@
     group: "{{ pve_exporter_user }}"
     mode: '0600'
   notify: restart pve_exporter
+
+- name: Create monitoring network file
+  ansible.builtin.template:
+    src: monitoring.network.j2
+    dest: "{{ quadlet_systemd_dir }}/monitoring.network"
+    owner: "{{ pve_exporter_user }}"
+    group: "{{ pve_exporter_user }}"
+    mode: '0644'
 
 - name: Create PVE Exporter Quadlet container file
   ansible.builtin.template:

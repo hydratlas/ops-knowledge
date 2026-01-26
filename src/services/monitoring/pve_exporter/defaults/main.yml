@@ -17,11 +17,23 @@ pve_exporter_service_restart_sec: 5
 pve_exporter_config_dir: ""
 pve_exporter_config_file: ""
 
-# PVE connection configuration (required - no defaults to prevent misconfiguration)
-# pve_exporter_pve_user: ""
-# pve_exporter_pve_token_name: ""
-# pve_exporter_pve_token_value: ""
+# PVE connection configuration
 pve_exporter_pve_verify_ssl: false
+
+# PVE target-specific configuration (required)
+# Creates modules in pve.yml for each PVE target.
+# Each target must have user, token_name, and token_value.
+# Example:
+#   pve_exporter_pve_targets:
+#     ve-01:  # module name (used in scrape config params.module)
+#       user: "prometheus@pve"
+#       token_name: "exporter"
+#       token_value: "token-for-ve-01"
+#     ve-02:
+#       user: "prometheus@pve"
+#       token_name: "exporter"
+#       token_value: "token-for-ve-02"
+pve_exporter_pve_targets: {}
 
 # Collector flags (optional)
 pve_exporter_collector_config: true
