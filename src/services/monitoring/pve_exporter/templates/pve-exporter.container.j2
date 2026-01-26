@@ -4,9 +4,11 @@ Description={{ pve_exporter_service_description }}
 [Container]
 Image={{ pve_exporter_container_image }}
 ContainerName={{ pve_exporter_container_name }}
+Network=monitoring.network
 AutoUpdate=registry
 LogDriver=journald
 UserNS=keep-id
+User=0:0
 NoNewPrivileges=true
 ReadOnly=true
 PublishPort={{ pve_exporter_container_port }}:{{ pve_exporter_container_port }}

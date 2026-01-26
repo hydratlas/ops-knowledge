@@ -17,8 +17,10 @@ pve_exporter_service_restart_sec: 5
 pve_exporter_config_dir: ""
 pve_exporter_config_file: ""
 
-# PVE connection configuration
-pve_exporter_pve_token_value: ""
+# PVE connection configuration (required - no defaults to prevent misconfiguration)
+# pve_exporter_pve_user: ""
+# pve_exporter_pve_token_name: ""
+# pve_exporter_pve_token_value: ""
 pve_exporter_pve_verify_ssl: false
 
 # Collector flags (optional)
