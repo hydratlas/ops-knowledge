@@ -1,0 +1,25 @@
+---
+# PVE Exporter user configuration
+pve_exporter_user: "monitoring"
+pve_exporter_app_name: "pve-exporter"
+
+# Container configuration
+pve_exporter_container_image: "docker.io/prompve/prometheus-pve-exporter:latest"
+pve_exporter_container_name: "pve-exporter"
+pve_exporter_container_port: 9221
+
+# Service configuration
+pve_exporter_service_description: "Prometheus PVE Exporter Service"
+pve_exporter_service_restart: "always"
+pve_exporter_service_restart_sec: 5
+
+# Directory paths - will be set after including podman_rootless_quadlet_base
+pve_exporter_config_dir: ""
+pve_exporter_config_file: ""
+
+# PVE connection configuration
+pve_exporter_pve_token_value: ""
+pve_exporter_pve_verify_ssl: false
+
+# Collector flags (optional)
+pve_exporter_collector_config: true

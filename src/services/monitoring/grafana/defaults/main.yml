@@ -33,12 +33,21 @@ grafana_anonymous_org_role: "Viewer"
 
 # Datasource configuration
 grafana_datasources:
-  - name: prometheus
+  - name: Prometheus
     type: prometheus
     access: proxy
     url: "http://victoria-metrics:8428/"
     isDefault: true
-  - name: loki
+  - name: Loki
     type: loki
     access: proxy
     url: "http://loki:3100/"
+
+# Dashboard provisioning configuration
+grafana_dashboards_dir: ""
+grafana_dashboards_json_dir: ""
+grafana_dashboards:
+  - name: node-exporter-full
+    url: https://grafana.com/api/dashboards/1860/revisions/latest/download
+  - name: loki-stack-monitoring
+    url: https://grafana.com/api/dashboards/14055/revisions/latest/download

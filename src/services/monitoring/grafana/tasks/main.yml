@@ -11,6 +11,8 @@
     grafana_data_dir: "{{ quadlet_home }}/.local/share/grafana"
     grafana_provisioning_dir: "{{ quadlet_config_dir }}/provisioning"
     grafana_datasources_dir: "{{ quadlet_config_dir }}/provisioning/datasources"
+    grafana_dashboards_dir: "{{ quadlet_config_dir }}/provisioning/dashboards"
+    grafana_dashboards_json_dir: "{{ quadlet_config_dir }}/provisioning/dashboards/json"
     grafana_env_file: "{{ quadlet_config_dir }}/grafana.env"
 
 - name: Create additional Grafana directories
@@ -24,6 +26,8 @@
     - "{{ grafana_data_dir }}"
     - "{{ grafana_provisioning_dir }}"
     - "{{ grafana_datasources_dir }}"
+    - "{{ grafana_dashboards_dir }}"
+    - "{{ grafana_dashboards_json_dir }}"
 
 - name: Create monitoring network file
   ansible.builtin.template:
@@ -50,6 +54,26 @@
     group: "{{ grafana_user }}"
     mode: '0644'
   loop: "{{ grafana_datasources }}"
+  notify: restart grafana
+
+- name: Create dashboard provider configuration
+  ansible.builtin.template:
+    src: dashboard-provider.yaml.j2
+    dest: "{{ grafana_dashboards_dir }}/dashboard-provider.yaml"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_user }}"
+    mode: '0644'
+  notify: restart grafana
+
+- name: Download dashboard JSON files
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "{{ grafana_dashboards_json_dir }}/{{ item.name }}.json"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_user }}"
+    mode: '0644'
+  loop: "{{ grafana_dashboards }}"
+  when: grafana_dashboards | length > 0
   notify: restart grafana
 
 - name: Create Grafana Quadlet container file

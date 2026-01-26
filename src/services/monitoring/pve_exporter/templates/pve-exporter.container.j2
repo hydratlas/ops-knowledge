@@ -1,0 +1,24 @@
+[Unit]
+Description={{ pve_exporter_service_description }}
+
+[Container]
+Image={{ pve_exporter_container_image }}
+ContainerName={{ pve_exporter_container_name }}
+AutoUpdate=registry
+LogDriver=journald
+UserNS=keep-id
+NoNewPrivileges=true
+ReadOnly=true
+PublishPort={{ pve_exporter_container_port }}:{{ pve_exporter_container_port }}
+Volume={{ pve_exporter_config_file }}:/etc/prometheus/pve.yml:ro,z
+Volume=/etc/localtime:/etc/localtime:ro
+{% if not pve_exporter_collector_config %}
+Exec=--no-collector.config
+{% endif %}
+
+[Service]
+Restart={{ pve_exporter_service_restart }}
+RestartSec={{ pve_exporter_service_restart_sec }}
+
+[Install]
+WantedBy=default.target

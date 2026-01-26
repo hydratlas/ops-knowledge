@@ -1,6 +1,15 @@
 scrape_configs:
 {% for config in victoria_metrics_scrape_configs %}
   - job_name: {{ config.job_name }}
+{% if config.metrics_path is defined %}
+    metrics_path: {{ config.metrics_path }}
+{% endif %}
+{% if config.params is defined %}
+    params:
+{% for key, value in config.params.items() %}
+      {{ key }}: {{ value | to_json }}
+{% endfor %}
+{% endif %}
 {% if config.static_configs is defined %}
     static_configs:
 {% for static_config in config.static_configs %}
@@ -13,7 +22,11 @@ scrape_configs:
 {% if config.relabel_configs is defined %}
     relabel_configs:
 {% for relabel in config.relabel_configs %}
+{% if relabel.source_labels is defined %}
       - source_labels: [{{ relabel.source_labels | join(', ') }}]
+{% else %}
+      -
+{% endif %}
 {% if relabel.regex is defined %}
         regex: '{{ relabel.regex }}'
 {% endif %}

@@ -18,6 +18,7 @@ ReadOnly=true
 PublishPort={{ grafana_container_port }}:{{ grafana_container_port }}
 Volume={{ grafana_data_dir }}:/var/lib/grafana:Z
 Volume={{ grafana_datasources_dir }}:/etc/grafana/provisioning/datasources:z
+Volume={{ grafana_dashboards_dir }}:/etc/grafana/provisioning/dashboards:z
 Volume=/etc/localtime:/etc/localtime:ro
 
 [Service]

@@ -1,0 +1,19 @@
+---
+- name: reload systemd user daemon
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    scope: user
+  become: yes
+  become_user: "{{ pve_exporter_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ quadlet_uid }}"
+
+- name: restart pve_exporter
+  ansible.builtin.systemd:
+    name: pve-exporter.service
+    state: restarted
+    scope: user
+  become: yes
+  become_user: "{{ pve_exporter_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ quadlet_uid }}"
