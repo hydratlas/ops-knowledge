@@ -17,6 +17,12 @@ scrape_configs:
 {% for target in static_config.targets %}
         - {{ target }}
 {% endfor %}
+{% if static_config.labels is defined %}
+        labels:
+{% for key, value in static_config.labels.items() %}
+          {{ key }}: {{ value }}
+{% endfor %}
+{% endif %}
 {% endfor %}
 {% endif %}
 {% if config.relabel_configs is defined %}

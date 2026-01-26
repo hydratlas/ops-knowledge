@@ -12,7 +12,7 @@ Network={{ grafana_network_name }}
 EnvironmentFile={{ grafana_env_file }}
 AutoUpdate=registry
 LogDriver=journald
-UserNS=keep-id
+UserNS=keep-id:uid=472,gid=472
 NoNewPrivileges=true
 ReadOnly=true
 PublishPort={{ grafana_container_port }}:{{ grafana_container_port }}

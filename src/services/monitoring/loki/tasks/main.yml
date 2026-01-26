@@ -1,6 +1,7 @@
 ---
 - name: Include podman_rootless_quadlet_base role
-  ansible.builtin.include_tasks: "../../infrastructure/container/podman_rootless_quadlet_base/tasks/main.yml"
+  ansible.builtin.include_role:
+    name: infrastructure/container/podman_rootless_quadlet_base
   vars:
     quadlet_user: "{{ loki_user }}"
     quadlet_user_comment: "{{ loki_user_comment }}"
@@ -46,6 +47,9 @@
     group: "{{ loki_user }}"
     mode: '0644'
   notify: reload systemd user daemon
+
+- name: Flush handlers to ensure systemd user daemon is reloaded
+  ansible.builtin.meta: flush_handlers
 
 - name: Enable and start Loki service
   ansible.builtin.systemd:
