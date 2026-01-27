@@ -12,6 +12,7 @@
   ansible.builtin.systemd:
     name: victoria-metrics.service
     state: restarted
+    daemon_reload: true
     scope: user
   become: yes
   become_user: "{{ victoria_metrics_user }}"
