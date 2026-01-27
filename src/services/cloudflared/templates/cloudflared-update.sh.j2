@@ -1,0 +1,35 @@
+#!/bin/sh
+# Cloudflared auto-update script
+# Managed by Ansible - do not edit manually
+
+set -e
+
+BINARY_PATH="{{ cloudflared_binary_path }}"
+DOWNLOAD_URL="{{ cloudflared_download_url }}"
+TMP_PATH="/tmp/cloudflared-new"
+
+# Get current version
+CURRENT_VERSION=""
+if [ -x "$BINARY_PATH" ]; then
+    CURRENT_VERSION=$("$BINARY_PATH" version 2>/dev/null | head -1 || echo "")
+fi
+
+# Download latest version
+if wget -q -O "$TMP_PATH" "$DOWNLOAD_URL"; then
+    chmod +x "$TMP_PATH"
+    NEW_VERSION=$("$TMP_PATH" version 2>/dev/null | head -1 || echo "")
+
+    if [ "$NEW_VERSION" != "$CURRENT_VERSION" ] && [ -n "$NEW_VERSION" ]; then
+        logger -t cloudflared-update "Updating cloudflared: $CURRENT_VERSION -> $NEW_VERSION"
+        mv "$TMP_PATH" "$BINARY_PATH"
+        chmod 755 "$BINARY_PATH"
+        rc-service cloudflared restart 2>/dev/null || true
+        logger -t cloudflared-update "Update completed successfully"
+    else
+        rm -f "$TMP_PATH"
+    fi
+else
+    logger -t cloudflared-update "Failed to download cloudflared"
+    rm -f "$TMP_PATH"
+    exit 1
+fi

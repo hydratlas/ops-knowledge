@@ -1,13 +1,22 @@
 ---
-# Alpine Linux: testingリポジトリからインストール
-- name: Install cloudflared (Alpine)
-  community.general.apk:
-    name:
-      - cloudflared
-      - cloudflared-openrc
-    state: present
-    repository: https://dl-cdn.alpinelinux.org/alpine/edge/testing
+# Alpine Linux: 公式バイナリを直接ダウンロード
+- name: Install cloudflared from official binary (Alpine)
   when: ansible_os_family == "Alpine"
+  block:
+    - name: Download cloudflared binary
+      ansible.builtin.get_url:
+        url: "{{ cloudflared_download_url }}"
+        dest: "{{ cloudflared_binary_path }}"
+        mode: "0755"
+        force: false
+
+    - name: Create log directory for cloudflared
+      ansible.builtin.file:
+        path: /var/log/cloudflared
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
 
 # Debian系: GPGキーとリポジトリの設定
 - name: Ensure keyrings directory exists (Debian)
@@ -86,13 +95,13 @@
     - cloudflared_token | length > 0
     - ansible_os_family == "Alpine"
   block:
-    - name: Configure cloudflared token (Alpine)
+    - name: Install cloudflared init script (Alpine)
       ansible.builtin.template:
-        src: cloudflared.confd.j2
-        dest: /etc/conf.d/cloudflared
+        src: cloudflared.initd.j2
+        dest: /etc/init.d/cloudflared
         owner: root
         group: root
-        mode: "0600"
+        mode: "0755"
       notify: Restart cloudflared (OpenRC)
 
     - name: Enable cloudflared service (Alpine)
@@ -105,3 +114,25 @@
       ansible.builtin.service:
         name: cloudflared
         state: "{{ cloudflared_service_state }}"
+
+# Alpine Linux: 自動更新の設定
+- name: Configure cloudflared auto-update (Alpine)
+  when:
+    - ansible_os_family == "Alpine"
+    - cloudflared_auto_update | bool
+  block:
+    - name: Install update script
+      ansible.builtin.template:
+        src: cloudflared-update.sh.j2
+        dest: /usr/local/bin/cloudflared-update
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Configure daily cron job for auto-update
+      ansible.builtin.cron:
+        name: cloudflared-auto-update
+        minute: "{{ cloudflared_auto_update_minute }}"
+        hour: "{{ cloudflared_auto_update_hour }}"
+        job: /usr/local/bin/cloudflared-update
+        user: root

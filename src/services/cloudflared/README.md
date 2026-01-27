@@ -4,12 +4,13 @@ Cloudflare Tunnel をインストール・設定するロール。
 
 ## 概要
 
-このロールは cloudflared パッケージのインストールと、トークンベースの Tunnel サービス設定を行う。パッケージのインストールのみ、または Tunnel 設定を含めた完全な構成の両方に対応している。
+このロールは cloudflared のインストールと、トークンベースの Tunnel サービス設定を行う。パッケージのインストールのみ、または Tunnel 設定を含めた完全な構成の両方に対応している。
 
 ### 実現される機能
 
-- cloudflared パッケージのインストール（Debian 系・RHEL 系・Alpine Linux）
+- cloudflared のインストール（Debian 系・RHEL 系・Alpine Linux）
 - トークンベースの Tunnel サービス登録・起動
+- Alpine Linux: 公式バイナリの直接ダウンロードと毎日の自動更新
 
 ## 要件と前提条件
 
@@ -78,11 +79,16 @@ Public Hostnames を追加してローカルホストの SSH サーバーを Tun
 
 #### 変数
 
-| 変数名                        | 必須 | デフォルト | 説明                                |
-| ----------------------------- | ---- | ---------- | ----------------------------------- |
-| `cloudflared_token`           | No   | `""`       | Tunnel トークン（Vault 暗号化推奨） |
-| `cloudflared_service_enabled` | No   | `true`     | サービスの自動起動を有効化          |
-| `cloudflared_service_state`   | No   | `started`  | サービスの状態                      |
+| 変数名                          | 必須 | デフォルト                          | 説明                                          |
+| ------------------------------- | ---- | ----------------------------------- | --------------------------------------------- |
+| `cloudflared_token`             | No   | `""`                                | Tunnel トークン（Vault 暗号化推奨）           |
+| `cloudflared_service_enabled`   | No   | `true`                              | サービスの自動起動を有効化                    |
+| `cloudflared_service_state`     | No   | `started`                           | サービスの状態                                |
+| `cloudflared_binary_path`       | No   | `/usr/local/bin/cloudflared`        | バイナリのインストール先（Alpine のみ）       |
+| `cloudflared_download_url`      | No   | GitHub Releases の最新バイナリ URL  | ダウンロード URL（Alpine のみ）               |
+| `cloudflared_auto_update`       | No   | `true`                              | 毎日の自動更新を有効化（Alpine のみ）         |
+| `cloudflared_auto_update_hour`  | No   | `"3"`                               | 自動更新の実行時刻（時）（Alpine のみ）       |
+| `cloudflared_auto_update_minute`| No   | `"30"`                              | 自動更新の実行時刻（分）（Alpine のみ）       |
 
 #### トークンの管理
 
@@ -131,7 +137,7 @@ sudo dnf makecache
 
 **Alpine Linux の場合:**
 
-リポジトリの追加は不要。testing リポジトリから直接インストールする。
+公式バイナリを直接ダウンロードする。リポジトリの設定は不要である。
 
 #### ステップ2: インストール
 
@@ -142,8 +148,10 @@ sudo apt-get install -y cloudflared
 # RHEL 系
 sudo dnf install -y cloudflared
 
-# Alpine Linux
-doas apk add --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing cloudflared cloudflared-openrc
+# Alpine Linux（公式バイナリを直接ダウンロード）
+doas wget -O /usr/local/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+doas chmod 755 /usr/local/bin/cloudflared
+doas mkdir -p /var/log/cloudflared
 ```
 
 #### ステップ3: Tunnel 設定（オプション）
@@ -163,15 +171,80 @@ sudo systemctl enable --now cloudflared
 **Alpine Linux の場合（OpenRC）:**
 
 ```bash
-# conf.d ファイルにトークンを設定
-cat << 'EOF' | doas tee /etc/conf.d/cloudflared
+# init スクリプトを作成
+cat << 'EOF' | doas tee /etc/init.d/cloudflared
+#!/sbin/openrc-run
+
+name="cloudflared"
+description="Cloudflare Tunnel daemon"
+
+command="/usr/local/bin/cloudflared"
 command_args="tunnel run --token <TOKEN>"
+command_user="root"
+command_background="yes"
+pidfile="/run/${RC_SVCNAME}.pid"
+
+output_log="/var/log/cloudflared/cloudflared.log"
+error_log="/var/log/cloudflared/cloudflared.log"
+
+depend() {
+    need net
+    after firewall
+}
+
+start_pre() {
+    checkpath --directory --owner root:root --mode 0755 /var/log/cloudflared
+}
 EOF
-doas chmod 600 /etc/conf.d/cloudflared
+doas chmod 755 /etc/init.d/cloudflared
 
 # サービスを起動
 doas rc-update add cloudflared default
 doas rc-service cloudflared start
+```
+
+**Alpine Linux: 自動更新の設定（オプション）:**
+
+毎日 3:30 に自動更新を実行する場合:
+
+```bash
+# 更新スクリプトを作成
+cat << 'EOF' | doas tee /usr/local/bin/cloudflared-update
+#!/bin/sh
+set -e
+
+BINARY_PATH="/usr/local/bin/cloudflared"
+DOWNLOAD_URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
+TMP_PATH="/tmp/cloudflared-new"
+
+CURRENT_VERSION=""
+if [ -x "$BINARY_PATH" ]; then
+    CURRENT_VERSION=$("$BINARY_PATH" version 2>/dev/null | head -1 || echo "")
+fi
+
+if wget -q -O "$TMP_PATH" "$DOWNLOAD_URL"; then
+    chmod +x "$TMP_PATH"
+    NEW_VERSION=$("$TMP_PATH" version 2>/dev/null | head -1 || echo "")
+
+    if [ "$NEW_VERSION" != "$CURRENT_VERSION" ] && [ -n "$NEW_VERSION" ]; then
+        logger -t cloudflared-update "Updating cloudflared: $CURRENT_VERSION -> $NEW_VERSION"
+        mv "$TMP_PATH" "$BINARY_PATH"
+        chmod 755 "$BINARY_PATH"
+        rc-service cloudflared restart 2>/dev/null || true
+        logger -t cloudflared-update "Update completed successfully"
+    else
+        rm -f "$TMP_PATH"
+    fi
+else
+    logger -t cloudflared-update "Failed to download cloudflared"
+    rm -f "$TMP_PATH"
+    exit 1
+fi
+EOF
+doas chmod 755 /usr/local/bin/cloudflared-update
+
+# cron ジョブを設定
+echo "30 3 * * * /usr/local/bin/cloudflared-update" | doas crontab -
 ```
 
 ## 運用管理
@@ -220,7 +293,7 @@ sudo systemctl daemon-reload
 ```bash
 doas rc-service cloudflared stop
 doas rc-update del cloudflared default
-doas rm -f /etc/conf.d/cloudflared
+doas rm -f /etc/init.d/cloudflared
 ```
 
 ### パッケージとリポジトリの削除
@@ -247,7 +320,11 @@ sudo dnf clean all
 **Alpine Linux の場合:**
 
 ```bash
-doas apk del cloudflared cloudflared-openrc
+# バイナリと関連ファイルの削除
+doas rm -f /usr/local/bin/cloudflared
+doas rm -f /usr/local/bin/cloudflared-update
+doas rm -rf /var/log/cloudflared
+doas crontab -r  # cron ジョブを削除（他のジョブがある場合は個別に削除）
 ```
 
 ## 関連ドキュメント
