@@ -214,31 +214,24 @@ cat << 'EOF' | doas tee /usr/local/bin/cloudflared-update
 set -e
 
 BINARY_PATH="/usr/local/bin/cloudflared"
-DOWNLOAD_URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
-TMP_PATH="/tmp/cloudflared-new"
 
 CURRENT_VERSION=""
 if [ -x "$BINARY_PATH" ]; then
     CURRENT_VERSION=$("$BINARY_PATH" version 2>/dev/null | head -1 || echo "")
 fi
 
-if wget -q -O "$TMP_PATH" "$DOWNLOAD_URL"; then
-    chmod +x "$TMP_PATH"
-    NEW_VERSION=$("$TMP_PATH" version 2>/dev/null | head -1 || echo "")
-
-    if [ "$NEW_VERSION" != "$CURRENT_VERSION" ] && [ -n "$NEW_VERSION" ]; then
-        logger -t cloudflared-update "Updating cloudflared: $CURRENT_VERSION -> $NEW_VERSION"
-        mv "$TMP_PATH" "$BINARY_PATH"
-        chmod 755 "$BINARY_PATH"
-        rc-service cloudflared restart 2>/dev/null || true
-        logger -t cloudflared-update "Update completed successfully"
-    else
-        rm -f "$TMP_PATH"
-    fi
-else
-    logger -t cloudflared-update "Failed to download cloudflared"
-    rm -f "$TMP_PATH"
+UPDATE_OUTPUT=$("$BINARY_PATH" update 2>&1) || {
+    logger -t cloudflared-update "cloudflared update failed: $UPDATE_OUTPUT"
     exit 1
+}
+
+if echo "$UPDATE_OUTPUT" | grep -q "is up to date"; then
+    logger -t cloudflared-update "cloudflared is already up to date"
+else
+    NEW_VERSION=$("$BINARY_PATH" version 2>/dev/null | head -1 || echo "")
+    logger -t cloudflared-update "Updated cloudflared: $CURRENT_VERSION -> $NEW_VERSION"
+    rc-service cloudflared restart 2>/dev/null || true
+    logger -t cloudflared-update "Service restarted successfully"
 fi
 EOF
 doas chmod 755 /usr/local/bin/cloudflared-update
