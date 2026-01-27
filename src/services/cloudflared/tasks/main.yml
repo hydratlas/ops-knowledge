@@ -1,4 +1,14 @@
 ---
+# Alpine Linux: testingリポジトリからインストール
+- name: Install cloudflared (Alpine)
+  community.general.apk:
+    name:
+      - cloudflared
+      - cloudflared-openrc
+    state: present
+    repository: https://dl-cdn.alpinelinux.org/alpine/edge/testing
+  when: ansible_os_family == "Alpine"
+
 # Debian系: GPGキーとリポジトリの設定
 - name: Ensure keyrings directory exists (Debian)
   ansible.builtin.file:
@@ -51,8 +61,11 @@
   when: ansible_os_family == "RedHat"
 
 # Tunnel サービスの設定（トークンが設定されている場合のみ）
-- name: Configure cloudflared service
-  when: cloudflared_token | length > 0
+# systemd 系（Debian, RedHat）
+- name: Configure cloudflared service (systemd)
+  when:
+    - cloudflared_token | length > 0
+    - ansible_os_family in ["Debian", "RedHat"]
   block:
     - name: Install cloudflared service with token
       ansible.builtin.command:
@@ -60,9 +73,35 @@
       args:
         creates: /etc/systemd/system/cloudflared.service
 
-    - name: Manage cloudflared service
+    - name: Manage cloudflared service (systemd)
       ansible.builtin.systemd:
         name: cloudflared
         enabled: "{{ cloudflared_service_enabled }}"
         state: "{{ cloudflared_service_state }}"
         daemon_reload: true
+
+# OpenRC 系（Alpine Linux）
+- name: Configure cloudflared service (OpenRC)
+  when:
+    - cloudflared_token | length > 0
+    - ansible_os_family == "Alpine"
+  block:
+    - name: Configure cloudflared token (Alpine)
+      ansible.builtin.template:
+        src: cloudflared.confd.j2
+        dest: /etc/conf.d/cloudflared
+        owner: root
+        group: root
+        mode: "0600"
+      notify: Restart cloudflared (OpenRC)
+
+    - name: Enable cloudflared service (Alpine)
+      ansible.builtin.service:
+        name: cloudflared
+        enabled: "{{ cloudflared_service_enabled }}"
+        runlevel: default
+
+    - name: Manage cloudflared service (OpenRC)
+      ansible.builtin.service:
+        name: cloudflared
+        state: "{{ cloudflared_service_state }}"

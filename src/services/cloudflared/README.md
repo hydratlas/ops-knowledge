@@ -8,14 +8,14 @@ Cloudflare Tunnel をインストール・設定するロール。
 
 ### 実現される機能
 
-- cloudflared パッケージのインストール（Debian 系・RHEL 系）
+- cloudflared パッケージのインストール（Debian 系・RHEL 系・Alpine Linux）
 - トークンベースの Tunnel サービス登録・起動
 
 ## 要件と前提条件
 
 ### 共通要件
 
-- 対応 OS: Debian 系, RHEL 系
+- 対応 OS: Debian 系, RHEL 系, Alpine Linux
 - ネットワーク接続
 - root または sudo 権限
 
@@ -129,6 +129,10 @@ sudo dnf config-manager --add-repo https://pkg.cloudflare.com/cloudflared-ascii.
 sudo dnf makecache
 ```
 
+**Alpine Linux の場合:**
+
+リポジトリの追加は不要。testing リポジトリから直接インストールする。
+
 #### ステップ2: インストール
 
 ```bash
@@ -137,11 +141,16 @@ sudo apt-get install -y cloudflared
 
 # RHEL 系
 sudo dnf install -y cloudflared
+
+# Alpine Linux
+doas apk add --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing cloudflared cloudflared-openrc
 ```
 
 #### ステップ3: Tunnel 設定（オプション）
 
 Tunnel サービスとして実行する場合、トークンを使用してサービスをインストールする。
+
+**Debian 系・RHEL 系の場合（systemd）:**
 
 ```bash
 # サービスとしてインストール（トークンは Cloudflare ダッシュボードから取得）
@@ -151,7 +160,23 @@ sudo cloudflared service install <TOKEN>
 sudo systemctl enable --now cloudflared
 ```
 
+**Alpine Linux の場合（OpenRC）:**
+
+```bash
+# conf.d ファイルにトークンを設定
+cat << 'EOF' | doas tee /etc/conf.d/cloudflared
+command_args="tunnel run --token <TOKEN>"
+EOF
+doas chmod 600 /etc/conf.d/cloudflared
+
+# サービスを起動
+doas rc-update add cloudflared default
+doas rc-service cloudflared start
+```
+
 ## 運用管理
+
+**Debian 系・RHEL 系の場合（systemd）:**
 
 ```bash
 # バージョン確認
@@ -164,15 +189,38 @@ systemctl status cloudflared
 journalctl -u cloudflared -f
 ```
 
+**Alpine Linux の場合（OpenRC）:**
+
+```bash
+# バージョン確認
+cloudflared version
+
+# サービス状態確認
+rc-service cloudflared status
+
+# ログ確認
+tail -f /var/log/messages | grep cloudflared
+```
+
 ## アンインストール
 
 ### サービスのアンインストール
 
 サービスをインストールしている場合のみ実行する。
 
+**Debian 系・RHEL 系の場合（systemd）:**
+
 ```bash
 sudo cloudflared service uninstall
 sudo systemctl daemon-reload
+```
+
+**Alpine Linux の場合（OpenRC）:**
+
+```bash
+doas rc-service cloudflared stop
+doas rc-update del cloudflared default
+doas rm -f /etc/conf.d/cloudflared
 ```
 
 ### パッケージとリポジトリの削除
@@ -194,6 +242,12 @@ sudo dnf remove -y cloudflared
 sudo dnf autoremove -y
 sudo rm -f /etc/yum.repos.d/cloudflared-ascii.repo
 sudo dnf clean all
+```
+
+**Alpine Linux の場合:**
+
+```bash
+doas apk del cloudflared cloudflared-openrc
 ```
 
 ## 関連ドキュメント

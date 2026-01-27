@@ -4,3 +4,10 @@
     name: cloudflared
     state: restarted
     daemon_reload: true
+  when: ansible_os_family in ["Debian", "RedHat"]
+
+- name: Restart cloudflared (OpenRC)
+  ansible.builtin.service:
+    name: cloudflared
+    state: restarted
+  when: ansible_os_family == "Alpine"
