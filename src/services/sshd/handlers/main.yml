@@ -1,0 +1,6 @@
+---
+- name: Restart sshd (OpenRC)
+  ansible.builtin.service:
+    name: sshd
+    state: restarted
+  when: ansible_os_family == "Alpine"

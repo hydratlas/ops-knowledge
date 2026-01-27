@@ -5,12 +5,12 @@ SSHサーバーのセキュリティを強化するロール
 ## 概要
 
 ### このドキュメントの目的
-このロールはSSHサーバーのセキュリティ強化設定を提供します。Ansibleによる自動設定と手動設定の両方の方法を説明します。
+このロールはSSHサーバーのセキュリティ強化設定を提供する。Ansibleによる自動設定と手動設定の両方の方法を説明する。
 
 ### 実現される機能
 - パスワード認証の無効化による不正アクセスの防止
 - rootユーザーの直接ログイン制限（公開鍵認証のみ許可）
-- カスタムSSHホストキーの設定（オプション）
+- カスタムSSHホストキーの設定（オプション、`ssh_host_key`ロールに委譲）
 - セキュアなSSH設定の一元管理
 
 ## 要件と前提条件
@@ -40,7 +40,8 @@ SSHサーバーのセキュリティを強化するロール
 | `sshd.host_ed25519_key_pub` | カスタムEd25519ホスト公開鍵 | なし | いいえ |
 
 #### 依存関係
-なし
+
+- `infrastructure/ssh_host_key`: カスタムホストキー注入ロール（`sshd.host_ed25519_key`が定義されている場合に適用）
 
 #### タグとハンドラー
 
@@ -102,29 +103,7 @@ sudo chown root:root /etc/ssh/sshd_config.d/00-ssh-secure.conf
 
 #### ステップ3: カスタムホストキーの設定（オプション）
 
-```bash
-# カスタムホストキーを生成（新規作成の場合）
-ssh-keygen -t ed25519 -f custom_ssh_host_ed25519_key -N '' -C ''
-
-# カスタムホストキー設定ファイルを作成
-sudo tee /etc/ssh/sshd_config.d/80-custom-hostkey.conf > /dev/null << 'EOF'
-HostKey /etc/ssh/custom_ssh_host_ed25519_key
-EOF
-
-# 権限を設定
-sudo chmod 644 /etc/ssh/sshd_config.d/80-custom-hostkey.conf
-sudo chown root:root /etc/ssh/sshd_config.d/80-custom-hostkey.conf
-
-# カスタム秘密鍵を配置
-sudo cp custom_ssh_host_ed25519_key /etc/ssh/custom_ssh_host_ed25519_key
-sudo chmod 600 /etc/ssh/custom_ssh_host_ed25519_key
-sudo chown root:root /etc/ssh/custom_ssh_host_ed25519_key
-
-# カスタム公開鍵を配置
-sudo cp custom_ssh_host_ed25519_key.pub /etc/ssh/custom_ssh_host_ed25519_key.pub
-sudo chmod 644 /etc/ssh/custom_ssh_host_ed25519_key.pub
-sudo chown root:root /etc/ssh/custom_ssh_host_ed25519_key.pub
-```
+カスタムホストキーを設定する場合は、[ssh_host_keyロールのREADME](../ssh_host_key/README.md)を参照のこと。
 
 #### ステップ4: 起動と有効化
 
@@ -184,7 +163,7 @@ sudo journalctl -u ssh --since "1 hour ago"
    ```bash
    # クライアント側で詳細ログを表示
    ssh -vvv user@hostname
-   
+
    # サーバー側でSSH設定を確認
    sudo sshd -T
    ```
@@ -193,19 +172,13 @@ sudo journalctl -u ssh --since "1 hour ago"
    ```bash
    # 設定ファイルの読み込み順序を確認
    ls -la /etc/ssh/sshd_config.d/
-   
+
    # 競合する設定がないか確認
    sudo grep -r "PasswordAuthentication" /etc/ssh/
    ```
 
 3. **カスタムホストキーが使用されない場合**
-   ```bash
-   # ホストキーファイルの権限を確認
-   ls -la /etc/ssh/custom_ssh_host_*
-   
-   # SSHデーモンのログを確認
-   sudo journalctl -u ssh -n 100
-   ```
+   [ssh_host_keyロールのREADME](../ssh_host_key/README.md)のトラブルシューティングを参照のこと。
 
 ### メンテナンス
 
@@ -226,11 +199,8 @@ sudo cp -a /etc/ssh/sshd_config.d /etc/ssh/sshd_config.d.backup-$(date +%Y%m%d)
 ```bash
 # カスタムSSH設定ファイルの削除
 sudo rm -f /etc/ssh/sshd_config.d/00-ssh-secure.conf
-sudo rm -f /etc/ssh/sshd_config.d/80-custom-hostkey.conf
 
-# カスタムホストキーの削除（使用していた場合）
-sudo rm -f /etc/ssh/custom_ssh_host_ed25519_key
-sudo rm -f /etc/ssh/custom_ssh_host_ed25519_key.pub
+# カスタムホストキーを削除する場合は ssh_host_key ロールのREADMEを参照
 
 # デフォルト設定に戻す
 sudo sed -i 's/^PasswordAuthentication no/# PasswordAuthentication yes/' /etc/ssh/sshd_config
@@ -240,5 +210,5 @@ sudo sed -i 's/^PermitRootLogin prohibit-password/# PermitRootLogin yes/' /etc/s
 sudo systemctl restart ssh   # Debian/Ubuntu
 sudo systemctl restart sshd  # RHEL/CentOS/AlmaLinux
 
-# 注意: この操作によりパスワード認証が再度有効になります
+# 注意: この操作によりパスワード認証が再度有効になる
 ```

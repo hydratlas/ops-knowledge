@@ -1,0 +1,7 @@
+- name: Install Python on Alpine Linux
+  ansible.builtin.raw: apk add --no-cache python3
+  register: apk_result
+  changed_when: "'Installing' in apk_result.stdout"
+
+- name: Gather facts after Python installation
+  ansible.builtin.setup:
