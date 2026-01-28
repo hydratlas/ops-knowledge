@@ -17,22 +17,6 @@
   loop: "{{ slurm_users }}"
   when: slurm_users | length > 0
 
-# クラスター登録の確認と追加
-# slurmctldが起動すると通常は自動登録されるが、タイミングの問題で
-# 登録が完了していない場合があるため、明示的に確認・登録する
-- name: Get existing clusters
-  ansible.builtin.command:
-    cmd: sacctmgr show cluster --parsable2 --noheader format=Cluster
-  register: existing_clusters
-  changed_when: false
-  run_once: true
-
-- name: Register cluster in slurmdbd
-  ansible.builtin.command:
-    cmd: sacctmgr add cluster {{ slurm_cluster_name }} --immediate
-  when: slurm_cluster_name not in existing_clusters.stdout_lines
-  run_once: true
-
 - name: Get existing accounts
   ansible.builtin.command:
     cmd: sacctmgr show account --parsable2 --noheader format=Account
@@ -44,7 +28,6 @@
   ansible.builtin.command:
     cmd: >
       sacctmgr add account {{ item.name }}
-      Cluster={{ slurm_cluster_name }}
       Description="{{ item.description | default(item.name) }}"
       --immediate
   loop: "{{ slurm_accounts }}"

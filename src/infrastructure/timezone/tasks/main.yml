@@ -1,3 +1,9 @@
+- name: Install tzdata on Alpine Linux
+  ansible.builtin.package:
+    name: tzdata
+    state: present
+  when: ansible_os_family == 'Alpine'
+
 - name: Set the system timezone
-  ansible.builtin.timezone:
+  community.general.timezone:
     name: "{{ timezone }}"

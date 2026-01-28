@@ -9,25 +9,25 @@
 
 ### 実現される機能
 - システムホスト名の永続的な設定
-- hostnamectlを使用した正式なホスト名変更
+- systemd環境ではhostnamectl、Alpine Linux（OpenRC）環境では/etc/hostnameを使用
 - 再起動後も保持される設定
 - RFC 1123準拠のホスト名検証
 
 ## 要件と前提条件
 
 ### 共通要件
-- Linux OS（systemd搭載システム）
+- Linux OS（systemd搭載システム、またはAlpine Linux等のOpenRC環境）
 - root権限またはsudo権限
-- hostnamectlコマンドが利用可能
+- hostnamectlコマンド（systemd環境）またはhostnameコマンド（Alpine Linux等）が利用可能
 
 ### Ansible固有の要件
 - Ansible 2.9以上
 - プレイブックレベルで`become: true`の指定が必要
 
 ### 手動設定の要件
-- bashシェル
+- シェル（bash、ash等）
 - sudo権限を持つユーザー
-- hostnamectl（systemd環境）またはhostnameコマンド
+- hostnamectl（systemd環境）またはhostnameコマンド（Alpine Linux等）
 
 ## 設定方法
 
@@ -85,13 +85,25 @@ cat /etc/hosts
 
 #### ステップ2: ホスト名の設定
 
-systemd環境（推奨）：
+systemd環境（Debian/Ubuntu、RHEL/CentOS 7+等）：
 ```bash
 # ホスト名を設定（例: web-01）
 sudo hostnamectl set-hostname web-01
 
 # 設定を確認
 hostnamectl status
+```
+
+Alpine Linux（OpenRC環境）：
+```bash
+# ホスト名を設定（例: web-01）
+echo "web-01" | sudo tee /etc/hostname
+
+# 即時適用
+sudo hostname -F /etc/hostname
+
+# 設定を確認
+hostname
 ```
 
 従来の方法（systemd非対応環境）：
@@ -128,14 +140,17 @@ hostnamectl status
 
 ### 基本操作
 
-ホスト名の確認：
+ホスト名の確認（共通）：
 ```bash
 # 短いホスト名
 hostname
 
 # FQDN（完全修飾ドメイン名）
 hostname -f
+```
 
+systemd環境での詳細確認：
+```bash
 # 詳細情報
 hostnamectl status
 
@@ -145,8 +160,18 @@ hostnamectl status --transient
 hostnamectl status --pretty
 ```
 
+Alpine Linux（OpenRC環境）での確認：
+```bash
+# 設定ファイルの内容を確認
+cat /etc/hostname
+
+# ドメイン名を確認
+hostname -d
+```
+
 ### ログとモニタリング
 
+systemd環境：
 ```bash
 # ホスト名変更のログを確認
 sudo journalctl -u systemd-hostnamed
@@ -159,13 +184,22 @@ sudo grep -i hostname /var/log/messages # RHEL/CentOS
 sudo aureport -x --summary | grep hostname
 ```
 
+Alpine Linux（OpenRC環境）：
+```bash
+# システムログで確認
+sudo grep -i hostname /var/log/messages
+```
+
 ### トラブルシューティング
 
 #### 診断フロー
 
 1. 現在の設定確認
    ```bash
+   # systemd環境
    hostnamectl status
+
+   # 共通
    cat /etc/hostname
    cat /etc/hosts
    ```
@@ -178,7 +212,11 @@ sudo aureport -x --summary | grep hostname
 
 3. サービスへの影響確認
    ```bash
+   # systemd環境
    systemctl status
+
+   # Alpine Linux（OpenRC環境）
+   rc-status
    ```
 
 #### よくある問題と対処方法
@@ -217,6 +255,7 @@ sudo cp /etc/cloud/cloud.cfg /etc/cloud/cloud.cfg.backup
 
 ホスト名をデフォルトに戻す手順：
 
+systemd環境：
 ```bash
 # デフォルトホスト名（通常はlocalhost）に戻す
 sudo hostnamectl set-hostname localhost
@@ -233,9 +272,25 @@ hostname
 hostnamectl status
 ```
 
+Alpine Linux（OpenRC環境）：
+```bash
+# デフォルトホスト名に戻す
+echo "localhost" | sudo tee /etc/hostname
+sudo hostname -F /etc/hostname
+
+# または元のホスト名に戻す（バックアップがある場合）
+sudo cp /etc/hostname.backup /etc/hostname
+sudo hostname -F /etc/hostname
+
+# 確認
+hostname
+cat /etc/hostname
+```
+
 ## 注意事項
 
-- ホスト名の変更は多くのサービスに影響を与える可能性があります
-- 特にクラスター環境では、ホスト名変更前に関連サービスへの影響を確認してください
-- cloud-init環境では、`/etc/cloud/cloud.cfg`で`preserve_hostname: true`の設定が必要な場合があります
-- ホスト名は一意である必要があり、ネットワーク内で重複しないよう注意してください
+- ホスト名の変更は多くのサービスに影響を与える可能性がある
+- 特にクラスター環境では、ホスト名変更前に関連サービスへの影響を確認すること
+- cloud-init環境では、`/etc/cloud/cloud.cfg`で`preserve_hostname: true`の設定が必要な場合がある
+- ホスト名は一意である必要があり、ネットワーク内で重複しないよう注意すること
+- Alpine Linuxでは`lbu commit`を実行しないと再起動時に設定が失われる場合がある（diskless/run-from-RAM構成の場合）

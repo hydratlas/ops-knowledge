@@ -15,7 +15,9 @@
 ## 要件と前提条件
 
 ### 共通要件
-- systemdベースのLinuxディストリビューション（timedatectlコマンドが必要）
+- 以下のいずれかのLinuxディストリビューション
+  - systemdベースのディストリビューション（Debian, Ubuntu, RHEL系など）
+  - Alpine Linux（OpenRCベース）
 - root権限またはsudo権限を持つユーザーでの実行
 
 ### Ansible固有の要件
@@ -23,7 +25,8 @@
 - プレイブックレベルで `become: true` の指定が必要
 
 ### 手動設定の要件
-- timedatectlコマンドが利用可能であること
+- systemdベース: timedatectlコマンドが利用可能であること
+- Alpine Linux: tzdataパッケージがインストールされていること
 
 ## 設定方法
 
@@ -65,7 +68,7 @@ timezone: Asia/Tokyo
     - timezone
 ```
 
-### 方法2: 手動での設定手順
+### 方法2: 手動での設定手順（systemdベース）
 
 #### ステップ1: 環境準備
 
@@ -101,6 +104,38 @@ date
 
 # ハードウェアクロックとの同期状態を確認
 hwclock --show
+```
+
+### 方法3: 手動での設定手順（Alpine Linux）
+
+#### ステップ1: 環境準備
+
+```bash
+# tzdataパッケージをインストール
+apk add tzdata
+
+# 利用可能なタイムゾーンの一覧を確認
+ls /usr/share/zoneinfo/Asia/
+```
+
+#### ステップ2: 設定
+
+```bash
+# タイムゾーンを設定（例: Asia/Tokyo）
+ln -sf /usr/share/zoneinfo/Asia/Tokyo /etc/localtime
+
+# UTC（協定世界時）に設定する場合
+ln -sf /usr/share/zoneinfo/UTC /etc/localtime
+```
+
+#### ステップ3: 設定の確認
+
+```bash
+# 設定が反映されたことを確認
+date
+
+# シンボリックリンクを確認
+ls -la /etc/localtime
 ```
 
 ## 運用管理
