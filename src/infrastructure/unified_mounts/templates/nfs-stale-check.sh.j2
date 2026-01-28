@@ -1,7 +1,11 @@
 #!/bin/bash
 # {{ ansible_managed }}
 # NFS stale file handle detection and forced unmount script
+{% if not _unified_mounts_is_lxc %}
 # 再マウントは systemd automount の標準機能に委譲
+{% else %}
+# LXCコンテナ環境: automount非対応のため、unmount後にmountユニットを再起動
+{% endif %}
 
 set -euo pipefail
 
@@ -22,10 +26,17 @@ check_and_unmount() {
 
     unit_name=$(echo "$mount_path" | sed 's|^/||' | tr '/' '-')
 
+{% if not _unified_mounts_is_lxc %}
     # automount が有効でない場合はスキップ
     if ! systemctl is-enabled "${unit_name}.automount" &>/dev/null; then
         return 0
     fi
+{% else %}
+    # mount ユニットが有効でない場合はスキップ
+    if ! systemctl is-enabled "${unit_name}.mount" &>/dev/null; then
+        return 0
+    fi
+{% endif %}
 
     # マウントされていない場合はスキップ
     # mountpoint -q は stale 状態で false を返すため、findmnt を使用
@@ -43,12 +54,23 @@ check_and_unmount() {
     # mount ユニットの failed 状態をリセット
     systemctl reset-failed "${unit_name}.mount" 2>/dev/null || true
 
+{% if not _unified_mounts_is_lxc %}
     # 強制アンマウント（再マウントは automount が自動実行）
     if umount -l "$mount_path" 2>/dev/null; then
         log_info "Forced unmount of $mount_path succeeded"
     else
         log_warn "Forced unmount of $mount_path failed"
     fi
+{% else %}
+    # LXC: 強制アンマウント後にmountユニットを再起動
+    if umount -l "$mount_path" 2>/dev/null; then
+        log_info "Forced unmount of $mount_path succeeded, restarting mount unit"
+        systemctl restart "${unit_name}.mount" 2>/dev/null || \
+            log_warn "Failed to restart ${unit_name}.mount"
+    else
+        log_warn "Forced unmount of $mount_path failed"
+    fi
+{% endif %}
 
     return 0
 }

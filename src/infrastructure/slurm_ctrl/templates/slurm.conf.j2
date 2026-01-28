@@ -48,16 +48,14 @@ SlurmdDebug=info
 SlurmdLogFile=/var/log/slurm/slurmd.log
 
 # DYNAMIC NODES
-# Nodes register themselves dynamically using slurmd -Z
-# Pre-defined placeholders allow partitions to reference nodes before they register
+MaxNodeCount={{ slurm_max_node_count }}
+
+# NODE SETS
 {% for partition in slurm_partitions %}
-{% if partition.node_names is defined %}
-{% for node_name in partition.node_names %}
-NodeName={{ node_name }} State=FUTURE
-{% endfor %}
+{% if partition.feature is defined %}
+NodeSet={{ partition.name }}_nodes Feature={{ partition.feature }}
 {% endif %}
 {% endfor %}
-MaxNodeCount={{ slurm_max_node_count }}
 
 # PARTITIONS
 {% for partition in slurm_partitions %}
