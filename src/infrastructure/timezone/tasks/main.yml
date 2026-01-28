@@ -2,8 +2,18 @@
   ansible.builtin.package:
     name: tzdata
     state: present
+    update_cache: true
   when: ansible_os_family == 'Alpine'
 
-- name: Set the system timezone
+- name: Set the system timezone on Alpine Linux
+  ansible.builtin.file:
+    src: "/usr/share/zoneinfo/{{ timezone }}"
+    dest: /etc/localtime
+    state: link
+    force: true
+  when: ansible_os_family == 'Alpine'
+
+- name: Set the system timezone on systemd-based systems
   community.general.timezone:
     name: "{{ timezone }}"
+  when: ansible_os_family != 'Alpine'
