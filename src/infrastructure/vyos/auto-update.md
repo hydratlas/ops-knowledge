@@ -1,5 +1,9 @@
 # VyOSの自動アップデートの設定
 
+## 設計方針
+
+VyOSではイメージアップデート時に`/etc/systemd/system/`の内容がリセットされるため、systemdユニットファイルを直接配置しても永続化されない。そのため、すべてのファイルを永続領域である`/config/scripts/`に配置し、起動時に`vyos-postconfig-bootup.script`経由でセットアップスクリプトを実行して`/etc/systemd/system/`へコピーする構成を採っている。
+
 ## アップデーター一式の設定
 
 ```bash

@@ -1,0 +1,10 @@
+[Unit]
+Description=Run VyOS update monthly
+
+[Timer]
+OnCalendar=monthly
+RandomizedDelaySec=28d
+Persistent=true
+
+[Install]
+WantedBy=timers.target
