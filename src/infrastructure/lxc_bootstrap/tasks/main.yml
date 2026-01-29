@@ -9,6 +9,11 @@
   changed_when: "'Installing' in apk_result.stdout"
   when: pkg_mgr_result.stdout is search('apk')
 
+- name: Wait for apt lock to be released (Debian/Ubuntu)
+  ansible.builtin.raw: bash -c 'while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 2; done'
+  changed_when: false
+  when: pkg_mgr_result.stdout is search('apt')
+
 - name: Install Python (Debian/Ubuntu)
   ansible.builtin.raw: apt-get update -qq && apt-get install -y -qq python3
   register: apt_result

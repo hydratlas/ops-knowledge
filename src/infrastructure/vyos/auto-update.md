@@ -1,5 +1,7 @@
 # VyOSの自動アップデートの設定
+
 ## REST API用のキーのセットアップ
+
 ```bash
 REST_KEY="$(uuidgen)" &&
 KEY_NAME="main" &&
@@ -18,34 +20,45 @@ curl -k --location --request POST 'https://localhost/retrieve' \
 ```
 
 ## アップデーター一式の設定
+
 ```bash
 SCRIPT_FILENAME="vyos-updater.sh" &&
 SETUP_SCRIPT_FILENAME="setup-vyos-updater.sh" &&
 ENV_FILENAME="vyos-updater.env" &&
 SERVICE_FILENAME="vyos-updater.service" &&
 TIMER_FILENAME="vyos-updater.timer" &&
-sudo tee "/config/scripts/${SCRIPT_FILENAME}" << EOS > /dev/null &&
-#!/bin/vbash
-source /opt/vyatta/etc/functions/script-template
+sudo tee "/config/scripts/${SCRIPT_FILENAME}" << 'EOS' > /dev/null &&
+#!/bin/bash
+set -euo pipefail
 
-NEW_IMAGE_URL=\$(wget -q -O - "https://api.github.com/repos/vyos/vyos-rolling-nightly-builds/releases/latest" | grep browser_download_url | head -n 1 | cut -d\" -f4)
-if [ -z "\${NEW_IMAGE_URL}" ]; then
+if [ -z "${REST_KEY:-}" ]; then
+    echo "ERROR: REST_KEY is not set" >&2
+    exit 1
+fi
+
+NEW_IMAGE_URL=$(wget -q -O - "https://api.github.com/repos/vyos/vyos-rolling-nightly-builds/releases/latest" | grep browser_download_url | head -n 1 | cut -d\" -f4)
+if [ -z "${NEW_IMAGE_URL}" ]; then
     exit 0
 fi
-echo "Download URL: \${NEW_IMAGE_URL}"
-DATA='{"op": "add", "url": "'"\${NEW_IMAGE_URL}"'"}'
-curl --silent -k --location --request POST 'https://localhost/image' --form data="\${DATA}" --form key="\${REST_KEY}" > /dev/null || exit 0
+echo "Download URL: ${NEW_IMAGE_URL}"
+DATA='{"op": "add", "url": "'"${NEW_IMAGE_URL}"'"}'
+curl --silent -k --location --request POST 'https://localhost/image' --form data="${DATA}" --form key="${REST_KEY}" > /dev/null || exit 0
 echo "Download Completed"
 
-OLD_IMAGE_NAME="\$(run show system image | tail -n 1 | grep -iv "yes" | sed 's/^ *//;s/ *$//')"
-if [ -n "\${OLD_IMAGE_NAME}" ]; then
-    DATA='{"op": "delete", "name": "'"\${OLD_IMAGE_NAME}"'"}'
-    curl --silent -k --location --request POST 'https://localhost/image' --form data="\${DATA}" --form key="\${REST_KEY}" > /dev/null
-    echo "Delete: \${OLD_IMAGE_NAME}"
-fi
+IMAGE_JSON="$(/usr/libexec/vyos/op_mode/image_info.py show_images_summary --raw)"
+DEFAULT_IMAGE="$(echo "${IMAGE_JSON}" | python3 -c "import sys,json; print(json.load(sys.stdin)['image_default'])")"
+RUNNING_IMAGE="$(echo "${IMAGE_JSON}" | python3 -c "import sys,json; print(json.load(sys.stdin)['image_running'])")"
+ALL_IMAGES="$(echo "${IMAGE_JSON}" | python3 -c "import sys,json; [print(i) for i in json.load(sys.stdin)['images_available']]")"
 
-save
-run reboot now
+while IFS= read -r IMAGE_NAME; do
+    if [ -n "${IMAGE_NAME}" ] && [ "${IMAGE_NAME}" != "${DEFAULT_IMAGE}" ] && [ "${IMAGE_NAME}" != "${RUNNING_IMAGE}" ]; then
+        DATA='{"op": "delete", "name": "'"${IMAGE_NAME}"'"}'
+        curl --silent -k --location --request POST 'https://localhost/image' --form data="${DATA}" --form key="${REST_KEY}" > /dev/null
+        echo "Delete: ${IMAGE_NAME}"
+    fi
+done <<< "${ALL_IMAGES}"
+
+/sbin/reboot
 EOS
 sudo chmod 755 "/config/scripts/${SCRIPT_FILENAME}" &&
 sudo tee "/config/scripts/${SETUP_SCRIPT_FILENAME}" << EOS > /dev/null &&
@@ -67,7 +80,7 @@ Description=Update VyOS to the latest rolling release
 [Service]
 Type=oneshot
 EnvironmentFile=/config/scripts/${ENV_FILENAME}
-ExecStart=/bin/vbash /config/scripts/${SCRIPT_FILENAME}
+ExecStart=/bin/bash /config/scripts/${SCRIPT_FILENAME}
 StandardOutput=journal
 StandardError=journal
 EOS
@@ -77,7 +90,7 @@ Description=Run VyOS update monthly
 
 [Timer]
 OnCalendar=monthly
-RandomizedDelaySec=28d 
+RandomizedDelaySec=28d
 Persistent=true
 
 [Install]
@@ -86,24 +99,28 @@ EOS
 sudo tee -a "/config/scripts/vyos-postconfig-bootup.script" <<< "/config/scripts/${SETUP_SCRIPT_FILENAME}" > /dev/null
 ```
 
-## 再起動して設定を完了させる
+## systemdユニットの反映
+
 ```bash
-reboot now
+sudo /config/scripts/setup-vyos-updater.sh && sudo systemctl daemon-reload && sudo systemctl start vyos-updater.timer
 ```
 
 ## 確認
+
 ```bash
-systemctl status --no-pager --full vyos-updater.timer
-systemctl status --no-pager --full vyos-updater.service
+systemctl status --no-pager --full vyos-updater.timer &&
+systemctl status --no-pager --full vyos-updater.service &&
 show system image
 ```
 
 ## すぐに実行
+
 ```bash
 sudo systemctl start vyos-updater.service
 ```
 
 ## ログの確認
+
 ```bash
 journalctl --no-pager --full -u vyos-updater.service
 ```
