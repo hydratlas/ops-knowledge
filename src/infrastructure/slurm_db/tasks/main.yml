@@ -90,3 +90,14 @@
     port: 6819
     host: "{{ slurm_dbd_addr }}"
     timeout: 30
+
+- name: Get existing clusters
+  ansible.builtin.command:
+    cmd: sacctmgr show cluster --parsable2 --noheader format=Cluster
+  register: existing_clusters
+  changed_when: false
+
+- name: Register cluster in slurmdbd
+  ansible.builtin.command:
+    cmd: sacctmgr add cluster {{ slurm_cluster_name }} --immediate
+  when: slurm_cluster_name not in existing_clusters.stdout_lines
