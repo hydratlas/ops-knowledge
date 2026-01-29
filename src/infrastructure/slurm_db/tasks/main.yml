@@ -51,6 +51,7 @@
   ansible.builtin.apt:
     name:
       - slurmdbd
+      - slurm-client
     state: present
 
 - name: Create slurm log directory
@@ -90,6 +91,14 @@
     port: 6819
     host: "{{ slurm_dbd_addr }}"
     timeout: 30
+
+- name: Deploy minimal slurm.conf for sacctmgr
+  ansible.builtin.template:
+    src: slurm.conf.j2
+    dest: /etc/slurm/slurm.conf
+    owner: slurm
+    group: slurm
+    mode: '0644'
 
 - name: Get existing clusters
   ansible.builtin.command:
