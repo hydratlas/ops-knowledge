@@ -44,7 +44,9 @@ sudo tee "/config/scripts/${SETUP_SCRIPT_FILENAME}" << EOS > /dev/null &&
 set -e
 cp /config/scripts/${SERVICE_FILENAME} /etc/systemd/system/${SERVICE_FILENAME}
 cp /config/scripts/${TIMER_FILENAME} /etc/systemd/system/${TIMER_FILENAME}
+systemctl daemon-reload
 systemctl enable ${TIMER_FILENAME}
+systemctl start ${TIMER_FILENAME}
 EOS
 sudo chmod 755 "/config/scripts/${SETUP_SCRIPT_FILENAME}" &&
 sudo tee "/config/scripts/${SERVICE_FILENAME}" << EOS > /dev/null &&

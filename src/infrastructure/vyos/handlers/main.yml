@@ -1,13 +1,4 @@
 - name: Run vyos-updater setup script
   ansible.builtin.command: /config/scripts/setup-vyos-updater.sh
   changed_when: true
-
-- name: Reload systemd daemon
-  ansible.builtin.systemd:
-    daemon_reload: true
-
-- name: Enable and start vyos-updater.timer
-  ansible.builtin.systemd:
-    name: vyos-updater.timer
-    enabled: true
-    state: started
+  listen: vyos-updater changed
