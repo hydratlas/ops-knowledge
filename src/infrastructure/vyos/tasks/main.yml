@@ -1,3 +1,9 @@
+- name: Validate vyos_base_config is defined
+  ansible.builtin.assert:
+    that:
+      - vyos_base_config is defined
+    fail_msg: "vyos_base_config is not defined"
+
 - name: Combine base, dhcp mapping, and custom config for VyOS
   ansible.builtin.set_fact:
     vyos_final_config: "{{ vyos_base_config + vyos_dhcp_mapping_config | default([]) + vyos_custom_config | default([]) }}"
@@ -7,38 +13,3 @@
     match: none
     lines: "{{ vyos_final_config }}"
     save: true
-
-- name: Deploy vyos-updater.sh
-  ansible.builtin.copy:
-    src: vyos-updater.sh
-    dest: /config/scripts/vyos-updater.sh
-    mode: "0755"
-  notify: vyos-updater changed
-
-- name: Deploy setup-vyos-updater.sh
-  ansible.builtin.copy:
-    src: setup-vyos-updater.sh
-    dest: /config/scripts/setup-vyos-updater.sh
-    mode: "0755"
-  notify: vyos-updater changed
-
-- name: Deploy vyos-updater.service
-  ansible.builtin.copy:
-    src: vyos-updater.service
-    dest: /config/scripts/vyos-updater.service
-    mode: "0644"
-  notify: vyos-updater changed
-
-- name: Deploy vyos-updater.timer
-  ansible.builtin.copy:
-    src: vyos-updater.timer
-    dest: /config/scripts/vyos-updater.timer
-    mode: "0644"
-  notify: vyos-updater changed
-
-- name: Ensure setup script is in vyos-postconfig-bootup.script
-  ansible.builtin.lineinfile:
-    path: /config/scripts/vyos-postconfig-bootup.script
-    line: /config/scripts/setup-vyos-updater.sh
-    create: true
-    mode: "0755"
