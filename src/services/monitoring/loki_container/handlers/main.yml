@@ -12,6 +12,7 @@
   ansible.builtin.systemd:
     name: loki.service
     state: restarted
+    daemon_reload: true
     scope: user
   become: yes
   become_user: "{{ loki_user }}"

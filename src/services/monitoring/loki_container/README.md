@@ -48,7 +48,7 @@
 | `loki_service_restart` | `always` | コンテナの再起動ポリシー |
 | `loki_service_restart_sec` | `5` | 再起動間隔（秒） |
 | `loki_auth_enabled` | `false` | 認証の有効/無効 |
-| `loki_compactor_retention_enabled` | `true` | データ保持ポリシーの有効/無効 |
+| `loki_analytics_reporting_enabled` | `false` | 分析レポートの有効/無効 |
 
 #### 依存関係
 - [podman_rootless_quadlet_base](../../../infrastructure/container/podman_rootless_quadlet_base/README.md)ロールを内部的に使用
@@ -200,8 +200,6 @@ sudo -u "monitoring" mkdir -p "/home/monitoring/.local/share/loki"
 sudo -u "monitoring" tee "/home/monitoring/.config/containers/systemd/loki.container" << EOF > /dev/null
 [Unit]
 Description=Grafana Loki Service
-After=network-online.target
-Wants=network-online.target
 
 [Container]
 Image=docker.io/grafana/loki:latest
