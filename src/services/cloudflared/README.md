@@ -79,16 +79,16 @@ Public Hostnames を追加してローカルホストの SSH サーバーを Tun
 
 #### 変数
 
-| 変数名                          | 必須 | デフォルト                          | 説明                                          |
-| ------------------------------- | ---- | ----------------------------------- | --------------------------------------------- |
-| `cloudflared_token`             | No   | `""`                                | Tunnel トークン（Vault 暗号化推奨）           |
-| `cloudflared_service_enabled`   | No   | `true`                              | サービスの自動起動を有効化                    |
-| `cloudflared_service_state`     | No   | `started`                           | サービスの状態                                |
-| `cloudflared_binary_path`       | No   | `/usr/local/bin/cloudflared`        | バイナリのインストール先（Alpine のみ）       |
-| `cloudflared_download_url`      | No   | GitHub Releases の最新バイナリ URL  | ダウンロード URL（Alpine のみ）               |
-| `cloudflared_auto_update`       | No   | `true`                              | 毎日の自動更新を有効化（Alpine のみ）         |
-| `cloudflared_auto_update_hour`  | No   | `"3"`                               | 自動更新の実行時刻（時）（Alpine のみ）       |
-| `cloudflared_auto_update_minute`| No   | `"30"`                              | 自動更新の実行時刻（分）（Alpine のみ）       |
+| 変数名                           | 必須 | デフォルト                         | 説明                                    |
+| -------------------------------- | ---- | ---------------------------------- | --------------------------------------- |
+| `cloudflared_token`              | No   | `""`                               | Tunnel トークン（Vault 暗号化推奨）     |
+| `cloudflared_service_enabled`    | No   | `true`                             | サービスの自動起動を有効化              |
+| `cloudflared_service_state`      | No   | `started`                          | サービスの状態                          |
+| `cloudflared_binary_path`        | No   | `/usr/local/bin/cloudflared`       | バイナリのインストール先（Alpine のみ） |
+| `cloudflared_download_url`       | No   | GitHub Releases の最新バイナリ URL | ダウンロード URL（Alpine のみ）         |
+| `cloudflared_auto_update`        | No   | `true`                             | 毎日の自動更新を有効化（Alpine のみ）   |
+| `cloudflared_auto_update_hour`   | No   | `"3"`                              | 自動更新の実行時刻（時）（Alpine のみ） |
+| `cloudflared_auto_update_minute` | No   | `"30"`                             | 自動更新の実行時刻（分）（Alpine のみ） |
 
 #### トークンの管理
 
@@ -96,7 +96,7 @@ Public Hostnames を追加してローカルホストの SSH サーバーを Tun
 
 ```bash
 # トークンを Vault で暗号化
-ansible-vault encrypt_string --vault-password-file .vault_password 'eyJ...<TOKEN>'
+ansible-vault encrypt_string 'eyJ...<TOKEN>'
 ```
 
 出力された暗号化文字列を `group_vars` または `host_vars` に配置する。
