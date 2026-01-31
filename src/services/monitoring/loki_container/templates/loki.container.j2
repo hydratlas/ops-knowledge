@@ -7,7 +7,7 @@ ContainerName={{ loki_container_name }}
 AutoUpdate=registry
 LogDriver=journald
 Network={{ loki_network_name }}
-UserNS=keep-id
+UserNS=keep-id:uid=10001,gid=10001
 Exec='-config.file=/loki.yaml'
 NoNewPrivileges=true
 ReadOnly=true
