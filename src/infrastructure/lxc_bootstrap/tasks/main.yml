@@ -18,5 +18,10 @@
 - name: Gather facts after Python installation
   ansible.builtin.setup:
     gather_subset:
-      - "all"
-      - "!network"
+      - "!all"
+      - "!any"
+      - "distribution"
+      - "pkg_mgr"
+      - "platform"
+      - "python"
+      - "virtual"
