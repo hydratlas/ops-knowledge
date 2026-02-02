@@ -1,0 +1,8 @@
+---
+# User configuration
+quadlet_user: ""
+quadlet_user_comment: "Rootless container user"
+quadlet_user_shell: "/usr/sbin/nologin"
+
+# Directory configuration
+quadlet_app_name: ""  # Used for app-specific config directory (e.g., cloudflared, traefik, etc.)

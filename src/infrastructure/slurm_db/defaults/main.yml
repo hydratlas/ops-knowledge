@@ -1,0 +1,4 @@
+slurm_db_name: slurm_acct_db
+slurm_db_user: slurm
+slurm_dbd_host: "{{ ansible_fqdn }}"
+slurm_dbd_addr: "{{ ansible_fqdn }}"

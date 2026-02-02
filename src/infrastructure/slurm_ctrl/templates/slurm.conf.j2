@@ -1,0 +1,57 @@
+# Slurm configuration file
+# Managed by Ansible - do not edit manually
+
+ClusterName={{ slurm_cluster_name }}
+{% for host in slurm_controller_hosts %}
+SlurmctldHost={{ host }}
+{% endfor %}
+SlurmctldParameters=enable_configless
+AuthType=auth/slurm
+CredType=cred/slurm
+
+MpiDefault=none
+ProctrackType=proctrack/cgroup
+ReturnToService=1
+SlurmctldPidFile=/run/slurm/slurmctld.pid
+SlurmctldPort=6817
+SlurmdPidFile=/run/slurm/slurmd.pid
+SlurmdPort=6818
+SlurmdSpoolDir=/var/lib/slurm/slurmd
+SlurmUser=slurm
+StateSaveLocation=/var/lib/slurm/checkpoint
+TaskPlugin=task/cgroup,task/affinity
+PrologFlags=Contain
+
+# TIMERS
+InactiveLimit=0
+KillWait=30
+MinJobAge=300
+SlurmctldTimeout=120
+SlurmdTimeout=300
+Waittime=0
+
+# SCHEDULING
+SchedulerType=sched/backfill
+SelectType=select/cons_tres
+SelectTypeParameters=CR_Core_Memory
+
+# LOGGING AND ACCOUNTING
+AccountingStorageType=accounting_storage/slurmdbd
+AccountingStorageHost={{ slurm_db_host }}
+AccountingStorageEnforce=limits,qos,safe
+JobCompType=jobcomp/none
+JobAcctGatherFrequency=30
+JobAcctGatherType=jobacct_gather/cgroup
+SlurmctldDebug=info
+SlurmctldLogFile=/var/log/slurm/slurmctld.log
+SlurmdDebug=info
+SlurmdLogFile=/var/log/slurm/slurmd.log
+
+# DYNAMIC NODES
+# Nodes register themselves dynamically using slurmd -Z
+MaxNodeCount={{ slurm_max_node_count }}
+
+# PARTITIONS
+{% for partition in slurm_partitions %}
+PartitionName={{ partition.name }} {{ partition.options }}
+{% endfor %}

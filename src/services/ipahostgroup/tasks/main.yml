@@ -1,0 +1,5 @@
+- name: Ensure FreeIPA hostgroup is present
+  freeipa.ansible_freeipa.ipahostgroup:
+    ipaadmin_password: "{{ ipaadmin_password }}"
+    name: "{{ ipahostgroup_name }}"
+    host: "{{ ipahostgroup_hosts }}"

@@ -1,0 +1,32 @@
+[book]
+title = "オペレーションナレッジ"
+authors = ["hydratlas"]
+description = "インフラストラクチャとオペレーションに関するナレッジベース"
+language = "ja"
+multilingual = false
+src = "src"
+
+[output.html]
+site-url = "/ops-knowledge/"
+git-repository-url = "https://github.com/hydratlas/ops-knowledge"
+no-section-label = true
+additional-css = ["theme/custom.css"]
+
+[output.html.search]
+enable = true
+limit-results = 30
+teaser-word-count = 30
+use-boolean-and = true
+boost-title = 2
+boost-hierarchy = 1
+boost-paragraph = 1
+expand = true
+heading-split-level = 3
+copy-js = true
+
+[build]
+build-dir = "_site"
+create-missing = false
+
+[preprocessor.auto-gen-summary]
+first-line-as-link-text = true

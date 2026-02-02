@@ -1,0 +1,5 @@
+---
+# Ceph version to use for the repository
+# Available versions: quincy, reef
+ceph_version: reef
+

@@ -1,0 +1,14 @@
+---
+- name: Install fuse-overlayfs on Debian-based systems
+  ansible.builtin.apt:
+    name:
+      - fuse-overlayfs
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Install fuse-overlayfs on RHEL-based systems
+  ansible.builtin.dnf:
+    name:
+      - fuse-overlayfs
+    state: present
+  when: ansible_os_family == "RedHat"

@@ -1,0 +1,68 @@
+---
+# Debian系: GPGキーとリポジトリの設定
+- name: Ensure keyrings directory exists (Debian)
+  ansible.builtin.file:
+    path: /usr/share/keyrings
+    state: directory
+    mode: "0755"
+  when: ansible_os_family == "Debian"
+
+- name: Add Cloudflare GPG key (Debian)
+  ansible.builtin.get_url:
+    url: https://pkg.cloudflare.com/cloudflare-main.gpg
+    dest: /usr/share/keyrings/cloudflare-main.gpg
+    mode: "0644"
+  when: ansible_os_family == "Debian"
+
+- name: Add Cloudflare repository (Debian)
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/cloudflared.sources
+    content: |
+      Types: deb
+      URIs: https://pkg.cloudflare.com/cloudflared
+      Suites: any
+      Components: main
+      Signed-By: /usr/share/keyrings/cloudflare-main.gpg
+    mode: "0644"
+  when: ansible_os_family == "Debian"
+
+- name: Install cloudflared (Debian)
+  ansible.builtin.apt:
+    name: cloudflared
+    state: present
+    update_cache: true
+  when: ansible_os_family == "Debian"
+
+# RHEL系: リポジトリの設定とインストール
+- name: Add Cloudflare repository (RedHat)
+  ansible.builtin.yum_repository:
+    name: cloudflared-stable
+    description: cloudflared-stable
+    baseurl: https://pkg.cloudflare.com/cloudflared/rpm
+    gpgcheck: true
+    gpgkey: https://pkg.cloudflare.com/cloudflare-ascii-pubkey.gpg
+    enabled: true
+  when: ansible_os_family == "RedHat"
+
+- name: Install cloudflared (RedHat)
+  ansible.builtin.dnf:
+    name: cloudflared
+    state: present
+  when: ansible_os_family == "RedHat"
+
+# Tunnel サービスの設定（トークンが設定されている場合のみ）
+- name: Configure cloudflared service
+  when: cloudflared_token | length > 0
+  block:
+    - name: Install cloudflared service with token
+      ansible.builtin.command:
+        cmd: cloudflared service install {{ cloudflared_token }}
+      args:
+        creates: /etc/systemd/system/cloudflared.service
+
+    - name: Manage cloudflared service
+      ansible.builtin.systemd:
+        name: cloudflared
+        enabled: "{{ cloudflared_service_enabled }}"
+        state: "{{ cloudflared_service_state }}"
+        daemon_reload: true

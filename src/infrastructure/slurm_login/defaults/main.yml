@@ -1,0 +1,2 @@
+# Slurm login node defaults
+slurm_controller_host: ""

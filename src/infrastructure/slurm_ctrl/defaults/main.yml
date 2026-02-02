@@ -1,0 +1,26 @@
+# Slurm controller defaults
+slurm_cluster_name: "cluster"
+slurm_controller_hosts:
+  - "{{ ansible_fqdn }}"
+slurm_db_host: ""
+
+# Dynamic nodes configuration
+# Nodes register themselves using slurmd -Z (no static NodeName definitions needed)
+slurm_max_node_count: 100
+
+# Partition configuration
+# 動的ノード登録では、パーティションに Nodes=ALL を指定し、
+# ジョブ実行時に --constraint=<feature> でノードを選択する
+slurm_partitions:
+  # CPUテストクラスター（仮想マシン）- srun --constraint=cpu-test で選択
+  - name: cpu-test
+    options: "Nodes=ALL Default=NO MaxTime=1:00:00 State=UP"
+  # CPU本番クラスター（物理マシン）- srun --constraint=cpu-prod で選択
+  - name: cpu-prod
+    options: "Nodes=ALL Default=YES MaxTime=24:00:00 State=UP"
+  # GPUクラスター（将来追加予定）
+  # - name: gpu
+  #   options: "Nodes=ALL Default=NO MaxTime=24:00:00 State=UP"
+  # 全ノード
+  - name: all
+    options: "Nodes=ALL Default=NO MaxTime=24:00:00 State=UP"

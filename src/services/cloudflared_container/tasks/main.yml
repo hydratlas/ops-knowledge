@@ -1,0 +1,44 @@
+---
+- name: Include common Rootless Podman Quadlet setup
+  ansible.builtin.include_role:
+    name: infrastructure/container/podman_rootless_quadlet_base
+  vars:
+    quadlet_user: "{{ cloudflared_user }}"
+    quadlet_user_comment: "{{ cloudflared_user_comment }}"
+    quadlet_app_name: "{{ cloudflared_app_name }}"
+
+- name: Configure sysctl for unprivileged ping
+  ansible.builtin.copy:
+    content: |
+      net.ipv4.ping_group_range=0 2147483647
+    dest: /etc/sysctl.d/99-ping-group-range.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload sysctl
+
+- name: Set cloudflared specific facts from base role
+  ansible.builtin.set_fact:
+    cloudflared_uid: "{{ quadlet_uid }}"
+    cloudflared_gid: "{{ quadlet_gid }}"
+    cloudflared_home: "{{ quadlet_home }}"
+    cloudflared_config_dir: "{{ quadlet_config_dir }}"
+    cloudflared_systemd_dir: "{{ quadlet_systemd_dir }}"
+
+- name: Create cloudflared environment file
+  ansible.builtin.template:
+    src: cloudflared.env.j2
+    dest: "{{ cloudflared_config_dir }}/cloudflared.env"
+    owner: "{{ cloudflared_user }}"
+    group: "{{ cloudflared_user }}"
+    mode: "0600"
+  notify: restart cloudflared user service
+
+- name: Create Podman Quadlet container file
+  ansible.builtin.template:
+    src: cloudflared.container.j2
+    dest: "{{ cloudflared_systemd_dir }}/cloudflared.container"
+    owner: "{{ cloudflared_user }}"
+    group: "{{ cloudflared_user }}"
+    mode: "0644"
+  notify: restart cloudflared user service

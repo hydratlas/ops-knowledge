@@ -1,0 +1,19 @@
+---
+- name: reload systemd user daemon
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    scope: user
+  become: yes
+  become_user: "{{ grafana_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ quadlet_uid }}"
+
+- name: restart grafana
+  ansible.builtin.systemd:
+    name: grafana.service
+    state: restarted
+    scope: user
+  become: yes
+  become_user: "{{ grafana_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ quadlet_uid }}"

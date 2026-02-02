@@ -1,0 +1,5 @@
+{% for export in nfs_exports %}
+{% for client in export.clients %}
+{{ export.path }} {{ client.host }}({{ client.options }}){% if client.comment | default(None) %} # {{ client.comment }}{% endif %}{{ "" }}
+{% endfor %}
+{% endfor %}
