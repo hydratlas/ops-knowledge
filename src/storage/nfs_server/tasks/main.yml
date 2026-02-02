@@ -1,0 +1,51 @@
+- name: Install nfs-utils package on RedHat-based systems
+  ansible.builtin.package:
+    name: nfs-utils
+    state: present
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: Install nfs-kernel-server package on Debian-based systems
+  ansible.builtin.package:
+    name: nfs-kernel-server
+    state: present
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Check if NFS export directories exist
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+  loop: "{{ nfs_exports }}"
+  register: nfs_export_dirs
+
+- name: Create NFS export directories if not exist
+  ansible.builtin.file:
+    path: "{{ item.item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.item.mode | default('0755') }}"
+  loop: "{{ nfs_export_dirs.results }}"
+  when: not item.stat.exists
+  notify: Restart NFS service
+
+- name: Configure /etc/exports from template
+  ansible.builtin.template:
+    src: exports.j2
+    dest: /etc/exports
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload NFS export configuration
+
+- name: Start and enable NFS service on RedHat-based systems
+  ansible.builtin.service:
+    name: nfs-server
+    state: started
+    enabled: yes
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: Start and enable NFS service on Debian-based systems
+  ansible.builtin.service:
+    name: nfs-kernel-server
+    state: started
+    enabled: yes
+  when: ansible_facts['os_family'] == "Debian"

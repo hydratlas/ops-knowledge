@@ -1,0 +1,1 @@
+このロールはProxmox VEのリポジトリをエンタープライズ版から無料版に切り替える機能を提供する。具体的には既存のpve-enterprise.listとceph.listをバックアップファイルに移動し、DEB822形式の新しいリポジトリファイルとしてpve-no-subscription.sourcesとceph.sourcesを作成する。Cephリポジトリのバージョンはデフォルトでreefが使用されるが、変数で変更可能である。リポジトリ変更後にはハンドラーを通じてaptキャッシュが自動的に更新される。このロールはProxmox VE 7.x以降を対象とし、root権限での実行が必要である。

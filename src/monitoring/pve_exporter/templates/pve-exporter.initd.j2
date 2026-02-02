@@ -1,0 +1,24 @@
+#!/sbin/openrc-run
+# OpenRC init script for PVE Exporter
+# Managed by Ansible - do not edit manually
+
+name="pve-exporter"
+description="{{ pve_exporter_service_description }}"
+
+command="{{ pve_exporter_venv_dir }}/bin/pve_exporter"
+command_args="--config.file {{ pve_exporter_config_file }} --web.listen-address :{{ pve_exporter_port }}{% if not pve_exporter_collector_config %} --no-collector.config{% endif %}"
+command_user="{{ pve_exporter_user }}:{{ pve_exporter_group }}"
+command_background="yes"
+pidfile="/run/${RC_SVCNAME}.pid"
+
+output_log="/var/log/pve-exporter/pve-exporter.log"
+error_log="/var/log/pve-exporter/pve-exporter.log"
+
+depend() {
+    need net
+    after firewall
+}
+
+start_pre() {
+    checkpath --directory --owner {{ pve_exporter_user }}:{{ pve_exporter_group }} --mode 0755 /var/log/pve-exporter
+}

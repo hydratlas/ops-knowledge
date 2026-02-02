@@ -1,0 +1,1 @@
+このロールは、既存のZFSプール上にデータセットを作成し、quota・mountpoint・compression等のプロパティを設定する。community.general.zfsモジュールを使用して冪等性を担保し、zfs_datasets変数でデータセットのリストを定義する。各データセットはname（pool/dataset形式）、properties（ZFSプロパティ）、owner・group・mode（マウントポイントの所有者・権限）を指定できる。プール作成はzpoolロールで別途行う必要がある。Debian 12に対応し、手動実行時はzfs createコマンドとchown・chmodによる権限設定で同等の構成を実現できる。

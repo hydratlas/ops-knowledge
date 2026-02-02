@@ -1,0 +1,9 @@
+---
+# btrfs ファイルシステム定義（リスト形式で複数対応）
+btrfs_filesystems: []
+
+# マウントオプション
+btrfs_mount_options: "compress=zstd:1,noatime"
+
+# 強制フォーマットオプション（既存データ上書き許可）
+btrfs_force: false

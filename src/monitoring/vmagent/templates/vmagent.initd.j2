@@ -1,0 +1,24 @@
+#!/sbin/openrc-run
+# OpenRC init script for vmagent
+# Managed by Ansible - do not edit manually
+
+name="vmagent"
+description="{{ vmagent_service_description }}"
+
+command="{{ vmagent_binary_path }}"
+command_args="-httpListenAddr={{ vmagent_http_listen_addr }} -promscrape.config={{ vmagent_config_file }} -remoteWrite.tmpDataPath={{ vmagent_data_dir }}/remote-write-tmp -remoteWrite.maxDiskUsagePerURL={{ vmagent_remote_write_max_disk_usage_per_url }} -promscrape.cluster.name={{ vmagent_cluster_name }}{% for url in vmagent_remote_write_urls %} -remoteWrite.url={{ url }}{% endfor %}{% for flag in vmagent_extra_flags %} {{ flag }}{% endfor %}"
+command_user="{{ vmagent_user }}:{{ vmagent_group }}"
+command_background="yes"
+pidfile="/run/${RC_SVCNAME}.pid"
+
+output_log="/var/log/vmagent/vmagent.log"
+error_log="/var/log/vmagent/vmagent.log"
+
+depend() {
+    need net
+    after firewall
+}
+
+start_pre() {
+    checkpath --directory --owner {{ vmagent_user }}:{{ vmagent_group }} --mode 0755 /var/log/vmagent
+}

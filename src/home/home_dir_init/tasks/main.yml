@@ -1,0 +1,29 @@
+---
+- name: Set ownership and permissions for home directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    owner: "{{ item.user }}"
+    group: "{{ item.group | default(item.user) }}"
+    mode: "{{ item.mode | default('0700') }}"
+    state: directory
+  loop: "{{ home_directories }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Copy skeleton files to home directories
+  ansible.builtin.shell:
+    cmd: cp -rT --no-clobber /etc/skel/ "{{ item.path }}/"
+    creates: "{{ item.path }}/.bashrc"
+  loop: "{{ home_directories }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Set ownership for skeleton files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    owner: "{{ item.user }}"
+    group: "{{ item.group | default(item.user) }}"
+    recurse: true
+  loop: "{{ home_directories }}"
+  loop_control:
+    label: "{{ item.path }}"

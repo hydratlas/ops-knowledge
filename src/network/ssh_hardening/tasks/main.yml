@@ -1,0 +1,14 @@
+- name: Create sshd_config.d directory
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config.d
+    state: directory
+    mode: '0755'
+
+- name: Deploy secure SSH configuration
+  ansible.builtin.template:
+    src: "00-ssh-secure.conf.j2"
+    dest: "/etc/ssh/sshd_config.d/00-ssh-secure.conf"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload SSH

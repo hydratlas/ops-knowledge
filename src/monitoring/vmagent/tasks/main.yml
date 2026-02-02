@@ -1,0 +1,117 @@
+---
+- name: Validate vmagent_remote_write_urls is defined
+  ansible.builtin.assert:
+    that:
+      - vmagent_remote_write_urls | default([]) | length > 0
+    fail_msg: "vmagent_remote_write_urls must be defined with at least one URL"
+
+- name: Create vmagent system group
+  ansible.builtin.group:
+    name: "{{ vmagent_group }}"
+    system: yes
+    state: present
+
+- name: Create vmagent system user
+  ansible.builtin.user:
+    name: "{{ vmagent_user }}"
+    group: "{{ vmagent_group }}"
+    system: yes
+    shell: "{{ '/sbin/nologin' if ansible_os_family == 'Alpine' else '/usr/sbin/nologin' }}"
+    home: "{{ vmagent_data_dir }}"
+    create_home: no
+    comment: "vmagent service user"
+
+- name: Check if vmagent binary exists
+  ansible.builtin.stat:
+    path: "{{ vmagent_binary_path }}"
+  register: _vmagent_binary
+
+- name: Download vmagent archive
+  ansible.builtin.get_url:
+    url: "{{ vmagent_download_url }}"
+    dest: "/tmp/vmagent-{{ vmagent_version }}.tar.gz"
+    mode: "0644"
+  when: not _vmagent_binary.stat.exists
+
+- name: Extract vmagent binary
+  ansible.builtin.command:
+    cmd: tar xzf /tmp/vmagent-{{ vmagent_version }}.tar.gz -C {{ vmagent_binary_path | dirname }} vmagent-prod
+  when: not _vmagent_binary.stat.exists
+  notify: restart vmagent
+
+- name: Remove vmagent archive
+  ansible.builtin.file:
+    path: "/tmp/vmagent-{{ vmagent_version }}.tar.gz"
+    state: absent
+  when: not _vmagent_binary.stat.exists
+
+- name: Set binary permissions
+  ansible.builtin.file:
+    path: "{{ vmagent_binary_path }}"
+    owner: root
+    group: "{{ vmagent_group }}"
+    mode: '0755'
+
+- name: Create configuration directory
+  ansible.builtin.file:
+    path: "{{ vmagent_config_dir }}"
+    state: directory
+    owner: root
+    group: "{{ vmagent_group }}"
+    mode: '0750'
+
+- name: Create data directory
+  ansible.builtin.file:
+    path: "{{ vmagent_data_dir }}"
+    state: directory
+    owner: "{{ vmagent_user }}"
+    group: "{{ vmagent_group }}"
+    mode: '0750'
+
+- name: Create Prometheus scrape configuration
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: "{{ vmagent_config_file }}"
+    owner: root
+    group: "{{ vmagent_group }}"
+    mode: '0640'
+  notify: restart vmagent
+
+- name: Create systemd service file
+  ansible.builtin.template:
+    src: vmagent.service.j2
+    dest: "/etc/systemd/system/{{ vmagent_service_name }}.service"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload systemd daemon
+  when: ansible_os_family != "Alpine"
+
+- name: Create OpenRC init script (Alpine)
+  ansible.builtin.template:
+    src: vmagent.initd.j2
+    dest: "/etc/init.d/{{ vmagent_service_name }}"
+    owner: root
+    group: root
+    mode: '0755'
+  notify: restart vmagent
+  when: ansible_os_family == "Alpine"
+
+- name: Flush handlers to ensure service manager is reloaded
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start vmagent service (systemd)
+  ansible.builtin.systemd:
+    name: "{{ vmagent_service_name }}.service"
+    enabled: yes
+    state: started
+    daemon_reload: true
+  when: ansible_os_family != "Alpine"
+
+- name: Enable and start vmagent service (OpenRC)
+  ansible.builtin.service:
+    name: "{{ vmagent_service_name }}"
+    enabled: yes
+    state: started
+    runlevel: default
+  when: ansible_os_family == "Alpine"

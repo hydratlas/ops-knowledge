@@ -1,0 +1,62 @@
+---
+# Debian系: unattended-upgrades による自動更新
+- name: Configure unattended-upgrades (Debian)
+  when: ansible_os_family == "Debian"
+  block:
+    - name: Install unattended-upgrades
+      ansible.builtin.apt:
+        name: unattended-upgrades
+        state: present
+
+    - name: Enable automatic updates
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Unattended-Upgrade "1";
+        mode: "0644"
+
+# RedHat系: dnf-automatic による自動更新
+- name: Configure dnf-automatic (RedHat)
+  when: ansible_os_family == "RedHat"
+  block:
+    - name: Install dnf-automatic
+      ansible.builtin.dnf:
+        name: dnf-automatic
+        state: present
+
+    - name: Configure dnf-automatic to apply updates
+      ansible.builtin.ini_file:
+        path: /etc/dnf/automatic.conf
+        section: commands
+        option: apply_updates
+        value: "yes"
+        mode: "0644"
+
+    - name: Reload systemd to pick up dnf-automatic-install.timer
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Enable and start dnf-automatic-install.timer
+      ansible.builtin.systemd:
+        name: dnf-automatic-install.timer
+        enabled: true
+        state: started
+
+# Alpine Linux: apk upgrade を daily cron で実行
+- name: Configure auto-update (Alpine)
+  when: ansible_os_family == "Alpine"
+  block:
+    - name: Create daily apk upgrade script
+      ansible.builtin.copy:
+        dest: /etc/periodic/daily/apk-autoupgrade
+        content: |
+          #!/bin/sh
+          apk update && apk upgrade
+        mode: "0755"
+
+    - name: Ensure crond is enabled
+      ansible.builtin.service:
+        name: crond
+        enabled: true
+        state: started

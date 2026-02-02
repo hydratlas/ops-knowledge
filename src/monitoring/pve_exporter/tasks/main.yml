@@ -1,0 +1,114 @@
+---
+- name: Validate pve_exporter_pve_targets is defined
+  ansible.builtin.assert:
+    that:
+      - pve_exporter_pve_targets | default({}) | length > 0
+    fail_msg: "pve_exporter_pve_targets must be defined with at least one target"
+
+- name: Validate each target has required fields
+  ansible.builtin.assert:
+    that:
+      - item.value.user is defined and item.value.user != ""
+      - item.value.token_name is defined and item.value.token_name != ""
+      - item.value.token_value is defined and item.value.token_value != ""
+    fail_msg: "Target '{{ item.key }}' must have 'user', 'token_name', and 'token_value' defined"
+  no_log: true
+  loop: "{{ pve_exporter_pve_targets | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: Install required system packages (Debian)
+  ansible.builtin.apt:
+    name:
+      - python3-venv
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Install required system packages (Alpine)
+  community.general.apk:
+    name:
+      - python3
+      - py3-pip
+      - py3-virtualenv
+    state: present
+  when: ansible_os_family == "Alpine"
+
+- name: Create PVE Exporter system group
+  ansible.builtin.group:
+    name: "{{ pve_exporter_group }}"
+    system: yes
+    state: present
+
+- name: Create PVE Exporter system user
+  ansible.builtin.user:
+    name: "{{ pve_exporter_user }}"
+    group: "{{ pve_exporter_group }}"
+    system: yes
+    shell: "{{ '/sbin/nologin' if ansible_os_family == 'Alpine' else '/usr/sbin/nologin' }}"
+    home: "{{ pve_exporter_venv_dir }}"
+    create_home: no
+    comment: "PVE Exporter service user"
+
+- name: Create virtualenv and install prometheus-pve-exporter
+  ansible.builtin.pip:
+    name: "{{ pve_exporter_pip_package }}"
+    virtualenv: "{{ pve_exporter_venv_dir }}"
+    virtualenv_command: python3 -m venv
+  notify: restart pve_exporter
+
+- name: Create configuration directory
+  ansible.builtin.file:
+    path: "{{ pve_exporter_config_dir }}"
+    state: directory
+    owner: root
+    group: "{{ pve_exporter_group }}"
+    mode: '0750'
+
+- name: Create PVE connection configuration file
+  ansible.builtin.template:
+    src: pve.yml.j2
+    dest: "{{ pve_exporter_config_file }}"
+    owner: root
+    group: "{{ pve_exporter_group }}"
+    mode: '0640'
+  notify: restart pve_exporter
+
+- name: Create systemd service file
+  ansible.builtin.template:
+    src: pve-exporter.service.j2
+    dest: "/etc/systemd/system/{{ pve_exporter_service_name }}.service"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload systemd daemon
+  when: ansible_os_family != "Alpine"
+
+- name: Create OpenRC init script (Alpine)
+  ansible.builtin.template:
+    src: pve-exporter.initd.j2
+    dest: "/etc/init.d/{{ pve_exporter_service_name }}"
+    owner: root
+    group: root
+    mode: '0755'
+  notify: restart pve_exporter (OpenRC)
+  when: ansible_os_family == "Alpine"
+
+- name: Flush handlers to ensure service manager is reloaded
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start PVE Exporter service (systemd)
+  ansible.builtin.systemd:
+    name: "{{ pve_exporter_service_name }}.service"
+    enabled: yes
+    state: started
+    daemon_reload: true
+  when: ansible_os_family != "Alpine"
+
+- name: Enable and start PVE Exporter service (OpenRC)
+  ansible.builtin.service:
+    name: "{{ pve_exporter_service_name }}"
+    enabled: yes
+    state: started
+    runlevel: default
+  when: ansible_os_family == "Alpine"

@@ -1,3 +1,0 @@
-- name: Set the system timezone
-  ansible.builtin.timezone:
-    name: "{{ timezone }}"

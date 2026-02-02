@@ -1,0 +1,14 @@
+---
+- name: Install prometheus-node-exporter packages
+  ansible.builtin.apt:
+    name:
+      - prometheus-node-exporter
+      - prometheus-node-exporter-collectors
+    state: present
+    update_cache: yes
+
+- name: Enable and start prometheus-node-exporter
+  ansible.builtin.systemd:
+    name: prometheus-node-exporter
+    enabled: yes
+    state: started

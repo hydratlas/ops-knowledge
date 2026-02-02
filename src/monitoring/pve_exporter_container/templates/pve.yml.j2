@@ -1,0 +1,7 @@
+{% for target_name, target_config in pve_exporter_pve_targets.items() %}
+{{ target_name }}:
+  user: {{ target_config.user }}
+  token_name: "{{ target_config.token_name }}"
+  token_value: "{{ target_config.token_value | trim }}"
+  verify_ssl: {{ pve_exporter_pve_verify_ssl | lower }}
+{% endfor %}

@@ -1,0 +1,16 @@
+# {{ ansible_managed }}
+# NFS automount unit for {{ item.path }}
+
+[Unit]
+Description=NFS automount for {{ item.path }}
+After=network-online.target
+Wants=network-online.target
+DefaultDependencies=no
+
+[Automount]
+Where={{ item.path }}
+DirectoryMode=0755
+TimeoutIdleSec={{ unified_mounts_nfs_idle_timeout | default(60) }}
+
+[Install]
+WantedBy=multi-user.target

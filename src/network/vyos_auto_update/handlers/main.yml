@@ -1,0 +1,4 @@
+- name: Run vyos-updater setup script
+  ansible.builtin.command: /config/scripts/setup-vyos-updater.sh
+  changed_when: true
+  listen: vyos-updater changed

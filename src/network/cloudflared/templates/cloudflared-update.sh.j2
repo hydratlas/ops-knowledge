@@ -1,0 +1,29 @@
+#!/bin/sh
+# Cloudflared auto-update script
+# Managed by Ansible - do not edit manually
+
+set -e
+
+BINARY_PATH="{{ cloudflared_binary_path }}"
+
+# Get current version
+CURRENT_VERSION=""
+if [ -x "$BINARY_PATH" ]; then
+    CURRENT_VERSION=$("$BINARY_PATH" version 2>/dev/null | head -1 || echo "")
+fi
+
+# Run cloudflared update command
+UPDATE_OUTPUT=$("$BINARY_PATH" update 2>&1) || {
+    logger -t cloudflared-update "cloudflared update failed: $UPDATE_OUTPUT"
+    exit 1
+}
+
+# Check if update was performed
+if echo "$UPDATE_OUTPUT" | grep -q "is up to date"; then
+    logger -t cloudflared-update "cloudflared is already up to date"
+else
+    NEW_VERSION=$("$BINARY_PATH" version 2>/dev/null | head -1 || echo "")
+    logger -t cloudflared-update "Updated cloudflared: $CURRENT_VERSION -> $NEW_VERSION"
+    rc-service cloudflared restart 2>/dev/null || true
+    logger -t cloudflared-update "Service restarted successfully"
+fi

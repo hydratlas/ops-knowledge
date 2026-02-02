@@ -1,9 +1,0 @@
----
-# unified_mounts ロールのデフォルト変数
-
-# 直接指定形式のマウントリスト
-unified_mounts: []
-
-# パターン/セレクタ形式
-unified_mount_patterns: {}
-unified_mount_selectors: []
