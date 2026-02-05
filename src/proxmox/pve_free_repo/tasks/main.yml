@@ -1,4 +1,10 @@
 ---
+- name: Gather distribution facts
+  ansible.builtin.setup:
+    gather_subset:
+      - distribution
+  when: ansible_distribution_release is not defined
+
 - name: Backup enterprise repository file
   ansible.builtin.command:
     cmd: mv /etc/apt/sources.list.d/pve-enterprise.list /etc/apt/sources.list.d/pve-enterprise.list.bak

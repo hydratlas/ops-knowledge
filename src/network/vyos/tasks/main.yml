@@ -4,6 +4,18 @@
       - vyos_base_config is defined
     fail_msg: "vyos_base_config is not defined"
 
+- name: Create scripts directory
+  ansible.builtin.raw: mkdir -p /config/scripts
+  changed_when: false
+
+- name: Create VRRP health check script
+  ansible.builtin.raw: printf '#!/bin/bash\nping -c 1 -W 2 157.82.243.193 > /dev/null 2>&1\n' > /config/scripts/check-gateway.sh
+  changed_when: false
+
+- name: Make health check script executable
+  ansible.builtin.raw: chmod +x /config/scripts/check-gateway.sh
+  changed_when: false
+
 - name: Combine base, dhcp mapping, and custom config for VyOS
   ansible.builtin.set_fact:
     vyos_final_config: "{{ vyos_base_config + vyos_dhcp_mapping_config | default([]) + vyos_custom_config | default([]) }}"
