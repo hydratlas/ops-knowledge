@@ -1,4 +1,11 @@
 ---
+- name: Gather OS facts
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - "!min"
+      - distribution
+
 # Alpine Linux: 公式バイナリを直接ダウンロード
 - name: Install cloudflared from official binary (Alpine)
   when: ansible_os_family == "Alpine"
@@ -21,7 +28,7 @@
 # Debian系: GPGキーとリポジトリの設定
 - name: Ensure keyrings directory exists (Debian)
   ansible.builtin.file:
-    path: /usr/share/keyrings
+    path: /etc/apt/keyrings
     state: directory
     mode: "0755"
   when: ansible_os_family == "Debian"
@@ -29,8 +36,14 @@
 - name: Add Cloudflare GPG key (Debian)
   ansible.builtin.get_url:
     url: https://pkg.cloudflare.com/cloudflare-main.gpg
-    dest: /usr/share/keyrings/cloudflare-main.gpg
+    dest: /etc/apt/keyrings/cloudflare-main.gpg
     mode: "0644"
+  when: ansible_os_family == "Debian"
+
+- name: Remove old Cloudflare GPG key from /usr/share/keyrings (Debian)
+  ansible.builtin.file:
+    path: /usr/share/keyrings/cloudflare-main.gpg
+    state: absent
   when: ansible_os_family == "Debian"
 
 - name: Add Cloudflare repository (Debian)
@@ -41,7 +54,7 @@
       URIs: https://pkg.cloudflare.com/cloudflared
       Suites: any
       Components: main
-      Signed-By: /usr/share/keyrings/cloudflare-main.gpg
+      Signed-By: /etc/apt/keyrings/cloudflare-main.gpg
     mode: "0644"
   when: ansible_os_family == "Debian"
 
@@ -76,11 +89,34 @@
     - cloudflared_token | length > 0
     - ansible_os_family in ["Debian", "RedHat"]
   block:
+    - name: Check if cloudflared service file exists
+      ansible.builtin.stat:
+        path: /etc/systemd/system/cloudflared.service
+      register: _cloudflared_service_file
+
+    - name: Read current service file content
+      ansible.builtin.slurp:
+        src: /etc/systemd/system/cloudflared.service
+      register: _cloudflared_service_content
+      when: _cloudflared_service_file.stat.exists
+
+    - name: Detect token change
+      ansible.builtin.set_fact:
+        _cloudflared_token_changed: "{{ (cloudflared_token | string) not in (_cloudflared_service_content.content | b64decode) }}"
+      when: _cloudflared_service_file.stat.exists
+
+    - name: Uninstall cloudflared service for token update
+      ansible.builtin.command:
+        cmd: cloudflared service uninstall
+      when:
+        - _cloudflared_service_file.stat.exists
+        - _cloudflared_token_changed | default(false)
+
     - name: Install cloudflared service with token
       ansible.builtin.command:
         cmd: cloudflared service install {{ cloudflared_token }}
-      args:
-        creates: /etc/systemd/system/cloudflared.service
+      when: not _cloudflared_service_file.stat.exists or _cloudflared_token_changed | default(false)
+      notify: Restart cloudflared
 
     - name: Manage cloudflared service (systemd)
       ansible.builtin.systemd:

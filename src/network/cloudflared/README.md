@@ -108,15 +108,17 @@ ansible-vault encrypt_string 'eyJ...<TOKEN>'
 **Debian 系の場合:**
 
 ```bash
+# キーリングディレクトリの作成
+sudo mkdir -p --mode=0755 /etc/apt/keyrings
+
 # GPG キーのインポート
-wget -O - https://pkg.cloudflare.com/cloudflare-main.gpg | gpg --dearmor | sudo tee /etc/apt/keyrings/cloudflare-main.gpg > /dev/null
+curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /etc/apt/keyrings/cloudflare-main.gpg > /dev/null
 
 # リポジトリの追加
-VERSION_CODENAME="$(grep -oP '(?<=^VERSION_CODENAME=).+' /etc/os-release | tr -d '\"')" &&
-sudo tee "/etc/apt/sources.list.d/cloudflared.sources" > /dev/null << EOF
+sudo tee /etc/apt/sources.list.d/cloudflared.sources > /dev/null << 'EOF'
 Types: deb
 URIs: https://pkg.cloudflare.com/cloudflared
-Suites: ${VERSION_CODENAME}
+Suites: any
 Components: main
 Signed-By: /etc/apt/keyrings/cloudflare-main.gpg
 EOF
