@@ -1,3 +1,10 @@
+- name: Gather OS family fact
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - distribution
+  when: ansible_os_family is not defined
+
 - name: Install tzdata on Alpine Linux
   ansible.builtin.package:
     name: tzdata
