@@ -73,6 +73,7 @@
     owner: "{{ grafana_user }}"
     group: "{{ grafana_user }}"
     mode: '0644'
+    force: true
   loop: "{{ grafana_dashboards }}"
   when: grafana_dashboards | length > 0
   notify: restart grafana
