@@ -1,7 +1,7 @@
 # Slurm controller defaults
 slurm_cluster_name: "cluster"
 slurm_controller_hosts:
-  - "{{ ansible_fqdn }}"
+  "{{ ansible_fqdn }}": ""
 slurm_db_host: ""
 
 # Dynamic nodes configuration

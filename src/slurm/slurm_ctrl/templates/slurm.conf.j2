@@ -2,7 +2,7 @@
 # Managed by Ansible - do not edit manually
 
 ClusterName={{ slurm_cluster_name }}
-{% for host in slurm_controller_hosts %}
+{% for host in slurm_controller_hosts.keys() %}
 SlurmctldHost={{ host }}
 {% endfor %}
 SlurmctldParameters=enable_configless
