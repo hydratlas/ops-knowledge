@@ -228,7 +228,7 @@ SlurmctldParameters=enable_configless
 # プロセス管理
 MpiDefault=none
 ProctrackType=proctrack/cgroup
-ReturnToService=1
+ReturnToService=2
 SlurmctldPidFile=/run/slurm/slurmctld.pid
 SlurmctldPort=6817
 SlurmdPidFile=/run/slurm/slurmd.pid

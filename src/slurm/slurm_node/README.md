@@ -86,7 +86,11 @@ sudo mkdir -p /etc/systemd/system/slurmd.service.d
 
 # 動的ノード+configlessモードの設定
 sudo tee /etc/systemd/system/slurmd.service.d/dynamic.conf << EOF
+[Unit]
+StartLimitIntervalSec=0
 [Service]
+Restart=on-failure
+RestartSec=60
 ExecStart=
 ExecStart=/usr/sbin/slurmd --systemd -s -Z --conf-server ${CONTROLLER_HOST}:6817
 EOF
@@ -99,7 +103,11 @@ Featureを指定する場合（例：GPUノード）：
 
 ```bash
 sudo tee /etc/systemd/system/slurmd.service.d/dynamic.conf << EOF
+[Unit]
+StartLimitIntervalSec=0
 [Service]
+Restart=on-failure
+RestartSec=60
 ExecStart=
 ExecStart=/usr/sbin/slurmd --systemd -s -Z --conf-server ${CONTROLLER_HOST}:6817 --conf "Feature=gpu"
 EOF

@@ -1,6 +1,10 @@
 # Systemd override for dynamic node registration with configless
 # Managed by Ansible - do not edit manually
+[Unit]
+StartLimitIntervalSec=0
 [Service]
+Restart=on-failure
+RestartSec=60
 ExecStart=
 {% set conf_parts = [] %}
 {% if slurm_node_features | default('') | length > 0 %}
