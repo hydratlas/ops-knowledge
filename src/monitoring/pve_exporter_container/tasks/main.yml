@@ -46,13 +46,15 @@
     mode: '0600'
   notify: restart pve_exporter
 
-- name: Create monitoring network file
-  ansible.builtin.template:
-    src: monitoring.network.j2
-    dest: "{{ quadlet_systemd_dir }}/monitoring.network"
-    owner: "{{ pve_exporter_user }}"
-    group: "{{ pve_exporter_user }}"
-    mode: '0644'
+- name: Include podman_rootless_quadlet_network role
+  ansible.builtin.include_role:
+    name: container/podman_rootless_quadlet_network
+  vars:
+    quadlet_network_name: "monitoring"
+    quadlet_network_description: "Monitoring Container Network"
+    quadlet_network_labels:
+      - "app=monitoring"
+    quadlet_network_owner: "{{ pve_exporter_user }}"
 
 - name: Create PVE Exporter Quadlet container file
   ansible.builtin.template:

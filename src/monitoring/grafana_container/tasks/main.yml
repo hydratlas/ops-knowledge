@@ -30,13 +30,15 @@
     - "{{ grafana_dashboards_dir }}"
     - "{{ grafana_dashboards_json_dir }}"
 
-- name: Create monitoring network file
-  ansible.builtin.template:
-    src: monitoring.network.j2
-    dest: "{{ quadlet_systemd_dir }}/monitoring.network"
-    owner: "{{ grafana_user }}"
-    group: "{{ grafana_user }}"
-    mode: '0644'
+- name: Include podman_rootless_quadlet_network role
+  ansible.builtin.include_role:
+    name: container/podman_rootless_quadlet_network
+  vars:
+    quadlet_network_name: "monitoring"
+    quadlet_network_description: "Monitoring Container Network"
+    quadlet_network_labels:
+      - "app=monitoring"
+    quadlet_network_owner: "{{ grafana_user }}"
 
 - name: Create Grafana environment file
   ansible.builtin.template:
@@ -72,6 +74,7 @@
     prefix: grafana_dashboards_
   register: grafana_dashboard_tmpdir
   changed_when: false
+  check_mode: false
 
 - name: Download dashboard JSON files to temporary directory
   ansible.builtin.get_url:
@@ -81,6 +84,7 @@
   loop: "{{ grafana_dashboards }}"
   when: grafana_dashboards | length > 0
   changed_when: false
+  check_mode: false
 
 - name: Fix datasource references in downloaded dashboard JSON files
   ansible.builtin.replace:

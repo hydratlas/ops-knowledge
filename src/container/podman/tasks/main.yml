@@ -32,7 +32,6 @@
     url: "https://download.docker.com/linux/{{ docker_distribution_name }}/gpg"
     dest: /etc/apt/keyrings/docker.asc
     mode: '0644'
-    force: true
   when: ansible_os_family == "Debian"
 
 - name: Add Docker repository

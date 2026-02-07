@@ -21,13 +21,15 @@
   loop:
     - "{{ victorialogs_data_dir }}"
 
-- name: Create monitoring network file
-  ansible.builtin.template:
-    src: monitoring.network.j2
-    dest: "{{ quadlet_systemd_dir }}/monitoring.network"
-    owner: "{{ victorialogs_user }}"
-    group: "{{ victorialogs_user }}"
-    mode: '0644'
+- name: Include podman_rootless_quadlet_network role
+  ansible.builtin.include_role:
+    name: container/podman_rootless_quadlet_network
+  vars:
+    quadlet_network_name: "monitoring"
+    quadlet_network_description: "Monitoring Container Network"
+    quadlet_network_labels:
+      - "app=monitoring"
+    quadlet_network_owner: "{{ victorialogs_user }}"
 
 - name: Create VictoriaLogs Quadlet container file
   ansible.builtin.template:
