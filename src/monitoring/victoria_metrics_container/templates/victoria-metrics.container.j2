@@ -14,7 +14,7 @@ PublishPort={{ victoria_metrics_container_port }}:{{ victoria_metrics_container_
 Volume={{ victoria_metrics_config_file }}:/etc/prometheus.yml:z
 Volume={{ victoria_metrics_data_dir }}:/victoria-metrics-data:Z
 Volume=/etc/localtime:/etc/localtime:ro
-Exec='-promscrape.config=/etc/prometheus.yml' '-dedup.minScrapeInterval={{ victoria_metrics_dedup_min_scrape_interval }}'
+Exec='-promscrape.config=/etc/prometheus.yml' '-retentionPeriod={{ victoria_metrics_retention_period }}' '-dedup.minScrapeInterval={{ victoria_metrics_dedup_min_scrape_interval }}'
 
 [Service]
 Restart={{ victoria_metrics_service_restart }}
