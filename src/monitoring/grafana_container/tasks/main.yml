@@ -66,17 +66,48 @@
     mode: '0644'
   notify: restart grafana
 
-- name: Download dashboard JSON files
+- name: Create temporary directory for dashboard downloads
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: grafana_dashboards_
+  register: grafana_dashboard_tmpdir
+  changed_when: false
+
+- name: Download dashboard JSON files to temporary directory
   ansible.builtin.get_url:
     url: "{{ item.url }}"
-    dest: "{{ grafana_dashboards_json_dir }}/{{ item.name }}.json"
-    owner: "{{ grafana_user }}"
-    group: "{{ grafana_user }}"
-    mode: '0644'
+    dest: "{{ grafana_dashboard_tmpdir.path }}/{{ item.name }}.json"
     force: true
   loop: "{{ grafana_dashboards }}"
   when: grafana_dashboards | length > 0
+  changed_when: false
+
+- name: Fix datasource references in downloaded dashboard JSON files
+  ansible.builtin.replace:
+    path: "{{ grafana_dashboard_tmpdir.path }}/{{ item.name }}.json"
+    regexp: '\$\{DS_PROMETHEUS\}'
+    replace: 'prometheus'
+  loop: "{{ grafana_dashboards }}"
+  when: grafana_dashboards | length > 0
+  changed_when: false
+
+- name: Deploy downloaded dashboard JSON files
+  ansible.builtin.copy:
+    src: "{{ grafana_dashboard_tmpdir.path }}/{{ item.name }}.json"
+    dest: "{{ grafana_dashboards_json_dir }}/{{ item.name }}.json"
+    remote_src: true
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_user }}"
+    mode: '0644'
+  loop: "{{ grafana_dashboards }}"
+  when: grafana_dashboards | length > 0
   notify: restart grafana
+
+- name: Remove temporary directory for dashboard downloads
+  ansible.builtin.file:
+    path: "{{ grafana_dashboard_tmpdir.path }}"
+    state: absent
+  changed_when: false
 
 - name: Copy local dashboard JSON files
   ansible.builtin.copy:
@@ -87,15 +118,6 @@
     mode: '0644'
   loop: "{{ grafana_local_dashboards }}"
   when: grafana_local_dashboards | length > 0
-  notify: restart grafana
-
-- name: Fix datasource references in dashboard JSON files
-  ansible.builtin.replace:
-    path: "{{ grafana_dashboards_json_dir }}/{{ item.name }}.json"
-    regexp: '\$\{DS_PROMETHEUS\}'
-    replace: 'prometheus'
-  loop: "{{ grafana_dashboards }}"
-  when: grafana_dashboards | length > 0
   notify: restart grafana
 
 - name: Create Grafana Quadlet container file
