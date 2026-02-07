@@ -82,36 +82,12 @@ uname -r
 #### ステップ2: インストール
 
 ##### Debian/Ubuntu系でのインストール
-リポジトリーの設定
-```bash
-DISTRIBUTION_ID="$(grep -oP '(?<=^ID=).+(?=$)' /etc/os-release)" &&
-DISTRIBUTION_NAME="" &&
-if [ "${DISTRIBUTION_ID}" = "ubuntu" ]; then
-  DISTRIBUTION_NAME="ubuntu"
-elif [ "${DISTRIBUTION_ID}" = "debian" ]; then
-  DISTRIBUTION_NAME="debian"
-else
-  echo "Error: Could not confirm that the OS is Ubuntu or Debian."
-fi &&
-sudo apt-get install -U -y ca-certificates &&
-wget -4 -O - "https://download.docker.com/linux/${DISTRIBUTION_NAME}/gpg" | \
-  sudo tee /etc/apt/keyrings/docker.asc > /dev/null &&
-sudo tee "/etc/apt/sources.list.d/docker.sources" > /dev/null << EOF
-Types: deb
-URIs: https://download.docker.com/linux/${DISTRIBUTION_NAME}
-Suites: $(grep -oP '(?<=^VERSION_CODENAME=).+(?=$)' /etc/os-release)
-Components: stable
-Signed-By: /etc/apt/keyrings/docker.asc
-Architectures: $(dpkg --print-architecture)
-EOF
-```
-
 ```bash
 # パッケージリストを更新
 sudo apt-get update
 
-# Podmanとdocker-composeをインストール（推奨パッケージは除外）
-sudo apt-get install -y --no-install-recommends podman containers-storage docker-compose-plugin
+# Podmanをインストール（推奨パッケージは除外）
+sudo apt-get install -y --no-install-recommends podman containers-storage uidmap slirp4netns passt aardvark-dns nftables
 ```
 
 ##### RHEL/CentOS/AlmaLinux/Rocky Linux系でのインストール
@@ -266,7 +242,7 @@ podman rm -a
 podman rmi -a
 
 # 4. Podmanのアンインストール
-sudo apt-get remove --purge -y podman containers-storage docker-compose-plugin
+sudo apt-get remove --purge -y podman containers-storage uidmap slirp4netns passt aardvark-dns nftables
 
 # 5. 設定ファイルの削除
 sudo rm -rf /etc/containers
