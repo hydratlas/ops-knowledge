@@ -1,0 +1,68 @@
+#!/bin/bash
+chosen_domain () {
+    local items=()
+    while read -r line; do
+    if [[ $line =~ ^search[[:space:]]+(.+) ]]; then
+        IFS=' ' read -r -a items <<< "${BASH_REMATCH[1]}"
+    fi
+    done < /etc/resolv.conf
+
+    echo "Please select a number from the following domains:"
+    local count=1
+    for item in "${items[@]}"; do
+        echo "  ${count}) $(hostname -s).${item}"
+        ((count++))
+    done
+    read -p "Please enter the number: " choice
+    if [[ ${choice} =~ ^[0-9]+$ ]] && [ ${choice} -ge 1 ] && [ ${choice} -le ${#items[@]} ]; then
+        domain="$(hostname -s).${items[$((choice-1))]}"
+        echo "Selected domain: ${domain}"
+    else
+        echo "An invalid number was entered."
+    fi
+}
+chosen_nameserver () {
+    local items=()
+    while read line; do
+        ip=$(echo "${line}" | awk '/^nameserver/{print $2}')
+        if [[ -n "${ip}" ]]; then
+            items+=("${ip}")
+        fi
+    done < /etc/resolv.conf
+
+    echo "Please select a number from the following nameservers:"
+    local count=1
+    for item in "${items[@]}"; do
+        echo "  ${count}) ${item}"
+        ((count++))
+    done
+    read -p "Please enter the number: " choice
+    if [[ ${choice} =~ ^[0-9]+$ ]] && [ ${choice} -ge 1 ] && [ ${choice} -le ${#items[@]} ]; then
+        nameserver="${items[$((choice-1))]}"
+        echo "Selected nameserver: ${nameserver}"
+    else
+        echo "An invalid number was entered."
+    fi
+}
+chosen_ip_address () {
+    local items=()
+    while read -r line; do
+    if [[ ${line} =~ ([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)/[0-9]+ ]]; then
+        items+=("${BASH_REMATCH[1]}")
+    fi
+    done < <(ip -4 addr show scope global | grep "inet " | awk '{print $2}')
+
+    echo "Please select a number from the following IP addresses:"
+    local count=1
+    for item in "${items[@]}"; do
+        echo "  ${count}) ${item}"
+        ((count++))
+    done
+    read -p "Please enter the number: " choice
+    if [[ ${choice} =~ ^[0-9]+$ ]] && [ ${choice} -ge 1 ] && [ ${choice} -le ${#items[@]} ]; then
+        ip_address="${items[$((choice-1))]}"
+        echo "Selected address: ${ip_address}"
+    else
+        echo "An invalid number was entered."
+    fi
+}

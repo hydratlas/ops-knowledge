@@ -1,0 +1,4 @@
+- name: Reload SSH
+  service:
+    name: "{{ 'sshd' if ansible_os_family == 'RedHat' else 'ssh' }}"
+    state: reloaded

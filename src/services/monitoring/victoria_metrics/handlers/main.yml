@@ -1,0 +1,19 @@
+---
+- name: reload systemd user daemon
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    scope: user
+  become: yes
+  become_user: "{{ victoria_metrics_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ quadlet_uid }}"
+
+- name: restart victoria_metrics
+  ansible.builtin.systemd:
+    name: victoria-metrics.service
+    state: restarted
+    scope: user
+  become: yes
+  become_user: "{{ victoria_metrics_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ quadlet_uid }}"

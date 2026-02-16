@@ -1,0 +1,27 @@
+- name: Restart slurmctld
+  ansible.builtin.service:
+    name: slurmctld
+    state: restarted
+
+- name: Check slurmctld status for reload
+  ansible.builtin.command:
+    cmd: systemctl is-active slurmctld
+  register: slurmctld_status
+  changed_when: false
+  failed_when: false
+  listen: "Reload slurmctld"
+
+- name: Reconfigure slurmctld if running
+  ansible.builtin.command:
+    cmd: scontrol reconfigure
+  changed_when: true
+  when: slurmctld_status.rc == 0
+  run_once: true
+  listen: "Reload slurmctld"
+
+- name: Start slurmctld if not running
+  ansible.builtin.service:
+    name: slurmctld
+    state: started
+  when: slurmctld_status.rc != 0
+  listen: "Reload slurmctld"

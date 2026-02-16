@@ -1,0 +1,61 @@
+---
+- name: Include podman_rootless_quadlet_base role
+  ansible.builtin.include_tasks: "../../infrastructure/container/podman_rootless_quadlet_base/tasks/main.yml"
+  vars:
+    quadlet_user: "{{ victoria_metrics_user }}"
+    quadlet_user_comment: "{{ victoria_metrics_user_comment }}"
+    quadlet_app_name: "{{ victoria_metrics_app_name }}"
+
+- name: Set VictoriaMetrics directory paths
+  ansible.builtin.set_fact:
+    victoria_metrics_data_dir: "{{ quadlet_home }}/.local/share/victoria-metrics-data"
+    victoria_metrics_config_dir: "{{ quadlet_home }}/.config/prometheus"
+    victoria_metrics_config_file: "{{ quadlet_home }}/.config/prometheus/prometheus.yml"
+
+- name: Create additional VictoriaMetrics directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ victoria_metrics_user }}"
+    group: "{{ victoria_metrics_user }}"
+    mode: '0755'
+  loop:
+    - "{{ victoria_metrics_data_dir }}"
+    - "{{ victoria_metrics_config_dir }}"
+
+- name: Create monitoring network file
+  ansible.builtin.template:
+    src: monitoring.network.j2
+    dest: "{{ quadlet_systemd_dir }}/monitoring.network"
+    owner: "{{ victoria_metrics_user }}"
+    group: "{{ victoria_metrics_user }}"
+    mode: '0644'
+
+- name: Create Prometheus configuration file
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: "{{ victoria_metrics_config_file }}"
+    owner: "{{ victoria_metrics_user }}"
+    group: "{{ victoria_metrics_user }}"
+    mode: '0644'
+  notify: restart victoria_metrics
+
+- name: Create VictoriaMetrics Quadlet container file
+  ansible.builtin.template:
+    src: victoria-metrics.container.j2
+    dest: "{{ quadlet_systemd_dir }}/victoria-metrics.container"
+    owner: "{{ victoria_metrics_user }}"
+    group: "{{ victoria_metrics_user }}"
+    mode: '0644'
+  notify: reload systemd user daemon
+
+- name: Enable and start VictoriaMetrics service
+  ansible.builtin.systemd:
+    name: victoria-metrics.service
+    enabled: yes
+    state: started
+    scope: user
+  become: yes
+  become_user: "{{ victoria_metrics_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ quadlet_uid }}"

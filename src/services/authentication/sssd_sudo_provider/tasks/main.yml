@@ -1,0 +1,32 @@
+- name: Ensure sssd is installed
+  ansible.builtin.package:
+    name: sssd
+    state: present
+
+- name: Gather service facts
+  ansible.builtin.service_facts:
+
+- name: Set 'sudo_provider = ipa' in SSSD domain configuration
+  ansible.builtin.ini_file:
+    path: /etc/sssd/sssd.conf
+    section: "domain/{{ ipaclient_domain }}"
+    option: "sudo_provider"
+    value: "ipa"
+    no_extra_spaces: false
+  notify: Restart sssd
+  when: ipaclient_domain is defined
+
+- name: Check if /etc/sssd/sssd.conf exists
+  ansible.builtin.stat:
+    path: /etc/sssd/sssd.conf
+  register: sssd_conf_stat
+
+- name: Ensure secure permissions for sssd.conf
+  ansible.builtin.file:
+    path: /etc/sssd/sssd.conf
+    owner: root
+    group: root
+    mode: '0600'
+  when: 
+    - ipaclient_domain is defined
+    - sssd_conf_stat.stat.exists

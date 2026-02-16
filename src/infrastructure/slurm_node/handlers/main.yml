@@ -1,0 +1,5 @@
+- name: Restart slurmd
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    name: slurmd
+    state: restarted

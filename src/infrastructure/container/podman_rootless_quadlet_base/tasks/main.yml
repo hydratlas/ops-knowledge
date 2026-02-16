@@ -1,0 +1,84 @@
+---
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - quadlet_user != ""
+      - quadlet_app_name != ""
+    fail_msg: "quadlet_user and quadlet_app_name must be defined"
+
+- name: Check if user exists
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ quadlet_user }}"
+  register: quadlet_user_check
+  failed_when: false
+
+- name: Create user with subuid/subgid
+  ansible.builtin.command:
+    cmd: useradd --system --user-group --add-subids-for-system --shell {{ quadlet_user_shell }} --comment "{{ quadlet_user_comment }}" {{ quadlet_user }}
+  when: quadlet_user_check.ansible_facts.getent_passwd[quadlet_user] is not defined
+
+- name: Get user info
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ quadlet_user }}"
+  register: quadlet_user_info
+
+- name: Set user facts
+  ansible.builtin.set_fact:
+    quadlet_uid: "{{ quadlet_user_info.ansible_facts.getent_passwd[quadlet_user][1] }}"
+    quadlet_gid: "{{ quadlet_user_info.ansible_facts.getent_passwd[quadlet_user][2] }}"
+    quadlet_home: "{{ quadlet_user_info.ansible_facts.getent_passwd[quadlet_user][4] }}"
+
+- name: Set directory paths
+  ansible.builtin.set_fact:
+    quadlet_config_dir: "{{ quadlet_home }}/.config/{{ quadlet_app_name }}"
+    quadlet_systemd_dir: "{{ quadlet_home }}/.config/containers/systemd"
+
+- name: Check if lingering is enabled
+  ansible.builtin.command: loginctl show-user {{ quadlet_user }} --property=Linger
+  register: linger_status
+  changed_when: false
+  failed_when: false
+
+- name: Enable lingering for user
+  ansible.builtin.command: loginctl enable-linger {{ quadlet_user }}
+  when: linger_status.stdout != "Linger=yes"
+
+- name: Create required directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ quadlet_user }}"
+    group: "{{ quadlet_user }}"
+    mode: "0755"
+  loop:
+    - "{{ quadlet_home }}"
+    - "{{ quadlet_home }}/.config"
+    - "{{ quadlet_home }}/.config/containers"
+    - "{{ quadlet_config_dir }}"
+    - "{{ quadlet_systemd_dir }}"
+    - "{{ quadlet_home }}/.local"
+    - "{{ quadlet_home }}/.local/share"
+    - "{{ quadlet_home }}/.local/share/containers"
+    - "{{ quadlet_home }}/.local/share/containers/storage"
+
+- name: Ensure systemd user daemon is reloaded
+  ansible.builtin.systemd:
+    daemon_reload: true
+    scope: user
+  become: true
+  become_user: "{{ quadlet_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ quadlet_uid }}"
+
+- name: Enable and start podman-auto-update.timer
+  ansible.builtin.systemd:
+    name: podman-auto-update.timer
+    enabled: true
+    state: started
+    scope: user
+  become: true
+  become_user: "{{ quadlet_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ quadlet_uid }}"

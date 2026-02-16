@@ -1,0 +1,38 @@
+! VRRP instance configurations
+! {{ ansible_managed }}
+
+{% for instance in keepalived_vrrp_instances %}
+vrrp_instance {{ instance.name }} {
+    state {{ instance.state | default('MASTER') }}
+    interface {{ instance.interface }}
+    virtual_router_id {{ instance.virtual_router_id }}
+    priority {{ instance.priority }}
+{% if instance.advert_int is defined %}
+    advert_int {{ instance.advert_int }}
+{% endif %}
+{% if instance.garp_master_delay is defined %}
+    garp_master_delay {{ instance.garp_master_delay }}
+{% endif %}
+{% if instance.auth_type is defined and instance.auth_pass is defined %}
+    authentication {
+        auth_type {{ instance.auth_type }}
+        auth_pass {{ instance.auth_pass }}
+    }
+{% endif %}
+    virtual_ipaddress {
+{% for vip in instance.virtual_ipaddresses %}
+        {{ vip }}
+{% endfor %}
+    }
+{% if instance.track_scripts is defined and instance.track_scripts | length > 0 %}
+    track_script {
+{% for script in instance.track_scripts %}
+        {{ script }}
+{% endfor %}
+    }
+{% endif %}
+}
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}

@@ -1,0 +1,7 @@
+- name: "Ensure 'subid: files sss' line exists or is updated in /etc/nsswitch.conf"
+  ansible.builtin.lineinfile:
+    path: /etc/nsswitch.conf 
+    regexp: '^subid:.*'
+    line: 'subid: sss' # If set to 'subid: files sss', sss will not work properly
+    state: present
+  notify: Restart sssd

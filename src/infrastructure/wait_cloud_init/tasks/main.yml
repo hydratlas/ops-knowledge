@@ -1,0 +1,10 @@
+- name: Wait for cloud-init completion
+  ansible.builtin.shell: |
+    if command -v cloud-init >/dev/null 2>&1; then
+      cloud-init status --wait || [ $? -eq 2 ]  # 終了コード2も成功とする
+    else
+      echo "No cloud-init found, skipping wait"
+    fi
+  changed_when: false
+  when: wait_cloud_init_enabled | default(true)
+ 

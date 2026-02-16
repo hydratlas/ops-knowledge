@@ -1,0 +1,39 @@
+---
+# Default variables for keepalived role
+
+# Keepalived base directory
+keepalived_base_dir: "/etc/keepalived"
+
+# Keepalived configuration paths (derived from base directory)
+keepalived_config_file: "{{ keepalived_base_dir }}/keepalived.conf"
+keepalived_config_dir: "{{ keepalived_base_dir }}/conf.d"
+keepalived_check_scripts_dir: "{{ keepalived_base_dir }}/scripts"
+
+# Service configuration
+keepalived_service_name: "keepalived"
+
+# Check script execution user (global default)
+keepalived_check_script_user: "keepalived_script"
+
+# Global definitions
+# These are the standard keepalived defaults (without email settings)
+keepalived_global_defs:
+  router_id: "{{ inventory_hostname_short }}"
+
+# Default VRRP instances configuration (empty by default)
+# This should be defined in group_vars or host_vars
+keepalived_vrrp_instances: []
+
+# Check script configuration
+# Set to empty list to disable check scripts
+# Each script can have:
+# - name: Script filename
+# - template: Template filename
+# - vrrp_name: Name used in VRRP configuration
+# - interval: Check interval in seconds (default: 2)
+# - weight: Priority weight change on failure (default: -20)
+# - fall: Number of failures before marking as down (default: 2)
+# - rise: Number of successes before marking as up (default: 2)
+# - user: User to run the script as (default: "keepalived_script")
+# - create_script_user: Whether to create the user (default: true)
+keepalived_check_scripts: []

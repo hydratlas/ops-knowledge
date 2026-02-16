@@ -1,0 +1,6 @@
+#!/bin/bash
+# Check systemd service status
+# {{ ansible_managed }}
+
+# Check if the service is active
+systemctl is-active --quiet "{{ item.service_name }}"

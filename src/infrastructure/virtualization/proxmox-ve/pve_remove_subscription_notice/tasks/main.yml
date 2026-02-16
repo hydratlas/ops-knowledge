@@ -1,0 +1,8 @@
+---
+- name: Remove subscription notice by modifying proxmoxlib.js
+  ansible.builtin.replace:
+    path: /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+    regexp: '(Ext\.Msg\.show\(\{\s+title: gettext\(''No valid sub)'
+    replace: 'void({ //\1'
+    backup: yes
+  notify: restart pveproxy

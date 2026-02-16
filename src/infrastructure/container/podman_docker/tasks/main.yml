@@ -1,0 +1,36 @@
+---
+# Tasks for podman-docker role
+
+- name: Install podman-docker compatibility package on Debian-based systems
+  ansible.builtin.apt:
+    name: 
+      - podman-docker
+    state: present
+    install_recommends: no
+  when: ansible_os_family == "Debian"
+
+- name: Install podman-docker compatibility package on RHEL-based systems
+  ansible.builtin.dnf:
+    name: podman-docker
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Configure unqualified-search-registries
+  ansible.builtin.lineinfile:
+    path: /etc/containers/registries.conf
+    regexp: '^#?\s*unqualified-search-registries\s*='
+    line: 'unqualified-search-registries = ["docker.io"]'
+    create: yes
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Create nodocker marker file
+  ansible.builtin.file:
+    path: /etc/containers/nodocker
+    state: touch
+    owner: root
+    group: root
+    mode: '0644'
+    access_time: preserve
+    modification_time: preserve

@@ -1,0 +1,59 @@
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - slurm_controller_host | length > 0
+    fail_msg: "slurm_controller_host must be set"
+    quiet: true
+
+- name: Verify slurm_jwt_key is defined
+  ansible.builtin.assert:
+    that:
+      - slurm_jwt_key is defined
+      - slurm_jwt_key | length > 0
+    fail_msg: "slurm_jwt_key must be defined and non-empty (Base64 encoded, 32 bytes)"
+    quiet: true
+
+- name: Install slurmd package
+  ansible.builtin.apt:
+    name:
+      - slurmd
+    state: present
+
+- name: Deploy JWT key
+  ansible.builtin.copy:
+    content: "{{ slurm_jwt_key | b64decode }}"
+    dest: /etc/slurm/slurm.key
+    owner: slurm
+    group: slurm
+    mode: '0600'
+  no_log: true
+
+- name: Create systemd override directory for slurmd
+  ansible.builtin.file:
+    path: /etc/systemd/system/slurmd.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Configure slurmd for dynamic node registration
+  ansible.builtin.template:
+    src: slurmd-dynamic.conf.j2
+    dest: /etc/systemd/system/slurmd.service.d/dynamic.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart slurmd
+
+- name: Start and enable slurmd service
+  ansible.builtin.systemd:
+    name: slurmd
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: Restart slurmd if slurm config changed on controller
+  ansible.builtin.systemd:
+    name: slurmd
+    state: restarted
+  when: hostvars[groups['slurm_ctrl_hosts'][0]]['slurm_config_changed'] | default(false)

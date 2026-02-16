@@ -1,0 +1,282 @@
+#!/bin/bash
+setup_netplan () {
+    set -eux &&
+    local JSON="${1}" &&
+    local host_index="" &&
+    while read -r index element; do
+        if [ "${element}" = "${HOSTNAME}" ]; then
+            host_index=${index}
+        fi
+    done <<< "$(echo "${JSON}" | jq -c -r ".router_host[]" | nl -v 0)" &&
+    if [ -z "${host_index}" ]; then
+        echo "There is no corresponding host name in the JSON." &&
+        exit 1
+    fi
+    while read -r index element; do
+        local interface
+        interface="$(echo "${element}" | jq -c -r ".interface[${host_index}]")"
+        local mac_address
+        mac_address="$(echo "${element}" | jq -c -r ".mac_address[${host_index}]")"
+        local ip_address
+        ip_address="$(echo "${element}" | jq -c -r ".ip_address[${host_index}]")"
+        local cidr
+        cidr="$(echo "${element}" | jq -c -r ".cidr")"
+        sudo tee "/etc/netplan/70-${interface}.yaml" << EOS > /dev/null
+network:
+  version: 2
+  ethernets:
+    ${interface}:
+      match:
+        macaddress: "${mac_address}"
+      addresses:
+        - "${ip_address}/${cidr}"
+      set-name: "${interface}"
+EOS
+        sudo chmod go= "/etc/netplan/70-${interface}.yaml"
+    done <<< "$(echo "${JSON}" | jq -c -r ".inside[]" | nl -v 0)"
+    set +u
+    if [ "${SSH_CONNECTION-}" ]; then
+        sudo netplan try --timeout 30
+    else
+        sudo netplan apply
+    fi
+    ip a
+    set +eux
+}
+setup_keepalived () {
+    set -eux &&
+    local JSON="${1}" &&
+    sudo apt-get install -y keepalived &&
+    sudo systemctl stop keepalived.service &&
+    if ! id keepalived_script; then
+        sudo useradd -s /sbin/nologin -M keepalived_script
+    fi &&
+    sudo tee "/etc/keepalived/check_dnsmasq.sh" << EOS > /dev/null &&
+#!/bin/bash
+if systemctl is-active --quiet dnsmasq.service; then
+  exit 0
+else
+  exit 1
+fi
+EOS
+    sudo chmod a+x "/etc/keepalived/check_dnsmasq.sh" &&
+    sudo tee "/etc/keepalived/restart_dnsmasq.sh" << EOS > /dev/null &&
+#!/bin/bash
+if systemctl is-active --quiet dnsmasq.service; then
+  systemctl stop dnsmasq.service
+  sleep 2s # Intervals are kept so that the system is not restarted too many times in a short period of time.
+  if ! systemctl is-active --quiet dnsmasq.service; then
+    systemctl start dnsmasq.service
+  fi
+fi
+EOS
+    sudo chmod a+x "/etc/keepalived/restart_dnsmasq.sh" &&
+    sudo tee "/etc/keepalived/keepalived.conf" << EOS > /dev/null &&
+include /etc/keepalived/conf.d/*.conf
+EOS
+    sudo mkdir -p /etc/keepalived/conf.d &&
+    sudo tee "/etc/keepalived/conf.d/base.conf" << EOS > /dev/null &&
+global_defs {
+  enable_script_security
+  script_user keepalived_script
+}
+vrrp_script check_dnsmasq {
+  script "/etc/keepalived/check_dnsmasq.sh"
+  interval 2
+  fall 2
+  rise 2
+}
+EOS
+    local host_index="" &&
+    while read -r index element; do
+        if [ "${element}" = "${HOSTNAME}" ]; then
+            host_index=${index}
+        fi
+    done <<< "$(echo "${JSON}" | jq -c -r ".router_host[]" | nl -v 0)" &&
+    if [ -z "${host_index}" ]; then
+        echo "There is no corresponding host name in the JSON." &&
+        exit 1
+    fi
+    local vrrp_state="$(echo "${JSON}" | jq -c -r ".vrrp.state[${host_index}]")" &&
+    local vrrp_priority="$(echo "${JSON}" | jq -c -r ".vrrp.priority[${host_index}]")" &&
+    local vrrp_advert_int="$(echo "${JSON}" | jq -c -r ".vrrp.advert_int")" &&
+    while read -r index element; do
+        local interface="$(echo "${element}" | jq -c -r ".interface[${host_index}]")" &&
+        local virtual_router_id="$(echo "${element}" | jq -c -r ".virtual_router_id")" &&
+        local virtual_ip_address="$(echo "${element}" | jq -c -r ".virtual_ip_address")" &&
+        local cidr="$(echo "${element}" | jq -c -r ".cidr")" &&
+        sudo tee "/etc/keepalived/conf.d/${interface}.conf" << EOS > /dev/null
+vrrp_instance VI_${interface} {
+  state ${vrrp_state}
+  interface ${interface}
+  virtual_router_id ${virtual_router_id}
+  priority ${vrrp_priority}
+  advert_int ${vrrp_advert_int}
+  virtual_ipaddress {
+    ${virtual_ip_address}/${cidr}
+  }
+  track_script {
+    check_dnsmasq
+  }
+  #notify_master "/etc/keepalived/restart_dnsmasq.sh"
+}
+EOS
+    done <<< "$(echo "${JSON}" | jq -c -r ".inside[]" | nl -v 0)" &&
+    sudo systemctl enable --now keepalived.service
+    set +eux
+}
+setup_nftables () {
+    set -eux &&
+    local JSON="${1}" &&
+    local host_index="" &&
+    while read -r index element; do
+        if [ "${element}" = "${HOSTNAME}" ]; then
+            host_index=${index}
+        fi
+    done <<< "$(echo "${JSON}" | jq -c -r ".router_host[]" | nl -v 0)" &&
+    if [ -z "${host_index}" ]; then
+        echo "There is no corresponding host name in the JSON." &&
+        exit 1
+    fi
+    local outside_interface="$(echo "${JSON}" | jq -c -r ".outside.interface[${host_index}]")" &&
+    local sysctl_conf_lines=() &&
+    sysctl_conf_lines+=("net.ipv4.ip_forward = 1") &&
+    sudo tee /etc/sysctl.d/20-forwarding.conf <<< "$(printf "%s\n" "${sysctl_conf_lines[@]}")" &&
+    sudo sysctl -p /etc/sysctl.d/20-forwarding.conf &&
+    if [ -e /etc/nftables.conf ]; then
+        sudo rm /etc/nftables.conf
+    fi &&
+    sudo touch /etc/nftables.conf &&
+    sudo apt-get install -y nftables ipcalc &&
+    sudo systemctl stop nftables.service &&
+    sudo nft flush ruleset &&
+    sudo nft add table inet filter &&
+    sudo nft add chain inet filter INPUT { type filter hook input priority 0 \; policy accept\; } &&
+    sudo nft add chain inet filter FORWARD { type filter hook forward priority 0 \; policy accept\; } &&
+    sudo nft add chain inet filter OUTPUT { type filter hook output priority 0 \; policy accept\; } &&
+    sudo nft add rule inet filter INPUT ip protocol icmp icmp type { echo-request, echo-reply } accept && # ICMPのエコー要求・応答の入力トラフィックを許可
+    sudo nft add rule inet filter INPUT iif "lo" accept && # ローカルホストへの入力トラフィックを許可
+    sudo nft add rule inet filter INPUT ct state established,related accept && # 既存の接続や関連の入力トラフィックを許可
+    sudo nft add table inet nat &&
+    sudo nft -- add chain inet nat PREROUTING { type nat hook prerouting priority -100 \; policy accept\; } &&
+    sudo nft add chain inet nat POSTROUTING { type nat hook postrouting priority 100 \; policy accept\; } &&
+    while read -r index element; do
+        local interface="$(echo "${element}" | jq -c -r ".interface[${host_index}]")" &&
+        local ip_address="$(echo "${element}" | jq -c -r ".ip_address[${host_index}]")" &&
+        local cidr="$(echo "${element}" | jq -c -r ".cidr")" &&
+        local forwarding_is_enabled=$(echo "${element}" | jq 'if .forwarding | has("is_enabled") and .is_enabled == true then true else false end') &&
+        local network_address="$(ipcalc "${ip_address}/${cidr}" | grep -oP "(?<=^Network:) *[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+")" &&
+        network_address="${network_address#"${network_address%%[![:space:]]*}"}" &&
+        sudo nft add rule inet filter INPUT iif "${interface}" ip daddr 224.0.0.18 ip protocol vrrp accept && # Keepalivedに関する入力トラフィックを許可
+        sudo nft add rule inet filter INPUT iif "${interface}" ip saddr "${network_address}/${cidr}" udp dport domain accept && # DNSクエリ(UDP)に関する入力トラフィックを許可
+        sudo nft add rule inet filter INPUT iif "${interface}" ip saddr "${network_address}/${cidr}" tcp dport domain accept && # DNSクエリ(TCP)に関する入力トラフィックを許可
+        sudo nft add rule inet filter INPUT iif "${interface}" ip protocol udp udp dport bootps accept && # DHCPリクエストに関する入力トラフィックを許可
+        if ${forwarding_is_enabled}; then
+            sudo nft add rule inet filter FORWARD ip saddr "${network_address}/${cidr}" iif "${interface}" oif "${outside_interface}" accept && # ローカルネットワークから外部への転送トラフィックを許可
+            sudo nft add rule inet filter FORWARD ip daddr "${network_address}/${cidr}" iif "${outside_interface}" oif "${interface}" ct state established,related accept && # 外部からローカルネットワークへの関連の転送トラフィックを許可
+            sudo nft add rule inet nat POSTROUTING ip saddr "${network_address}/${cidr}" iif "${interface}" oif "${outside_interface}" \
+                log prefix "\"nft masquerade: \"" level info \
+                masquerade # マスカレードを設定 ※SNATの場合には「snat to "${outside_ip_address}"」
+        fi
+    done <<< "$(echo "${JSON}" | jq -c -r ".inside[]" | nl -v 0)" &&
+    sudo nft add rule inet filter INPUT drop && # その他すべての入力トラフィックを拒否
+    sudo nft add rule inet filter FORWARD drop && # その他すべての転送トラフィックを拒否
+    if [ -e /etc/nftables.conf ]; then
+        sudo rm /etc/nftables.conf
+    fi &&
+    sudo nft list ruleset | sudo tee /etc/nftables.conf > /dev/null &&
+    sudo nft flush ruleset &&
+    sudo systemctl enable --now nftables.service
+    set +eux
+}
+setup_dnsmasq () {
+    set -eux &&
+    local JSON="${1}" &&
+    sudo apt-get install -y dnsmasq &&
+    sudo systemctl stop dnsmasq.service &&
+    local ntp="dhcp-option=option:ntp-server,$(echo "${JSON}" | jq -r '.ntp.ip_address | join(",")')" &&
+    # resolvconfパッケージがインストールされている場合、dnsmasqはシステムのデフォルトリゾルバとして
+    # 127.0.0.1配下のdnsmasqを使用するようにresolvconfに伝えるが、その動作を抑制する。
+    sudo perl -pe "s/^#?DNSMASQ_EXCEPT=.*\$/DNSMASQ_EXCEPT=lo/g" -i "/etc/default/dnsmasq" &&
+    sudo tee "/etc/dnsmasq.d/base.conf" << EOS > /dev/null &&
+# プレーンネーム（ドットやドメイン部分のないもの）を転送しない
+domain-needed
+
+# 非ルートアドレス空間のアドレスは転送しない
+bogus-priv
+
+# ローカル専用ドメインをここに追加すると、これらのドメインのクエリは/etc/hostsまたはDHCPからのみ応答される。
+local=/home.apra/
+
+# hosts-file内の単純な名前にドメインを自動的に追加したい場合は、これを設定する。
+expand-hosts
+
+# dnsmasqのドメインを設定する
+domain=home.apra
+
+# resolv.confを明示的に指定（デフォルトのはずなのであるが）
+resolv-file=/etc/resolv.conf
+
+# インターフェースへのバインドを起動時に固定せず、ダイナミックに変更する（bind-interfacesとは併用できない）
+bind-dynamic
+
+# loはsystemd-resolvedに任せるため、Dnsmasqでは使わないようにする（これによりbind-interfacesを使わなくてもすむ）
+except-interface=lo
+
+# NTPサーバーを公告
+${ntp}
+EOS
+    local TARGET_FILE="/etc/dnsmasq.conf" &&
+    local START_MARKER="# BEGIN INCLUDE BLOCK" &&
+    local END_MARKER="# END INCLUDE BLOCK" &&
+    local CODE_BLOCK=$(cat << EOS
+# .confで終わるディレクトリ内のすべてのファイルを読み込む
+conf-dir=/etc/dnsmasq.d/,*.conf
+EOS
+    ) &&
+    if ! grep -q "${START_MARKER}" "${TARGET_FILE}"; then
+        echo "${START_MARKER}"$'\n'"${CODE_BLOCK}"$'\n'"${END_MARKER}" | sudo tee -a "${TARGET_FILE}" > /dev/null  
+    fi &&
+    local host_index="" &&
+    while read -r index element; do
+        if [ "${element}" = "${HOSTNAME}" ]; then
+            host_index=${index}
+        fi
+    done <<< "$(echo "${JSON}" | jq -c -r ".router_host[]" | nl -v 0)" &&
+    if [ -z "${host_index}" ]; then
+        echo "There is no corresponding host name in the JSON." &&
+        exit 1
+    fi
+    while read -r index element; do
+        local conf_lines=() &&
+        local interface="$(echo "${element}" | jq -c -r ".interface[${host_index}]")" &&
+        local ip_address="$(echo "${element}" | jq -c -r ".ip_address[${host_index}]")" &&
+        local cidr="$(echo "${element}" | jq -c -r ".cidr")" &&
+        local subnet_mask="$(ipcalc "${ip_address}/${cidr}" | grep -oP "(?<=^Netmask:) *[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+")" &&
+        subnet_mask="${subnet_mask#"${subnet_mask%%[![:space:]]*}"}" &&
+        local virtual_ip_address="$(echo "${element}" | jq -c -r ".virtual_ip_address")" &&
+        local dhcp_range="$(echo "${element}" | jq -r ".dhcp_range[${host_index}] | join(\",\")")" &&
+        conf_lines+=("interface=${interface}") && # インターフェース
+        conf_lines+=("dhcp-range=${interface},${dhcp_range},${subnet_mask},24h") && # DHCPのアドレスの範囲
+        conf_lines+=("dhcp-option=${interface},option:router,${virtual_ip_address}") && # デフォルトルート
+        conf_lines+=("dhcp-option=${interface},option:dns-server,${virtual_ip_address}") && # DNSサーバー
+        if echo "${element}" | jq -e '.dhcp_hosts | type == "array"' > /dev/null; then
+            while read -r index2 dhcp_host; do
+                local dhcp_host_array=() &&
+                if echo "$dhcp_host" | jq -e 'has("mac_address")' > /dev/null; then
+                    dhcp_host_array+=("$(echo "${dhcp_host}" | jq -c -r '.mac_address')")
+                fi &&
+                if echo "$dhcp_host" | jq -e 'has("id")' > /dev/null; then
+                    dhcp_host_array+=("id:$(echo "${dhcp_host}" | jq -c -r '.id')")
+                fi &&
+                dhcp_host_array+=("$(echo "${dhcp_host}" | jq -c -r ".ip_address")") &&
+                dhcp_host_array+=("$(echo "${dhcp_host}" | jq -c -r ".hostname")") &&
+                dhcp_host_array+=("24h") &&
+                conf_lines+=("dhcp-host=$(IFS=','; echo "${dhcp_host_array[*]}")") # DHCP固定配布
+            done <<< "$(echo "${element}" | jq -c -r ".dhcp_hosts[]" | nl -v 0)"
+        fi &&
+        sudo tee "/etc/dnsmasq.d/interface-${interface}.conf" <<< "$(printf "%s\n" "${conf_lines[@]}")"
+    done <<< "$(echo "${JSON}" | jq -c -r ".inside[]" | nl -v 0)" &&
+    sudo systemctl enable --now dnsmasq.service
+    set +eux
+}

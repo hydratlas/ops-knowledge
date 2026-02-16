@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+# バグがあるため使用不可
+
+import argparse
+import pathlib
+import sys
+
+def update_or_add_textblock(old_lines, block_name, block_content):
+    block_start = f"# BEGIN {block_name} BLOCK" # ブロックの開始行
+    block_end = f"# END {block_name} BLOCK" # ブロックの終了行
+ 
+    new_lines = [] # 更新後の行
+    temp_lines = [] # 仮置きの行
+
+    in_block = False # 現在ブロックの内側か
+    found_block = False # すでにブロックが見つかったか
+
+    # 更新前の行をループ
+    for line in old_lines:
+        if not in_block: # 現在、ブロックの外側である場合
+            if line.strip() == block_start: # 現れた行がブロックの開始行であった場合
+                in_block = True # ブロックの内側になったことを記録
+            
+            # 更新前の行を、更新後の行にそのまま加える
+            new_lines.append(line)
+        else: # 現在、ブロックの内側である場合
+            if line.strip() == block_start: # 現れた行がブロックの開始行であった場合
+                # 仮置きしていた行を、更新後の行に加える
+                new_lines.extend(temp_lines)
+                temp_lines = []
+
+                # 更新前の行を、更新後の行にそのまま加える
+                new_lines.append(line)
+            elif line.strip() == block_end: # 現れた行がブロックの終了行であった場合
+                # ブロックの内容(block_content)を、更新後の行に加える
+                new_lines.append(block_content)
+
+                # 更新前の行を、更新後の行にそのまま加える
+                new_lines.append(line)
+
+                found_block = True # ブロックが見つかったことを記録
+                in_block = False # ブロックの内側ではなくなったことを記録
+            else:
+                # 更新前の行を、仮置きの行にそのまま加える
+                temp_lines.append(line)
+
+    # 結局ブロックの開始行は見つかったが、ブロックの終了行は見つからなかった場合
+    if in_block:
+        # 仮置きしていた行を、更新後の行に加える
+        new_lines.extend(temp_lines)
+        temp_lines = []
+
+    # 結局ブロックが見つからなかった場合
+    if not found_block:
+        # ブロックを末尾に追加
+        new_lines.append(block_start)
+        new_lines.append(block_content)
+        new_lines.append(block_end)
+
+    print(*new_lines, sep="\n")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Add or update text blocks in a text.')
+
+    parser.add_argument('block_name')
+    parser.add_argument('block_content')
+
+    args = parser.parse_args()
+
+    update_or_add_textblock(sys.stdin.read().splitlines(), args.block_name, args.block_content)

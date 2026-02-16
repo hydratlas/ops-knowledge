@@ -1,0 +1,14 @@
+! Global definitions configuration
+! {{ ansible_managed }}
+
+global_defs {
+{% for key, value in keepalived_global_defs.items() %}
+{% if value is boolean %}
+    {{ key }}
+{% elif value is number or value is string %}
+    {{ key }} {{ value }}
+{% endif %}
+{% endfor %}
+    script_user {{ keepalived_check_script_user }}
+    enable_script_security
+}

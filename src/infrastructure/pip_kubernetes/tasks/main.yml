@@ -1,0 +1,20 @@
+---
+- name: Install python3-kubernetes package (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name:
+      - python3-kubernetes
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Install pip package (RHEL/CentOS/Rocky/Alma)
+  ansible.builtin.dnf:
+    name:
+      - python3-pip
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Install kubernetes Python package using pip (RHEL/CentOS/Rocky/Alma)
+  ansible.builtin.pip:
+    name: kubernetes
+  when: ansible_os_family == "RedHat"

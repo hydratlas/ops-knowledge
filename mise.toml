@@ -1,0 +1,3 @@
+[tools]
+"aqua:rust-lang/mdBook" = "latest"
+rust = "latest"

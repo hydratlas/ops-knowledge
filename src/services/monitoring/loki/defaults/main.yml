@@ -1,0 +1,32 @@
+---
+# Loki user configuration
+loki_user: "monitoring"
+loki_user_comment: "Grafana Loki rootless user"
+loki_app_name: "loki"
+
+# Container configuration
+loki_container_image: "docker.io/grafana/loki:latest"
+loki_container_name: "loki"
+loki_container_port: 3100
+
+# Network configuration
+loki_network_name: "monitoring.network"
+
+# Service configuration
+loki_service_description: "Grafana Loki Service"
+loki_service_restart: "always"
+loki_service_restart_sec: 5
+
+# Directory paths - will be set after including podman_rootless_quadlet_base
+loki_config_dir: ""
+loki_data_dir: ""
+
+# Loki configuration
+loki_auth_enabled: false
+loki_http_listen_port: 3100
+loki_http_listen_address: "0.0.0.0"
+loki_instance_addr: "127.0.0.1"
+loki_path_prefix: "/loki"
+loki_storage_boltdb_path: "/loki/index"
+loki_storage_filesystem_path: "/loki/chunks"
+loki_analytics_reporting_enabled: false

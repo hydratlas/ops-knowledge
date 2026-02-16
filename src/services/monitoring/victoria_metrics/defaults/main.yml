@@ -1,0 +1,38 @@
+---
+# VictoriaMetrics user configuration
+victoria_metrics_user: "monitoring"
+victoria_metrics_user_comment: "VictoriaMetrics rootless user"
+victoria_metrics_app_name: "victoria-metrics"
+
+# Container configuration
+victoria_metrics_container_image: "docker.io/victoriametrics/victoria-metrics:latest"
+victoria_metrics_container_name: "victoria-metrics"
+victoria_metrics_container_port: 8428
+
+# Network configuration
+victoria_metrics_network_name: "monitoring.network"
+
+# Service configuration
+victoria_metrics_service_description: "VictoriaMetrics Service"
+victoria_metrics_service_restart: "always"
+victoria_metrics_service_restart_sec: 5
+
+# Directory paths - will be set after including podman_rootless_quadlet_base
+victoria_metrics_data_dir: ""
+victoria_metrics_config_dir: ""
+victoria_metrics_config_file: ""
+
+# Prometheus configuration
+victoria_metrics_scrape_configs:
+  - job_name: node
+    static_configs:
+      - targets: []
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '([^:]+):(\d+):([^:]+)'
+        target_label: instance
+        replacement: '${3}:${2}'
+      - source_labels: [__address__]
+        regex: '([^:]+):(\d+):([^:]+)'
+        target_label: __address__
+        replacement: '${1}:${2}'
