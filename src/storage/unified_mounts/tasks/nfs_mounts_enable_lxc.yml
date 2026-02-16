@@ -1,0 +1,32 @@
+---
+# --- LXC向け: automount非対応のためmountユニットを直接管理 ---
+
+# 変更ありのmountedマウント → mount再起動で設定変更を反映
+- name: "LXC: Restart changed NFS mount units (state=mounted)"
+  ansible.builtin.systemd:
+    name: "{{ item.path | regex_replace('^/', '') | regex_replace('/', '-') }}.mount"
+    enabled: true
+    state: restarted
+  loop: >-
+    {{ (_unified_mounts_nfs_active | rejectattr('state', 'defined') | list +
+        _unified_mounts_nfs_active | selectattr('state', 'defined') | selectattr('state', 'equalto', 'mounted') | list)
+       | selectattr('path', 'in', _nfs_changed_paths) | list }}
+  when: _nfs_changed_paths | length > 0
+
+# 変更なしのmountedマウント → mountを有効化・起動（冪等）
+- name: "LXC: Enable and start unchanged NFS mount units (state=mounted)"
+  ansible.builtin.systemd:
+    name: "{{ item.path | regex_replace('^/', '') | regex_replace('/', '-') }}.mount"
+    enabled: true
+    state: started
+  loop: >-
+    {{ (_unified_mounts_nfs_active | rejectattr('state', 'defined') | list +
+        _unified_mounts_nfs_active | selectattr('state', 'defined') | selectattr('state', 'equalto', 'mounted') | list)
+       | rejectattr('path', 'in', _nfs_changed_paths) | list }}
+
+# presentマウント → 次回起動時にマウントされるよう有効化のみ
+- name: "LXC: Enable NFS mount units without starting (state=present)"
+  ansible.builtin.systemd:
+    name: "{{ item.path | regex_replace('^/', '') | regex_replace('/', '-') }}.mount"
+    enabled: true
+  loop: "{{ _unified_mounts_nfs_active | selectattr('state', 'defined') | selectattr('state', 'equalto', 'present') | list }}"

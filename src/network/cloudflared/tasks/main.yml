@@ -1,0 +1,174 @@
+---
+- name: Gather OS facts
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - "!min"
+      - distribution
+
+# Alpine Linux: 公式バイナリを直接ダウンロード
+- name: Install cloudflared from official binary (Alpine)
+  when: ansible_os_family == "Alpine"
+  block:
+    - name: Download cloudflared binary
+      ansible.builtin.get_url:
+        url: "{{ cloudflared_download_url }}"
+        dest: "{{ cloudflared_binary_path }}"
+        mode: "0755"
+        force: false
+
+    - name: Create log directory for cloudflared
+      ansible.builtin.file:
+        path: /var/log/cloudflared
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+# Debian系: GPGキーとリポジトリの設定
+- name: Ensure keyrings directory exists (Debian)
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+  when: ansible_os_family == "Debian"
+
+- name: Add Cloudflare GPG key (Debian)
+  ansible.builtin.get_url:
+    url: https://pkg.cloudflare.com/cloudflare-main.gpg
+    dest: /etc/apt/keyrings/cloudflare-main.gpg
+    mode: "0644"
+  when: ansible_os_family == "Debian"
+
+- name: Remove old Cloudflare GPG key from /usr/share/keyrings (Debian)
+  ansible.builtin.file:
+    path: /usr/share/keyrings/cloudflare-main.gpg
+    state: absent
+  when: ansible_os_family == "Debian"
+
+- name: Add Cloudflare repository (Debian)
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/cloudflared.sources
+    content: |
+      Types: deb
+      URIs: https://pkg.cloudflare.com/cloudflared
+      Suites: any
+      Components: main
+      Signed-By: /etc/apt/keyrings/cloudflare-main.gpg
+    mode: "0644"
+  when: ansible_os_family == "Debian"
+
+- name: Install cloudflared (Debian)
+  ansible.builtin.apt:
+    name: cloudflared
+    state: present
+    update_cache: true
+  when: ansible_os_family == "Debian"
+
+# RHEL系: リポジトリの設定とインストール
+- name: Add Cloudflare repository (RedHat)
+  ansible.builtin.yum_repository:
+    name: cloudflared-stable
+    description: cloudflared-stable
+    baseurl: https://pkg.cloudflare.com/cloudflared/rpm
+    gpgcheck: true
+    gpgkey: https://pkg.cloudflare.com/cloudflare-ascii-pubkey.gpg
+    enabled: true
+  when: ansible_os_family == "RedHat"
+
+- name: Install cloudflared (RedHat)
+  ansible.builtin.dnf:
+    name: cloudflared
+    state: present
+  when: ansible_os_family == "RedHat"
+
+# Tunnel サービスの設定（トークンが設定されている場合のみ）
+# systemd 系（Debian, RedHat）
+- name: Configure cloudflared service (systemd)
+  when:
+    - cloudflared_token | length > 0
+    - ansible_os_family in ["Debian", "RedHat"]
+  block:
+    - name: Check if cloudflared service file exists
+      ansible.builtin.stat:
+        path: /etc/systemd/system/cloudflared.service
+      register: _cloudflared_service_file
+
+    - name: Read current service file content
+      ansible.builtin.slurp:
+        src: /etc/systemd/system/cloudflared.service
+      register: _cloudflared_service_content
+      when: _cloudflared_service_file.stat.exists
+
+    - name: Detect token change
+      ansible.builtin.set_fact:
+        _cloudflared_token_changed: "{{ (cloudflared_token | string) not in (_cloudflared_service_content.content | b64decode) }}"
+      when: _cloudflared_service_file.stat.exists
+
+    - name: Uninstall cloudflared service for token update
+      ansible.builtin.command:
+        cmd: cloudflared service uninstall
+      when:
+        - _cloudflared_service_file.stat.exists
+        - _cloudflared_token_changed | default(false)
+
+    - name: Install cloudflared service with token
+      ansible.builtin.command:
+        cmd: cloudflared service install {{ cloudflared_token }}
+      when: not _cloudflared_service_file.stat.exists or _cloudflared_token_changed | default(false)
+      notify: Restart cloudflared
+
+    - name: Manage cloudflared service (systemd)
+      ansible.builtin.systemd:
+        name: cloudflared
+        enabled: "{{ cloudflared_service_enabled }}"
+        state: "{{ cloudflared_service_state }}"
+        daemon_reload: true
+
+# OpenRC 系（Alpine Linux）
+- name: Configure cloudflared service (OpenRC)
+  when:
+    - cloudflared_token | length > 0
+    - ansible_os_family == "Alpine"
+  block:
+    - name: Install cloudflared init script (Alpine)
+      ansible.builtin.template:
+        src: cloudflared.initd.j2
+        dest: /etc/init.d/cloudflared
+        owner: root
+        group: root
+        mode: "0755"
+      notify: Restart cloudflared (OpenRC)
+
+    - name: Enable cloudflared service (Alpine)
+      ansible.builtin.service:
+        name: cloudflared
+        enabled: "{{ cloudflared_service_enabled }}"
+        runlevel: default
+
+    - name: Manage cloudflared service (OpenRC)
+      ansible.builtin.service:
+        name: cloudflared
+        state: "{{ cloudflared_service_state }}"
+
+# Alpine Linux: 自動更新の設定
+- name: Configure cloudflared auto-update (Alpine)
+  when:
+    - ansible_os_family == "Alpine"
+    - cloudflared_auto_update | bool
+  block:
+    - name: Install update script
+      ansible.builtin.template:
+        src: cloudflared-update.sh.j2
+        dest: /usr/local/bin/cloudflared-update
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Configure daily cron job for auto-update
+      ansible.builtin.cron:
+        name: cloudflared-auto-update
+        minute: "{{ cloudflared_auto_update_minute }}"
+        hour: "{{ cloudflared_auto_update_hour }}"
+        job: /usr/local/bin/cloudflared-update
+        user: root

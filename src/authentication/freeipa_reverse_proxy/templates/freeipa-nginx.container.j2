@@ -1,0 +1,26 @@
+[Unit]
+Description={{ freeipa_nginx_service_description }}
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ freeipa_nginx_container_image }}
+ContainerName={{ freeipa_nginx_container_name }}
+UserNS=keep-id:uid=101,gid=101
+NoNewPrivileges=true
+ReadOnly=true
+PublishPort={{ freeipa_nginx_listen_port }}:{{ freeipa_nginx_listen_port }}
+Volume={{ freeipa_nginx_config_dir }}/nginx.conf:/etc/nginx/nginx.conf:ro,z
+Volume={{ freeipa_nginx_ssl_cert }}:/etc/nginx/ssl/nginx.crt:ro,z
+Volume={{ freeipa_nginx_ssl_key }}:/etc/nginx/ssl/nginx.key:ro,z
+Volume={{ freeipa_nginx_home }}/.local/share/nginx-cache:/var/cache/nginx:Z
+Volume={{ freeipa_nginx_home }}/.local/share/nginx-run:/var/run:Z
+AutoUpdate=registry
+LogDriver=journald
+
+[Service]
+Restart={{ freeipa_nginx_service_restart }}
+RestartSec={{ freeipa_nginx_service_restart_sec }}
+
+[Install]
+WantedBy=default.target

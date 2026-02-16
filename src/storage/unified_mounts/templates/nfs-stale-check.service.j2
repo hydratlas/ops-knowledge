@@ -1,0 +1,22 @@
+# {{ ansible_managed }}
+# NFS stale file handle check and auto-remount service
+
+[Unit]
+Description=NFS stale file handle check and auto-remount
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/nfs-stale-check.sh
+
+# セキュリティハードニング（seccomp・プロセス属性系）
+NoNewPrivileges=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+SystemCallArchitectures=native
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

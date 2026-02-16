@@ -1,0 +1,24 @@
+[Unit]
+Description={{ loki_service_description }}
+
+[Container]
+Image={{ loki_container_image }}
+ContainerName={{ loki_container_name }}
+AutoUpdate=registry
+LogDriver=journald
+Network={{ loki_network_name }}
+UserNS=keep-id:uid=10001,gid=10001
+Exec='-config.file=/loki.yaml'
+NoNewPrivileges=true
+ReadOnly=true
+PublishPort={{ loki_container_port }}:3100
+Volume={{ loki_config_dir }}/loki.yaml:/loki.yaml:z
+Volume={{ loki_data_dir }}:/loki:Z
+Volume=/etc/localtime:/etc/localtime:ro
+
+[Service]
+Restart={{ loki_service_restart }}
+RestartSec={{ loki_service_restart_sec }}
+
+[Install]
+WantedBy=default.target

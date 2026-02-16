@@ -1,0 +1,7 @@
+[Unit]
+Description={{ quadlet_network_description }}
+
+[Network]
+{% for label in quadlet_network_labels %}
+Label={{ label }}
+{% endfor %}

@@ -1,0 +1,54 @@
+---
+# vmagent user configuration
+vmagent_user: "monitoring"
+vmagent_group: "monitoring"
+
+# Version and binary configuration
+vmagent_version: "v1.134.0"
+vmagent_arch: "amd64"
+vmagent_download_url: "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/{{ vmagent_version }}/vmutils-linux-{{ vmagent_arch }}-{{ vmagent_version }}.tar.gz"
+vmagent_binary_path: "/usr/local/bin/vmagent-prod"
+
+# Service configuration
+vmagent_service_name: "vmagent"
+vmagent_service_description: "VictoriaMetrics vmagent"
+vmagent_service_restart: "always"
+vmagent_service_restart_sec: 5
+
+# Directory paths
+vmagent_config_dir: "/etc/vmagent"
+vmagent_config_file: "{{ vmagent_config_dir }}/prometheus.yml"
+vmagent_data_dir: "/var/lib/vmagent"
+
+# Listening port
+vmagent_http_listen_addr: ":8429"
+
+# Remote write destinations (required)
+# Example:
+#   vmagent_remote_write_urls:
+#     - "http://victoria-metrics:8428/api/v1/write"
+vmagent_remote_write_urls: []
+
+# Remote write buffer configuration
+# Maximum disk usage per remote write URL for buffering unsent data.
+# This ensures no data loss when the remote write destination is down.
+# Set to 0 to disable the limit (use all available disk space).
+vmagent_remote_write_max_disk_usage_per_url: "1GB"
+
+# HA configuration
+# Unique cluster name per vmagent instance for proper deduplication in HA setups.
+# See: https://docs.victoriametrics.com/vmagent/#high-availability
+vmagent_cluster_name: "{{ inventory_hostname }}"
+
+# Extra CLI flags for vmagent
+vmagent_extra_flags: []
+
+# External labels added to all scraped metrics.
+# Must be identical across all vmagent instances in an HA pair.
+vmagent_external_labels: {}
+
+# Prometheus scrape configuration
+vmagent_scrape_configs:
+  - job_name: node
+    static_configs:
+      - targets: []

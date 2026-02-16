@@ -1,0 +1,39 @@
+---
+# PVE Exporter user configuration
+pve_exporter_user: "monitoring"
+pve_exporter_app_name: "pve-exporter"
+
+# Container configuration
+pve_exporter_container_image: "docker.io/prompve/prometheus-pve-exporter:latest"
+pve_exporter_container_name: "pve-exporter"
+pve_exporter_container_port: 9221
+
+# Service configuration
+pve_exporter_service_description: "Prometheus PVE Exporter Service"
+pve_exporter_service_restart: "always"
+pve_exporter_service_restart_sec: 5
+
+# Directory paths - will be set after including podman_rootless_quadlet_base
+pve_exporter_config_dir: ""
+pve_exporter_config_file: ""
+
+# PVE connection configuration
+pve_exporter_pve_verify_ssl: false
+
+# PVE target-specific configuration (required)
+# Creates modules in pve.yml for each PVE target.
+# Each target must have user, token_name, and token_value.
+# Example:
+#   pve_exporter_pve_targets:
+#     ve-01:  # module name (used in scrape config params.module)
+#       user: "prometheus@pve"
+#       token_name: "exporter"
+#       token_value: "token-for-ve-01"
+#     ve-02:
+#       user: "prometheus@pve"
+#       token_name: "exporter"
+#       token_value: "token-for-ve-02"
+pve_exporter_pve_targets: {}
+
+# Collector flags (optional)
+pve_exporter_collector_config: true

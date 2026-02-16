@@ -1,0 +1,33 @@
+- name: Deploy vyos-updater.sh
+  ansible.builtin.copy:
+    src: vyos-updater.sh
+    dest: /config/scripts/vyos-updater.sh
+    mode: "0755"
+
+- name: Deploy setup-vyos-updater.sh
+  ansible.builtin.copy:
+    src: setup-vyos-updater.sh
+    dest: /config/scripts/setup-vyos-updater.sh
+    mode: "0755"
+  notify: vyos-updater changed
+
+- name: Deploy vyos-updater.service
+  ansible.builtin.copy:
+    src: vyos-updater.service
+    dest: /config/scripts/vyos-updater.service
+    mode: "0644"
+  notify: vyos-updater changed
+
+- name: Deploy vyos-updater.timer
+  ansible.builtin.copy:
+    src: vyos-updater.timer
+    dest: /config/scripts/vyos-updater.timer
+    mode: "0644"
+  notify: vyos-updater changed
+
+- name: Ensure setup script is in vyos-postconfig-bootup.script
+  ansible.builtin.lineinfile:
+    path: /config/scripts/vyos-postconfig-bootup.script
+    line: /config/scripts/setup-vyos-updater.sh
+    create: true
+    mode: "0755"

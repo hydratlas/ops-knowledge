@@ -1,0 +1,50 @@
+---
+# Tasks for docker_compose_plugin role (Debian-based systems only)
+
+- name: Install ca-certificates
+  ansible.builtin.apt:
+    name: ca-certificates
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Set Docker repository variables
+  ansible.builtin.set_fact:
+    docker_distribution_name: "{{ 'ubuntu' if ansible_distribution == 'Ubuntu' else 'debian' }}"
+    docker_distribution_codename: "{{ ansible_distribution_release }}"
+    docker_architecture: "{{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}"
+  when: ansible_os_family == "Debian"
+
+- name: Ensure /etc/apt/keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+  when: ansible_os_family == "Debian"
+
+- name: Add Docker GPG key
+  ansible.builtin.get_url:
+    url: "https://download.docker.com/linux/{{ docker_distribution_name }}/gpg"
+    dest: /etc/apt/keyrings/docker.asc
+    mode: '0644'
+  when: ansible_os_family == "Debian"
+
+- name: Add Docker repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/docker.sources
+    content: |
+      Types: deb
+      URIs: https://download.docker.com/linux/{{ docker_distribution_name }}
+      Suites: {{ docker_distribution_codename }}
+      Components: stable
+      Signed-By: /etc/apt/keyrings/docker.asc
+      Architectures: {{ docker_architecture }}
+    mode: '0644'
+  when: ansible_os_family == "Debian"
+
+- name: Install docker-compose-plugin
+  ansible.builtin.apt:
+    name: docker-compose-plugin
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"

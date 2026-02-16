@@ -9,10 +9,17 @@
 このディレクトリには、以下のカテゴリに分類されたAnsibleロールが含まれています：
 
 - **applications/**: アプリケーションのデプロイと設定
+- **authentication/**: 認証基盤の設定（FreeIPA、SSSD等）
+- **container/**: コンテナランタイムの設定（Podman等）
 - **development/**: 開発環境の構築と管理
-- **infrastructure/**: インフラストラクチャ基盤の設定（コンテナ、仮想化、ストレージ、ネットワーク等）
+- **home/**: ホームディレクトリの初期化と権限管理
+- **monitoring/**: 監視システムの設定（Grafana、VictoriaMetrics等）
+- **network/**: ネットワーク・SSH・VPN関連の設定
+- **os_base/**: OS基盤の設定（タイムゾーン、ホスト名、自動更新等）
 - **platforms/**: OS固有の設定とカスタマイズ
-- **services/**: 各種サービスの設定（認証、監視、トンネリング等）
+- **proxmox/**: Proxmox VE 仮想化基盤の設定
+- **slurm/**: Slurm クラスターの設定
+- **storage/**: ストレージ関連の設定（ZFS、Btrfs、NFS等）
 
 各ロールは独立して動作するよう設計されており、必要に応じて組み合わせて使用することができます。詳細な使用方法は各ロールディレクトリ内のREADME.mdファイルを参照してください。
 

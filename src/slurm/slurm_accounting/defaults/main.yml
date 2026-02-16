@@ -1,0 +1,16 @@
+# Slurmアカウンティング設定
+# アカウント定義（rootの直下にフラットに配置）
+slurm_accounts: []
+# 例:
+#   - name: admins
+#     description: "Administrators"
+#   - name: users
+#     description: "General users"
+
+# ユーザー定義（アカウントへのひもづけ）
+slurm_users: []
+# 例:
+#   - name: sato
+#     account: admins
+#   - name: another-user
+#     account: users

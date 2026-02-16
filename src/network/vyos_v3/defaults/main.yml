@@ -1,0 +1,5 @@
+---
+# VyOS v3 role defaults
+
+# Enable backup of current configuration
+vyos_v3_backup: false

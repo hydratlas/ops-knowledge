@@ -1,0 +1,10 @@
+# Managed by Ansible - do not edit manually
+[Unit]
+Description=Slurm node registration watchdog timer
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=3min
+
+[Install]
+WantedBy=timers.target

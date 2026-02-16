@@ -1,0 +1,75 @@
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - slurm_controller_host | length > 0
+    fail_msg: "slurm_controller_host must be set"
+    quiet: true
+
+- name: Install slurmd package
+  ansible.builtin.apt:
+    name:
+      - slurmd
+    state: present
+
+- name: Create systemd override directory for slurmd
+  ansible.builtin.file:
+    path: /etc/systemd/system/slurmd.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Configure slurmd for dynamic node registration
+  ansible.builtin.template:
+    src: slurmd-dynamic.conf.j2
+    dest: /etc/systemd/system/slurmd.service.d/dynamic.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart slurmd
+
+- name: Start and enable slurmd service
+  ansible.builtin.systemd:
+    name: slurmd
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: Restart slurmd if slurm config changed on controller
+  ansible.builtin.systemd:
+    name: slurmd
+    state: restarted
+  when: hostvars[groups['slurm_ctrl'][0]]['slurm_config_changed'] | default(false)
+
+- name: Deploy slurm-node-watchdog script
+  ansible.builtin.copy:
+    src: slurm-node-watchdog
+    dest: /usr/local/bin/slurm-node-watchdog
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Deploy slurm-node-watchdog systemd service
+  ansible.builtin.copy:
+    src: slurm-node-watchdog.service
+    dest: /etc/systemd/system/slurm-node-watchdog.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart slurm-node-watchdog timer
+
+- name: Deploy slurm-node-watchdog systemd timer
+  ansible.builtin.copy:
+    src: slurm-node-watchdog.timer
+    dest: /etc/systemd/system/slurm-node-watchdog.timer
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart slurm-node-watchdog timer
+
+- name: Enable and start slurm-node-watchdog timer
+  ansible.builtin.systemd:
+    name: slurm-node-watchdog.timer
+    state: started
+    enabled: yes
+    daemon_reload: yes

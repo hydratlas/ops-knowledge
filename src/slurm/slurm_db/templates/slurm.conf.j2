@@ -1,0 +1,11 @@
+# Minimal slurm.conf for sacctmgr on slurmdbd host
+# Managed by Ansible - do not edit manually
+
+ClusterName={{ slurm_cluster_name }}
+SlurmctldHost=localhost
+
+AuthType=auth/slurm
+AuthInfo=/etc/slurm/slurm.key
+
+AccountingStorageType=accounting_storage/slurmdbd
+AccountingStorageHost={{ slurm_dbd_host }}

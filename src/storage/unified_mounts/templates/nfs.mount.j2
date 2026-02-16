@@ -1,0 +1,20 @@
+# {{ ansible_managed }}
+# NFS mount unit for {{ item.path }}
+
+[Unit]
+Description=NFS mount for {{ item.path }}
+After=network-online.target
+Wants=network-online.target
+DefaultDependencies=no
+StartLimitBurst={{ unified_mounts_start_limit_burst }}
+StartLimitIntervalSec={{ unified_mounts_start_limit_interval }}
+
+[Mount]
+What={{ item.src }}
+Where={{ item.path }}
+Type={{ item.fstype }}
+Options={{ item.opts }}
+TimeoutSec=90
+
+[Install]
+WantedBy=multi-user.target

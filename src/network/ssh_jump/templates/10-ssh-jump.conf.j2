@@ -1,0 +1,7 @@
+Match User {{ ansible_user }}
+    PermitTTY yes
+    ForceCommand none
+
+Match all
+    PermitTTY no
+    ForceCommand /usr/sbin/nologin

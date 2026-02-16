@@ -1,0 +1,10 @@
+{# DHCPスタティックマッピングとスタティックホスト名マッピング #}
+{% for host in vyos_v2_dhcp_static_mappings | default([]) %}
+{% for net in host.networks %}
+{% if net.mac is defined %}
+set service dhcp-server shared-network-name {{ net.segment }} subnet {{ net.subnet }} static-mapping {{ host.hostname }} ip-address '{{ net.ip }}'
+set service dhcp-server shared-network-name {{ net.segment }} subnet {{ net.subnet }} static-mapping {{ host.hostname }} mac '{{ net.mac }}'
+{% endif %}
+set system static-host-mapping host-name {{ host.hostname }}.{{ net.domain }} inet '{{ net.ip }}'
+{% endfor %}
+{% endfor %}

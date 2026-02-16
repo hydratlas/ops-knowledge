@@ -1,0 +1,15 @@
+{% for rule in vyos_v2_nat.destination_rules + vyos_v2_nat_extra_destination_rules | default([]) %}
+set nat destination rule {{ rule.number }} destination port '{{ rule.destination_port }}'
+set nat destination rule {{ rule.number }} inbound-interface name '{{ rule.inbound_interface }}'
+set nat destination rule {{ rule.number }} protocol '{{ rule.protocol }}'
+set nat destination rule {{ rule.number }} translation address '{{ rule.translation_address }}'
+set nat destination rule {{ rule.number }} translation port '{{ rule.translation_port }}'
+{% endfor %}
+{% for rule in vyos_v2_nat.source_rules %}
+{% if rule.log | default(false) %}
+set nat source rule {{ rule.number }} log
+{% endif %}
+set nat source rule {{ rule.number }} outbound-interface name '{{ rule.outbound_interface }}'
+set nat source rule {{ rule.number }} source address '{{ rule.source_address }}'
+set nat source rule {{ rule.number }} translation address '{{ rule.translation }}'
+{% endfor %}

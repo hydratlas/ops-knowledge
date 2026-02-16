@@ -1,0 +1,26 @@
+- name: Validate vyos_base_config is defined
+  ansible.builtin.assert:
+    that:
+      - vyos_base_config is defined
+    fail_msg: "vyos_base_config is not defined"
+
+- name: Create VRRP health check script
+  ansible.builtin.copy:
+    dest: /config/scripts/check-gateway.sh
+    mode: "0755"
+    content: |
+      #!/bin/sh
+      ping -c 1 -W 2 {{ vyos_health_check_gateway }} > /dev/null 2>&1
+  become: true
+  vars:
+    ansible_connection: ansible.builtin.ssh
+
+- name: Combine base, dhcp mapping, and custom config for VyOS
+  ansible.builtin.set_fact:
+    vyos_final_config: "{{ vyos_base_config + vyos_dhcp_mapping_config | default([]) + vyos_custom_config | default([]) }}"
+
+- name: Apply config to VyOS
+  vyos.vyos.vyos_config:
+    match: none
+    lines: "{{ vyos_final_config }}"
+    save: true

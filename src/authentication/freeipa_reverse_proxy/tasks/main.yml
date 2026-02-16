@@ -1,0 +1,110 @@
+---
+- name: Include common Rootless Podman Quadlet setup
+  ansible.builtin.include_role:
+    name: container/podman_rootless_quadlet_base
+  vars:
+    quadlet_user: "{{ freeipa_nginx_user }}"
+    quadlet_user_comment: "{{ freeipa_nginx_user_comment }}"
+    quadlet_app_name: "{{ freeipa_nginx_app_name }}"
+    quadlet_skip_subids: false
+
+- name: Set freeipa-nginx specific facts from base role
+  ansible.builtin.set_fact:
+    freeipa_nginx_uid: "{{ quadlet_uid }}"
+    freeipa_nginx_gid: "{{ quadlet_gid }}"
+    freeipa_nginx_home: "{{ quadlet_home }}"
+    freeipa_nginx_config_dir: "{{ quadlet_config_dir }}"
+    freeipa_nginx_systemd_dir: "{{ quadlet_systemd_dir }}"
+
+- name: Set SSL file paths
+  ansible.builtin.set_fact:
+    freeipa_nginx_ssl_dir: "{{ quadlet_config_dir }}/ssl"
+    freeipa_nginx_ssl_cert: "{{ quadlet_config_dir }}/ssl/nginx.crt"
+    freeipa_nginx_ssl_key: "{{ quadlet_config_dir }}/ssl/nginx.key"
+
+- name: Create SSL directory
+  ansible.builtin.file:
+    path: "{{ freeipa_nginx_ssl_dir }}"
+    state: directory
+    owner: "{{ freeipa_nginx_user }}"
+    group: "{{ freeipa_nginx_user }}"
+    mode: "0750"
+
+- name: Check if SSL certificate exists
+  ansible.builtin.stat:
+    path: "{{ freeipa_nginx_ssl_cert }}"
+  register: freeipa_nginx_ssl_cert_stat
+
+- name: Generate self-signed SSL certificate
+  ansible.builtin.command:
+    cmd: >
+      openssl req -x509 -nodes
+      -days {{ freeipa_nginx_ssl_days }}
+      -newkey rsa:2048
+      -keyout {{ freeipa_nginx_ssl_key }}
+      -out {{ freeipa_nginx_ssl_cert }}
+      -subj "/CN={{ freeipa_nginx_backend_host }}"
+  when: not freeipa_nginx_ssl_cert_stat.stat.exists
+  notify: restart freeipa-nginx
+
+- name: Set SSL certificate permissions
+  ansible.builtin.file:
+    path: "{{ freeipa_nginx_ssl_cert }}"
+    owner: "{{ freeipa_nginx_user }}"
+    group: "{{ freeipa_nginx_user }}"
+    mode: "0644"
+
+- name: Set SSL key permissions
+  ansible.builtin.file:
+    path: "{{ freeipa_nginx_ssl_key }}"
+    owner: "{{ freeipa_nginx_user }}"
+    group: "{{ freeipa_nginx_user }}"
+    mode: "0640"
+
+- name: Create cache directory
+  ansible.builtin.file:
+    path: "{{ freeipa_nginx_home }}/.local/share/nginx-cache"
+    state: directory
+    owner: "{{ freeipa_nginx_user }}"
+    group: "{{ freeipa_nginx_user }}"
+    mode: "0755"
+
+- name: Create run directory
+  ansible.builtin.file:
+    path: "{{ freeipa_nginx_home }}/.local/share/nginx-run"
+    state: directory
+    owner: "{{ freeipa_nginx_user }}"
+    group: "{{ freeipa_nginx_user }}"
+    mode: "0755"
+
+- name: Create nginx configuration file
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: "{{ freeipa_nginx_config_dir }}/nginx.conf"
+    owner: "{{ freeipa_nginx_user }}"
+    group: "{{ freeipa_nginx_user }}"
+    mode: "0644"
+  notify: restart freeipa-nginx
+
+- name: Create Podman Quadlet container file
+  ansible.builtin.template:
+    src: freeipa-nginx.container.j2
+    dest: "{{ freeipa_nginx_systemd_dir }}/freeipa-nginx.container"
+    owner: "{{ freeipa_nginx_user }}"
+    group: "{{ freeipa_nginx_user }}"
+    mode: "0644"
+  notify: reload systemd user daemon and restart freeipa-nginx
+
+- name: Flush handlers to ensure systemd user daemon is reloaded
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start freeipa-nginx service
+  ansible.builtin.systemd:
+    name: freeipa-nginx.service
+    enabled: yes
+    state: started
+    scope: user
+  become: yes
+  become_user: "{{ freeipa_nginx_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ freeipa_nginx_uid }}"

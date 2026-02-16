@@ -1,0 +1,1 @@
+このロールは、rootlessコンテナ実行に必要なsubuid/subgidマッピングをSSSDで集中管理するためのNSS設定を提供する。/etc/nsswitch.confに「subid: sss」行を追加し、FreeIPAなどの統合認証基盤からUID/GIDマッピング情報を動的に取得できるようにする。これにより、ローカルファイル(/etc/subuid、/etc/subgid)による個別管理から脱却し、マルチホスト環境におけるコンテナユーザー名前空間の一貫性を確保する。設定変更後はSSSDサービスを再起動して反映される。

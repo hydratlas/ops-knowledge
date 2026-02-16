@@ -1,0 +1,1 @@
+このロールはVyOSルーターの包括的な設定を宣言的に管理する。設定をfirewall、high-availability、interfaces、nat、protocols、service、system、containerの8つのセクションに分割し、各セクションをJinja2テンプレートで個別に生成する。現在の設定と望ましい設定を比較し、差分がある場合のみ変更を適用する仕組みを持つ。VRRPによる冗長構成、conntrack-sync、DHCPサーバー、DNS転送、NTPサービス、NATルール、ファイアウォールルール、静的ルート、コンテナ実行など、ネットワークゲートウェイに必要な機能を網羅的に構成できる。設定適用前にdelete文で既存の管理対象セクションを削除することで、べき等性を確保している。

@@ -1,0 +1,8 @@
+# ssh_jump_local_users:
+#   - name: username
+#     uid: 1000
+#     password: "$6$rounds=..."  # optional
+#     groups: "adm"
+#     ssh_authorized_keys:
+#       - "ssh-ed25519 AAAA..."
+ssh_jump_local_users: []

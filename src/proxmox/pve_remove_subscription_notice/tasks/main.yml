@@ -1,0 +1,18 @@
+---
+- name: Remove subscription notice by modifying proxmoxlib.js
+  ansible.builtin.replace:
+    path: /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+    regexp: '(?<!//)(Ext\.Msg\.show\(\{\s+title: gettext\(''No valid sub)'
+    replace: 'void({ //\1'
+    backup: yes
+  notify: restart pveproxy
+
+- name: Create APT hook to reapply patch after package updates
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/99-pve-no-subscription-nag
+    content: |
+      // Automatically reapply subscription notice removal after proxmox-widget-toolkit updates
+      DPkg::Post-Invoke {
+        "if dpkg -V proxmox-widget-toolkit 2>/dev/null | grep -q proxmoxlib.js; then exit 0; fi; sed -i.bak 's/Ext\\.Msg\\.show({[[:space:]]*title: gettext(.No valid sub/void({ \\/\\/\\0/' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js 2>/dev/null && systemctl restart pveproxy 2>/dev/null || true";
+      };
+    mode: '0644'

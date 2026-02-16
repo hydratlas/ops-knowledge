@@ -1,0 +1,30 @@
+---
+- name: "Set boot device to {{ bmc_boot_device }} on {{ inventory_hostname }}"
+  ansible.builtin.command:
+    cmd: >-
+      ipmitool -I {{ bmc_ipmi_interface }}
+      -H {{ ansible_host }}
+      -U {{ bmc_ipmi_username }}
+      -P {{ bmc_ipmi_password }}
+      chassis bootdev {{ bmc_boot_device }}
+      {{ 'options=persistent' if bmc_boot_persistent | bool else '' }}
+  delegate_to: "{{ bmc_delegate_host }}"
+  changed_when: true
+  no_log: true
+
+- name: Verify boot device setting
+  ansible.builtin.command:
+    cmd: >-
+      ipmitool -I {{ bmc_ipmi_interface }}
+      -H {{ ansible_host }}
+      -U {{ bmc_ipmi_username }}
+      -P {{ bmc_ipmi_password }}
+      chassis bootparam get 5
+  delegate_to: "{{ bmc_delegate_host }}"
+  changed_when: false
+  register: bmc_boot_result
+  no_log: true
+
+- name: Show boot device setting
+  ansible.builtin.debug:
+    msg: "{{ bmc_boot_result.stdout }}"

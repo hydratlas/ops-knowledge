@@ -1,0 +1,24 @@
+#!/sbin/openrc-run
+# OpenRC init script for cloudflared
+# Managed by Ansible - do not edit manually
+
+name="cloudflared"
+description="Cloudflare Tunnel daemon"
+
+command="{{ cloudflared_binary_path }}"
+command_args="tunnel run --token {{ cloudflared_token }}"
+command_user="root"
+command_background="yes"
+pidfile="/run/${RC_SVCNAME}.pid"
+
+output_log="/var/log/cloudflared/cloudflared.log"
+error_log="/var/log/cloudflared/cloudflared.log"
+
+depend() {
+    need net
+    after firewall
+}
+
+start_pre() {
+    checkpath --directory --owner root:root --mode 0755 /var/log/cloudflared
+}

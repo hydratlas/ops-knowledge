@@ -1,0 +1,18 @@
+---
+# IPMI 接続設定
+bmc_ipmi_interface: lanplus
+
+# 電源操作（status / on / off / reset / cycle / soft）
+bmc_power_action: status
+
+# ブートデバイス設定（disk / pxe / cdrom / bios）
+bmc_boot_device: disk
+bmc_boot_persistent: false
+
+# 認証情報ローテーション
+bmc_rotate_credentials: false
+bmc_new_ipmi_username: ""
+bmc_new_ipmi_password: ""
+
+# IPMI ユーザー ID（Supermicro のデフォルトは 2）
+bmc_ipmi_user_id: 2

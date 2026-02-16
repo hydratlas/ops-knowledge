@@ -1,0 +1,28 @@
+- name: Detect package manager
+  ansible.builtin.raw: sh -c 'if command -v apk >/dev/null 2>&1; then echo apk; elif command -v apt-get >/dev/null 2>&1; then echo apt; fi'
+  register: pkg_mgr_result
+  changed_when: false
+  check_mode: false
+
+- name: Install Python (Alpine Linux)
+  ansible.builtin.raw: apk add --no-cache python3
+  register: apk_result
+  changed_when: "'Installing' in apk_result.stdout"
+  when: pkg_mgr_result.stdout is search('apk')
+
+- name: Install Python (Debian/Ubuntu)
+  ansible.builtin.raw: apt-get -o DPkg::Lock::Timeout=300 update -qq && apt-get -o DPkg::Lock::Timeout=300 install -y -qq python3
+  register: apt_result
+  changed_when: "'Setting up python3' in apt_result.stdout"
+  when: pkg_mgr_result.stdout is search('apt')
+
+- name: Gather facts after Python installation
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - "!any"
+      - "distribution"
+      - "pkg_mgr"
+      - "platform"
+      - "python"
+      - "virtual"

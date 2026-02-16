@@ -1,0 +1,15 @@
+---
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - quadlet_network_name != ""
+      - quadlet_network_owner != ""
+    fail_msg: "quadlet_network_name and quadlet_network_owner must be defined"
+
+- name: Create Quadlet network file
+  ansible.builtin.template:
+    src: quadlet.network.j2
+    dest: "{{ quadlet_systemd_dir }}/{{ quadlet_network_name }}.network"
+    owner: "{{ quadlet_network_owner }}"
+    group: "{{ quadlet_network_owner }}"
+    mode: '0644'

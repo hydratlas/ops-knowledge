@@ -1,0 +1,41 @@
+---
+# Alpine Linux: OpenSSH サーバーのインストールと設定
+- name: Install OpenSSH server (Alpine)
+  when: ansible_os_family == "Alpine"
+  block:
+    - name: Install openssh package
+      community.general.apk:
+        name: openssh
+        state: present
+
+    - name: Ensure sshd_config.d directory exists
+      ansible.builtin.file:
+        path: /etc/ssh/sshd_config.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Configure sshd to include sshd_config.d
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        line: "Include /etc/ssh/sshd_config.d/*.conf"
+        insertbefore: BOF
+        state: present
+      notify: Restart sshd (OpenRC)
+
+    - name: Generate SSH host keys if not exist
+      ansible.builtin.command:
+        cmd: ssh-keygen -A
+        creates: /etc/ssh/ssh_host_ed25519_key
+
+    - name: Enable sshd service (Alpine)
+      ansible.builtin.service:
+        name: sshd
+        enabled: "{{ sshd_service_enabled }}"
+        runlevel: default
+
+    - name: Start sshd service (Alpine)
+      ansible.builtin.service:
+        name: sshd
+        state: "{{ sshd_service_state }}"

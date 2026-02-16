@@ -1,8 +1,0 @@
-- name: Ensure containers storage directories exist
-  ansible.builtin.file:
-    path: "{{ create_containers_storage_dir.home_base }}/{{ item.0.name }}/{{ item.1 }}"
-    state: directory
-    owner: "{{ item.0.uid }}"
-    group: "{{ item.0.gid }}"
-    mode: '0755'
-  loop: "{{ cluster_user_list | default([]) | product(['.local', '.local/share', '.local/share/containers', '.local/share/containers/storage']) | list }}"

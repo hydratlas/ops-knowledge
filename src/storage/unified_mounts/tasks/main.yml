@@ -1,0 +1,73 @@
+---
+# unified_mounts - NFS・CIFS等のマウントを統合管理するロール
+#
+# 入力変数（どちらか一方または両方を使用）:
+#   1. unified_mounts: マウント定義の直接リスト
+#   2. unified_mount_patterns + unified_mount_selectors: パターンから選択的に展開
+#
+# NFSはsystemdユニット（VM: automount / LXC: mount）で管理し、非NFSはfstabで管理する
+
+# OS種別の分岐とLXC判定に必要なファクトのみを限定収集
+- name: Gather required facts for unified_mounts
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - distribution
+      - virtual
+
+# 直接リストとパターン/セレクタの両入力形式を単一のマウントリストに統合
+- name: Build unified mount list
+  ansible.builtin.set_fact:
+    _unified_mounts_combined: >-
+      {{
+        (unified_mounts | default([])) +
+        (unified_mount_patterns | default({}) | dict2items
+          | selectattr('key', 'in', unified_mount_selectors | default([]))
+          | map(attribute='value')
+          | list)
+      }}
+
+# fstypeに基づきNFSと非NFSに分離（systemdユニットとfstabで管理方式が異なるため）
+- name: Separate NFS and non-NFS mounts
+  ansible.builtin.set_fact:
+    _unified_mounts_nfs: >-
+      {{ _unified_mounts_combined | selectattr('fstype', 'in', ['nfs', 'nfs4']) | list }}
+    _unified_mounts_non_nfs: >-
+      {{ _unified_mounts_combined | rejectattr('fstype', 'in', ['nfs', 'nfs4']) | list }}
+
+# LXCコンテナの検出（LXCではsystemd automountが使用不可のためmount直接管理に切替）
+- name: Detect LXC container environment
+  ansible.builtin.set_fact:
+    _unified_mounts_is_lxc: >-
+      {{ ansible_virtualization_type | default('') == 'lxc' }}
+
+# 有効なNFSマウント（state未指定またはabsent以外）を抽出
+- name: Filter active NFS mounts
+  ansible.builtin.set_fact:
+    _unified_mounts_nfs_active: >-
+      {{ _unified_mounts_nfs | rejectattr('state', 'defined') | list +
+         _unified_mounts_nfs | selectattr('state', 'defined') | rejectattr('state', 'equalto', 'absent') | list }}
+
+# マウント種別に応じた必須パッケージの導入（nfs-utils, cachefilesd, cifs-utils）
+- name: Install required packages
+  ansible.builtin.include_tasks: packages.yml
+
+# 非NFSマウント（CIFS・bind等）のマウントポイント作成とfstab登録
+- name: Configure non-NFS mounts
+  ansible.builtin.include_tasks: non_nfs_mounts.yml
+
+# NFSマウントのsystemdユニット配置・有効化とfstabからの移行処理
+- name: Configure NFS mounts via systemd
+  ansible.builtin.include_tasks: nfs_mounts.yml
+
+# NFSのstaleファイルハンドルを定期検知するsystemd timerの有効化
+- name: Enable NFS stale file handle check
+  ansible.builtin.include_tasks: nfs_stale_check_enable.yml
+  when:
+    - unified_mounts_stale_check_enabled | bool
+    - _unified_mounts_nfs_active | length > 0
+
+# NFSのstaleファイルハンドルを定期検知するsystemd timerの無効化
+- name: Disable NFS stale file handle check
+  ansible.builtin.include_tasks: nfs_stale_check_disable.yml
+  when: not (unified_mounts_stale_check_enabled | bool and _unified_mounts_nfs_active | length > 0)

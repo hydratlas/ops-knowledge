@@ -1,0 +1,13 @@
+---
+- name: Execute power operation
+  ansible.builtin.include_tasks: power.yml
+  tags: bmc_power
+
+- name: Set boot device
+  ansible.builtin.include_tasks: boot_device.yml
+  tags: bmc_boot
+
+- name: Rotate credentials
+  ansible.builtin.include_tasks: credential_rotate.yml
+  when: bmc_rotate_credentials | bool
+  tags: bmc_credential

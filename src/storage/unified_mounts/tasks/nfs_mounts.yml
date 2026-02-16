@@ -1,0 +1,31 @@
+---
+# LXCではカーネル制約によりFS-Cache（fscオプション）が使用不可のため除去
+- name: "LXC: Strip fsc option from NFS mount options"
+  ansible.builtin.set_fact:
+    _unified_mounts_nfs_active: >-
+      [{% for item in _unified_mounts_nfs_active %}
+      {{ item | combine({'opts': item.opts | default('') | split(',') | reject('equalto', 'fsc') | join(',')}) | to_json }}{{ ',' if not loop.last else '' }}
+      {% endfor %}]
+  when: _unified_mounts_is_lxc
+
+# state=absentのNFSマウントを停止しユニットファイルを削除
+- name: Remove absent NFS mounts
+  ansible.builtin.include_tasks: nfs_mounts_absent.yml
+
+# fstab管理のNFSマウントをsystemdユニット管理に移行
+- name: Migrate NFS mounts from fstab to systemd
+  ansible.builtin.include_tasks: nfs_mounts_migrate.yml
+
+# マウントポイント作成とsystemdユニットファイルの配置
+- name: Deploy NFS systemd unit files
+  ansible.builtin.include_tasks: nfs_mounts_deploy.yml
+
+# VM: automountユニット経由でNFSマウントを有効化・起動
+- name: Enable and start NFS automount units (VM)
+  ansible.builtin.include_tasks: nfs_mounts_enable_vm.yml
+  when: not _unified_mounts_is_lxc
+
+# LXC: mountユニットを直接管理してNFSマウントを有効化・起動
+- name: Enable and start NFS mount units (LXC)
+  ansible.builtin.include_tasks: nfs_mounts_enable_lxc.yml
+  when: _unified_mounts_is_lxc

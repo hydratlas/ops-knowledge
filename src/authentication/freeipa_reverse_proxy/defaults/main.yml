@@ -1,0 +1,23 @@
+---
+# User configuration
+freeipa_nginx_user: "freeipa-nginx"
+freeipa_nginx_user_comment: "FreeIPA nginx reverse proxy rootless user"
+freeipa_nginx_app_name: "freeipa-nginx"
+
+# Container configuration
+freeipa_nginx_container_image: "quay.io/nginx/nginx-unprivileged"
+freeipa_nginx_container_name: "freeipa-server-nginx"
+freeipa_nginx_listen_port: 10443
+
+# Service configuration
+freeipa_nginx_service_description: "Reverse Proxy for FreeIPA Server using nginx"
+freeipa_nginx_service_restart: "on-failure"
+freeipa_nginx_service_restart_sec: 5
+
+# SSL certificate configuration
+freeipa_nginx_ssl_days: 7300
+
+# Proxy backend configuration
+# freeipa_nginx_backend_host and freeipa_nginx_backend_url must be set in host_vars
+# freeipa_nginx_backend_host: "idm-XX.int.home.arpa"
+# freeipa_nginx_backend_url: "https://idm-XX.int.home.arpa/"

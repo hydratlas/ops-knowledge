@@ -1,0 +1,40 @@
+---
+- name: Check if btrfs filesystem already exists on first device
+  ansible.builtin.command:
+    cmd: blkid -o value -s TYPE {{ btrfs_fs.devices[0] }}
+  register: blkid_result
+  changed_when: false
+  failed_when: false
+
+- name: Create btrfs RAID1 filesystem
+  ansible.builtin.command:
+    cmd: >
+      mkfs.btrfs
+      -L {{ btrfs_fs.label }}
+      -d raid1
+      -m raid1
+      {% if btrfs_force | default(false) %}-f{% endif %}
+      {{ btrfs_fs.devices | join(' ') }}
+  when:
+    - blkid_result.stdout != 'btrfs'
+    - btrfs_fs.devices | length >= 2
+
+- name: Ensure mount point directory exists
+  ansible.builtin.file:
+    path: "{{ btrfs_fs.mountpoint.path }}"
+    state: directory
+    mode: "{{ btrfs_fs.mountpoint.mode | default('0755') }}"
+
+- name: Get btrfs filesystem UUID
+  ansible.builtin.command:
+    cmd: blkid -o value -s UUID {{ btrfs_fs.devices[0] }}
+  register: btrfs_uuid
+  changed_when: false
+
+- name: Mount btrfs filesystem via fstab
+  ansible.posix.mount:
+    path: "{{ btrfs_fs.mountpoint.path }}"
+    src: "UUID={{ btrfs_uuid.stdout }}"
+    fstype: btrfs
+    opts: "{{ btrfs_fs.mount_options | default(btrfs_mount_options) }}"
+    state: mounted

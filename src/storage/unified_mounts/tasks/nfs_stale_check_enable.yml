@@ -1,0 +1,40 @@
+---
+# staleファイルハンドルの検知・強制アンマウントスクリプトを配置
+- name: Deploy NFS stale check script
+  ansible.builtin.template:
+    src: nfs-stale-check.sh.j2
+    dest: /usr/local/sbin/nfs-stale-check.sh
+    owner: root
+    group: root
+    mode: "0755"
+
+# スクリプトを実行するoneshotサービスユニットを配置
+- name: Deploy NFS stale check service unit
+  ansible.builtin.template:
+    src: nfs-stale-check.service.j2
+    dest: /etc/systemd/system/nfs-stale-check.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd daemon
+
+# 定期実行を制御するtimerユニットを配置
+- name: Deploy NFS stale check timer unit
+  ansible.builtin.template:
+    src: nfs-stale-check.timer.j2
+    dest: /etc/systemd/system/nfs-stale-check.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd daemon
+
+# timer有効化前にdaemon-reloadを確実に完了させる
+- name: Flush handlers for stale check units
+  ansible.builtin.meta: flush_handlers
+
+# timerを有効化して定期的なstaleチェックを開始
+- name: Enable and start NFS stale check timer
+  ansible.builtin.systemd:
+    name: nfs-stale-check.timer
+    enabled: true
+    state: started

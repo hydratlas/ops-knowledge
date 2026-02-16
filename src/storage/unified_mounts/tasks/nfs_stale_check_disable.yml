@@ -1,0 +1,28 @@
+---
+# timerを停止（ユニット未存在でもエラーにしない）
+- name: Stop NFS stale check timer
+  ansible.builtin.systemd:
+    name: nfs-stale-check.timer
+    state: stopped
+    enabled: false
+  failed_when: false
+
+# timerユニットファイルを削除
+- name: Remove NFS stale check timer unit
+  ansible.builtin.file:
+    path: /etc/systemd/system/nfs-stale-check.timer
+    state: absent
+  notify: Reload systemd daemon
+
+# serviceユニットファイルを削除
+- name: Remove NFS stale check service unit
+  ansible.builtin.file:
+    path: /etc/systemd/system/nfs-stale-check.service
+    state: absent
+  notify: Reload systemd daemon
+
+# チェックスクリプトを削除
+- name: Remove NFS stale check script
+  ansible.builtin.file:
+    path: /usr/local/sbin/nfs-stale-check.sh
+    state: absent

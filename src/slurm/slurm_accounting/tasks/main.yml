@@ -1,0 +1,52 @@
+- name: Validate slurm_accounts format
+  ansible.builtin.assert:
+    that:
+      - item.name is defined
+    fail_msg: "Each account must have a 'name' field"
+    quiet: true
+  loop: "{{ slurm_accounts }}"
+  when: slurm_accounts | length > 0
+
+- name: Validate slurm_users format
+  ansible.builtin.assert:
+    that:
+      - item.name is defined
+      - item.account is defined
+    fail_msg: "Each user must have 'name' and 'account' fields"
+    quiet: true
+  loop: "{{ slurm_users }}"
+  when: slurm_users | length > 0
+
+- name: Get existing accounts
+  ansible.builtin.command:
+    cmd: sacctmgr show account --parsable2 --noheader format=Account
+  register: existing_accounts
+  changed_when: false
+  run_once: true
+
+- name: Create Slurm accounts
+  ansible.builtin.command:
+    cmd: >
+      sacctmgr add account {{ item.name }}
+      Description="{{ item.description | default(item.name) }}"
+      --immediate
+  loop: "{{ slurm_accounts }}"
+  when: item.name not in existing_accounts.stdout_lines
+  run_once: true
+
+- name: Get existing users
+  ansible.builtin.command:
+    cmd: sacctmgr show user --parsable2 --noheader format=User
+  register: existing_users
+  changed_when: false
+  run_once: true
+
+- name: Add users to Slurm accounts
+  ansible.builtin.command:
+    cmd: >
+      sacctmgr add user {{ item.name }}
+      Account={{ item.account }}
+      --immediate
+  loop: "{{ slurm_users }}"
+  when: item.name not in existing_users.stdout_lines
+  run_once: true

@@ -1,0 +1,23 @@
+[Unit]
+Description={{ victorialogs_service_description }}
+
+[Container]
+Image={{ victorialogs_container_image }}
+ContainerName={{ victorialogs_container_name }}
+Network={{ victorialogs_network_name }}
+AutoUpdate=registry
+LogDriver=journald
+UserNS=keep-id
+NoNewPrivileges=true
+ReadOnly=true
+PublishPort={{ victorialogs_container_port }}:9428
+Volume={{ victorialogs_data_dir }}:/victoria-logs-data:Z
+Volume=/etc/localtime:/etc/localtime:ro
+Exec='-retentionPeriod={{ victorialogs_retention_period }}'
+
+[Service]
+Restart={{ victorialogs_service_restart }}
+RestartSec={{ victorialogs_service_restart_sec }}
+
+[Install]
+WantedBy=default.target

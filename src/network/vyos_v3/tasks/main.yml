@@ -1,0 +1,45 @@
+---
+- name: Gather date/time facts
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - date_time
+
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - vyos_base_config is defined
+      - vyos_health_check_gateway is defined
+    fail_msg: "Required variables: vyos_base_config, vyos_health_check_gateway"
+
+- name: Combine base, DHCP mapping, and custom config for VyOS
+  ansible.builtin.set_fact:
+    vyos_v3_final_config: "{{ vyos_base_config + vyos_dhcp_mapping_config | default([]) + vyos_custom_config | default([]) }}"
+
+- name: Create VRRP health check script
+  ansible.builtin.copy:
+    dest: /config/scripts/check-gateway.sh
+    mode: "0755"
+    content: |
+      #!/bin/sh
+      ping -c 1 -W 2 {{ vyos_health_check_gateway }} > /dev/null 2>&1
+  become: true
+  vars:
+    ansible_connection: ansible.builtin.ssh
+
+- name: Apply configuration to VyOS
+  vyos.vyos.vyos_config:
+    lines: "{{ vyos_v3_final_config }}"
+    backup: "{{ vyos_v3_backup }}"
+    match: none
+    save: true
+    comment: "Applied by Ansible at {{ ansible_date_time.iso8601 }}"
+
+- name: Configure users
+  vyos.vyos.vyos_user:
+    name: "{{ item.name }}"
+    encrypted_password: "{{ item.encrypted_password }}"
+    public_keys: "{{ item.public_keys }}"
+  loop: "{{ vyos_users }}"
+  loop_control:
+    label: "{{ item.name }}"

@@ -1,0 +1,1 @@
+本ロールは、Prometheus PVE ExporterをPython venv環境にpipでインストールし、systemd（またはAlpine LinuxのOpenRC）サービスとして稼働させるものである。Proxmox VE クラスターからVM・CT・ノードのCPU、メモリ、ディスク、ネットワーク使用量などのメトリクスを収集し、Prometheus形式でポート9221に公開する。APIトークンによる認証を使用し、複数のProxmox VEターゲットに対応可能である。設定ファイルはYAML形式で管理され、サービス再起動時には自動的にsystemdまたはOpenRCが使い分けられる。コンテナ版とは異なりPodman不要でシンプルな構成となり、systemd hardeningによるセキュリティ強化が施されている。

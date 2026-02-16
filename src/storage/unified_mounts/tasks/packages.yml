@@ -1,0 +1,34 @@
+---
+# NFSマウントオプションにfscが含まれるかを判定
+- name: Check if any NFS mount uses fsc option
+  ansible.builtin.set_fact:
+    _unified_mounts_uses_fsc: >-
+      {{ _unified_mounts_nfs | selectattr('opts', 'defined')
+         | selectattr('opts', 'search', 'fsc') | list | length > 0 }}
+
+# Debian系パッケージの導入（nfs-common, cachefilesd, cifs-utils）
+- name: Install packages on Debian-based systems
+  ansible.builtin.include_tasks: packages_debian.yml
+  when: ansible_facts['os_family'] == 'Debian'
+
+# RHEL 8以降のパッケージ導入（nfs-utils, cachefilesd, cifs-utils）
+- name: Install packages on RedHat 8+ systems
+  ansible.builtin.include_tasks: packages_redhat.yml
+  when:
+    - ansible_facts['os_family'] == 'RedHat'
+    - ansible_facts['distribution_major_version'] | int >= 8
+
+# RHEL 7以前のパッケージ導入（dnfモジュール非対応のためcommandで代替）
+- name: Install packages on legacy RedHat systems
+  ansible.builtin.include_tasks: packages_redhat_legacy.yml
+  when:
+    - ansible_facts['os_family'] == 'RedHat'
+    - ansible_facts['distribution_major_version'] | int < 8
+
+# cachefilesdの有効化と起動（全ディストリビューション共通）
+- name: Ensure cachefilesd is enabled and started
+  ansible.builtin.service:
+    name: cachefilesd
+    state: started
+    enabled: true
+  when: _unified_mounts_uses_fsc

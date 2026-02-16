@@ -1,0 +1,36 @@
+---
+# PVE Exporter user configuration
+pve_exporter_user: "monitoring"
+pve_exporter_group: "monitoring"
+
+# Installation configuration
+pve_exporter_pip_package: "prometheus-pve-exporter"
+pve_exporter_venv_dir: "/opt/pve-exporter"
+pve_exporter_port: 9221
+
+# Service configuration
+pve_exporter_service_name: "pve-exporter"
+pve_exporter_service_description: "Prometheus PVE Exporter Service"
+pve_exporter_service_restart: "always"
+pve_exporter_service_restart_sec: 5
+
+# Directory paths
+pve_exporter_config_dir: "/etc/pve-exporter"
+pve_exporter_config_file: "/etc/pve-exporter/pve.yml"
+
+# PVE connection configuration
+pve_exporter_pve_verify_ssl: false
+
+# PVE target-specific configuration (required)
+# Creates modules in pve.yml for each PVE target.
+# Each target must have user, token_name, and token_value.
+# Example:
+#   pve_exporter_pve_targets:
+#     ve-01:
+#       user: "prometheus@pve"
+#       token_name: "exporter"
+#       token_value: "token-for-ve-01"
+pve_exporter_pve_targets: {}
+
+# Collector flags (optional)
+pve_exporter_collector_config: true

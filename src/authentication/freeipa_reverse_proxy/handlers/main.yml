@@ -1,0 +1,21 @@
+---
+- name: reload systemd user daemon and restart freeipa-nginx
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    scope: user
+  become: yes
+  become_user: "{{ freeipa_nginx_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ freeipa_nginx_uid }}"
+  changed_when: true
+  notify: restart freeipa-nginx
+
+- name: restart freeipa-nginx
+  ansible.builtin.systemd:
+    name: freeipa-nginx.service
+    state: restarted
+    scope: user
+  become: yes
+  become_user: "{{ freeipa_nginx_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ freeipa_nginx_uid }}"

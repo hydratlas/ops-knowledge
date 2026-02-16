@@ -1,0 +1,28 @@
+set system config-management commit-revisions '{{ vyos_v2_system.config_management_commit_revisions }}'
+set system console device {{ vyos_v2_system.console_device }} speed '{{ vyos_v2_system.console_speed }}'
+set system domain-name '{{ vyos_v2_system.domain_name }}'
+set system host-name '{{ vyos_v2_hostname }}'
+{% for user in vyos_v2_system.login.users %}
+{% if user.plaintext_password is defined %}
+set system login user {{ user.name }} authentication plaintext-password '{{ user.plaintext_password }}'
+{% endif %}
+{% if user.public_keys is defined %}
+{% for key in user.public_keys %}
+set system login user {{ user.name }} authentication public-keys {{ key.name }} key '{{ key.key }}'
+set system login user {{ user.name }} authentication public-keys {{ key.name }} type '{{ key.type }}'
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% for ns in vyos_v2_system.name_servers %}
+set system name-server '{{ ns }}'
+{% endfor %}
+{% for entry in vyos_v2_system.syslog.local %}
+set system syslog local facility {{ entry.facility }} level '{{ entry.level }}'
+{% endfor %}
+{% for entry in vyos_v2_system.syslog.remote %}
+set system syslog remote {{ entry.host }} facility {{ entry.facility }} level '{{ entry.level }}'
+set system syslog remote {{ entry.host }} port '{{ entry.port }}'
+set system syslog remote {{ entry.host }} protocol '{{ entry.protocol }}'
+{% endfor %}
+set system time-zone '{{ vyos_v2_system.time_zone }}'
+

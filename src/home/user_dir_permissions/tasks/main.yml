@@ -1,0 +1,29 @@
+---
+- name: Set ownership and permissions for user directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    owner: "{{ item.user }}"
+    group: "{{ item.group | default(item.user) }}"
+    mode: "{{ item.mode | default('0700') }}"
+    state: directory
+  loop: "{{ user_directories }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Copy skeleton files to user directories
+  ansible.builtin.shell:
+    cmd: cp -rT --no-clobber /etc/skel/ "{{ item.path }}/"
+    creates: "{{ item.path }}/.bashrc"
+  loop: "{{ user_directories | selectattr('copy_skel', 'defined') | selectattr('copy_skel', 'equalto', true) | list }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Set ownership for skeleton files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    owner: "{{ item.user }}"
+    group: "{{ item.group | default(item.user) }}"
+    recurse: true
+  loop: "{{ user_directories | selectattr('copy_skel', 'defined') | selectattr('copy_skel', 'equalto', true) | list }}"
+  loop_control:
+    label: "{{ item.path }}"

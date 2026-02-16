@@ -1,0 +1,8 @@
+[Unit]
+Description=Update VyOS to the latest rolling release
+
+[Service]
+Type=oneshot
+ExecStart=/bin/vbash /config/scripts/vyos-updater.sh
+StandardOutput=journal
+StandardError=journal

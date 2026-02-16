@@ -1,0 +1,23 @@
+{% for iface in vyos_v2_interfaces.ethernet %}
+{% for addr in iface.addresses %}
+set interfaces ethernet {{ iface.name }} address '{{ addr }}'
+{% endfor %}
+{% if iface.hw_id is defined %}
+set interfaces ethernet {{ iface.name }} hw-id '{{ iface.hw_id }}'
+{% endif %}
+{% if iface.adjust_mss | default(false) %}
+set interfaces ethernet {{ iface.name }} ip adjust-mss 'clamp-mss-to-pmtu'
+set interfaces ethernet {{ iface.name }} ipv6 adjust-mss 'clamp-mss-to-pmtu'
+{% endif %}
+{% if iface.mtu is defined %}
+set interfaces ethernet {{ iface.name }} mtu '{{ iface.mtu }}'
+{% endif %}
+{% if iface.offload is defined %}
+{% for offload_type in iface.offload %}
+set interfaces ethernet {{ iface.name }} offload {{ offload_type }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% for iface in vyos_v2_interfaces.loopback | default([]) %}
+set interfaces loopback {{ iface.name }}
+{% endfor %}

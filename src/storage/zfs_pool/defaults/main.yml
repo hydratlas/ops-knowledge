@@ -1,0 +1,19 @@
+---
+# vdevs 定義
+zpool_vdevs: []
+
+# 強制オプション（既存デバイスの上書きを許可）
+zpool_force: false
+
+# プールプロパティ
+zpool_properties:
+  ashift: "12" # 4K セクター用
+
+# ファイルシステムプロパティ（プール作成時のデフォルト値）
+zpool_filesystem_properties:
+  compression: zstd
+  atime: "off"
+  snapdir: visible
+  xattr: sa
+  canmount: "off"
+  acltype: posix

@@ -1,0 +1,27 @@
+---
+# unified_mounts ロールのデフォルト変数
+
+# 直接指定形式のマウントリスト
+unified_mounts: []
+
+# パターン/セレクタ形式
+unified_mount_patterns: {}
+unified_mount_selectors: []
+
+# NFS automount のアイドルタイムアウト（秒）
+# 短くするほど stale からの自動復旧が早い
+unified_mounts_nfs_idle_timeout: 60
+
+# StartLimit 設定（mount-start-limit-hit 対策）
+# 指定期間内に許可されるマウント試行回数
+unified_mounts_start_limit_burst: 5
+# 制限をカウントする期間（秒）
+unified_mounts_start_limit_interval: 30
+
+# NFS stale file handle 自動再マウント機能
+# 有効化フラグ
+unified_mounts_stale_check_enabled: false
+# 監視間隔（systemd timer形式: 30s, 1min, 5min など）
+unified_mounts_stale_check_interval: "30s"
+# statコマンドのタイムアウト秒数
+unified_mounts_stale_check_timeout: 5

@@ -1,0 +1,25 @@
+# show configuration commandsから管理対象コマンドを抽出する正規表現パターン
+# 期待状態と現在状態の比較に使用する
+vyos_v2_managed_regex: >-
+  ^set (container|firewall|high-availability|interfaces|nat|protocols static|service
+  (conntrack-sync|dhcp-server|dns|ntp|ssh)|system (config-management|console|domain-name|host-name|login|name-server|static-host-mapping|syslog|time-zone))
+
+# 新しい設定の適用前に実行するdeleteコマンド
+# 管理対象セクションを削除してクリーンな状態にする
+vyos_v2_delete_commands:
+  - delete container
+  - delete firewall
+  - delete high-availability
+  - delete interfaces
+  - delete nat
+  - delete protocols static
+  - delete service conntrack-sync
+  - delete service dhcp-server
+  - delete service dns
+  - delete service https
+  - delete service ntp
+  - delete service ssh
+  - delete system login
+  - delete system name-server
+  - delete system static-host-mapping
+  - delete system syslog

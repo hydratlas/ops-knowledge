@@ -1,0 +1,16 @@
+# {{ ansible_managed }}
+# Timer for NFS stale file handle check
+
+[Unit]
+Description=Timer for NFS stale file handle check
+After=network-online.target
+Wants=network-online.target
+
+[Timer]
+OnBootSec={{ unified_mounts_stale_check_interval }}
+OnUnitActiveSec={{ unified_mounts_stale_check_interval }}
+AccuracySec=10s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

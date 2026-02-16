@@ -1,0 +1,6 @@
+---
+- name: Restart Alloy container
+  ansible.builtin.systemd:
+    name: vyos-container-alloy.service
+    state: restarted
+  when: vyos_alloy_config_changed | default(false)

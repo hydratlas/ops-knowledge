@@ -1,8 +1,0 @@
----
-# Tunnel トークン（Vault で暗号化推奨）
-# Cloudflare ダッシュボードから取得
-cloudflared_token: ""
-
-# サービスを有効化・起動するかどうか
-cloudflared_service_enabled: true
-cloudflared_service_state: started

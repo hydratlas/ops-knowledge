@@ -1,0 +1,27 @@
+- name: Gather OS family fact
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - "!any"
+      - distribution
+
+- name: Create sshd_config.d directory
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config.d
+    state: directory
+    mode: "0755"
+
+- name: Remove old SSH hardening configuration file
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config.d/00-ssh-secure.conf
+    state: absent
+  notify: Reload SSH
+
+- name: Deploy SSH hardening configuration
+  ansible.builtin.template:
+    src: "00-ssh-hardening.conf.j2"
+    dest: "/etc/ssh/sshd_config.d/00-ssh-hardening.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload SSH

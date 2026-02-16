@@ -1,0 +1,18 @@
+{# 構造化変数から生成されるVyOS設定コマンド #}
+{# show configuration commandsとの比較用にsetコマンドのみを出力する（deleteなし） #}
+{% include 'sections/container.j2' %}
+{% include 'sections/firewall.j2' %}
+{% include 'sections/high_availability.j2' %}
+{% include 'sections/interfaces.j2' %}
+{% include 'sections/nat.j2' %}
+{% include 'sections/protocols.j2' %}
+{% include 'sections/service.j2' %}{{ '' }}
+{% include 'sections/system.j2' %}{{ '' }}
+{# DHCPスタティックマッピングとスタティックホストマッピング #}
+{% if vyos_v2_dhcp_static_mappings is defined %}
+{% include 'sections/dhcp_static_mapping.j2' %}
+{% else %}
+{% for cmd in vyos_dhcp_mapping_config | default([]) %}
+{{ cmd }}
+{% endfor %}
+{% endif %}

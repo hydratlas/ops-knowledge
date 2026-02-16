@@ -1,0 +1,170 @@
+---
+- name: Include podman_rootless_quadlet_base role
+  ansible.builtin.include_role:
+    name: container/podman_rootless_quadlet_base
+  vars:
+    quadlet_user: "{{ grafana_user }}"
+    quadlet_user_comment: "{{ grafana_user_comment }}"
+    quadlet_app_name: "{{ grafana_app_name }}"
+
+- name: Set Grafana directory paths
+  ansible.builtin.set_fact:
+    grafana_data_dir: "{{ quadlet_home }}/.local/share/grafana"
+    grafana_provisioning_dir: "{{ quadlet_config_dir }}/provisioning"
+    grafana_datasources_dir: "{{ quadlet_config_dir }}/provisioning/datasources"
+    grafana_dashboards_dir: "{{ quadlet_config_dir }}/provisioning/dashboards"
+    grafana_dashboards_json_dir: "{{ quadlet_config_dir }}/provisioning/dashboards/json"
+    grafana_env_file: "{{ quadlet_config_dir }}/grafana.env"
+
+- name: Create additional Grafana directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_user }}"
+    mode: '0755'
+  loop:
+    - "{{ grafana_data_dir }}"
+    - "{{ grafana_provisioning_dir }}"
+    - "{{ grafana_datasources_dir }}"
+    - "{{ grafana_dashboards_dir }}"
+    - "{{ grafana_dashboards_json_dir }}"
+
+- name: Include podman_rootless_quadlet_network role
+  ansible.builtin.include_role:
+    name: container/podman_rootless_quadlet_network
+  vars:
+    quadlet_network_name: "monitoring"
+    quadlet_network_description: "Monitoring Container Network"
+    quadlet_network_labels:
+      - "app=monitoring"
+    quadlet_network_owner: "{{ grafana_user }}"
+
+- name: Create Grafana environment file
+  ansible.builtin.template:
+    src: grafana.env.j2
+    dest: "{{ grafana_env_file }}"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_user }}"
+    mode: '0600'
+  notify: restart grafana
+
+- name: Create datasource configuration files
+  ansible.builtin.template:
+    src: datasource.yaml.j2
+    dest: "{{ grafana_datasources_dir }}/{{ item.name }}.yaml"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_user }}"
+    mode: '0644'
+  loop: "{{ grafana_datasources }}"
+  notify: restart grafana
+
+- name: Create dashboard provider configuration
+  ansible.builtin.template:
+    src: dashboard-provider.yaml.j2
+    dest: "{{ grafana_dashboards_dir }}/dashboard-provider.yaml"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_user }}"
+    mode: '0644'
+  notify: restart grafana
+
+- name: Create temporary directory for dashboard downloads
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: grafana_dashboards_
+  register: grafana_dashboard_tmpdir
+  changed_when: false
+  check_mode: false
+
+- name: Download dashboard JSON files to temporary directory
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "{{ grafana_dashboard_tmpdir.path }}/{{ item.name }}.json"
+    force: true
+  loop: "{{ grafana_dashboards }}"
+  when: grafana_dashboards | length > 0
+  changed_when: false
+  check_mode: false
+
+- name: Fix datasource references in downloaded dashboard JSON files
+  ansible.builtin.replace:
+    path: "{{ grafana_dashboard_tmpdir.path }}/{{ item.name }}.json"
+    regexp: '\$\{DS_PROMETHEUS\}'
+    replace: 'prometheus'
+  loop: "{{ grafana_dashboards }}"
+  when: grafana_dashboards | length > 0
+  changed_when: false
+
+- name: Deploy downloaded dashboard JSON files
+  ansible.builtin.copy:
+    src: "{{ grafana_dashboard_tmpdir.path }}/{{ item.name }}.json"
+    dest: "{{ grafana_dashboards_json_dir }}/{{ item.name }}.json"
+    remote_src: true
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_user }}"
+    mode: '0644'
+  loop: "{{ grafana_dashboards }}"
+  when: grafana_dashboards | length > 0
+  notify: restart grafana
+
+- name: Remove temporary directory for dashboard downloads
+  ansible.builtin.file:
+    path: "{{ grafana_dashboard_tmpdir.path }}"
+    state: absent
+  changed_when: false
+
+- name: Copy local dashboard JSON files
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ grafana_dashboards_json_dir }}/{{ item }}"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_user }}"
+    mode: '0644'
+  loop: "{{ grafana_local_dashboards }}"
+  when: grafana_local_dashboards | length > 0
+  notify: restart grafana
+
+- name: List existing dashboard JSON files
+  ansible.builtin.find:
+    paths: "{{ grafana_dashboards_json_dir }}"
+    patterns: "*.json"
+  register: grafana_existing_dashboards
+
+- name: Remove unmanaged dashboard JSON files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ grafana_existing_dashboards.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when: item.path | basename not in _grafana_expected_dashboards
+  vars:
+    _grafana_expected_dashboards: >-
+      {{ (grafana_dashboards | map(attribute='name') | map('regex_replace', '$', '.json') | list)
+         + (grafana_local_dashboards | default([])) }}
+  notify: restart grafana
+
+- name: Create Grafana Quadlet container file
+  ansible.builtin.template:
+    src: grafana.container.j2
+    dest: "{{ quadlet_systemd_dir }}/grafana.container"
+    owner: "{{ grafana_user }}"
+    group: "{{ grafana_user }}"
+    mode: '0644'
+  notify:
+    - reload systemd user daemon
+    - restart grafana
+
+- name: Flush handlers to ensure systemd user daemon is reloaded
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start Grafana service
+  ansible.builtin.systemd:
+    name: grafana.service
+    enabled: yes
+    state: started
+    scope: user
+  become: yes
+  become_user: "{{ grafana_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ quadlet_uid }}"

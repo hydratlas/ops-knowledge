@@ -1,7 +1,0 @@
-- name: Restart NFS service
-  service:
-    name: "{{ 'nfs-server' if ansible_os_family == 'RedHat' else 'nfs-kernel-server' }}"
-    state: restarted
-
-- name: Reload NFS export configuration
-  command: exportfs -rv

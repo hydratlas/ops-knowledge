@@ -1,0 +1,91 @@
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - slurm_controller_hosts is defined
+      - slurm_controller_hosts | length > 0
+    fail_msg: "slurm_controller_hosts must be defined as a mapping"
+    quiet: true
+
+- name: Validate current host is in slurm_controller_hosts
+  ansible.builtin.assert:
+    that:
+      - ansible_fqdn in slurm_controller_hosts.keys() or inventory_hostname in slurm_controller_hosts.keys()
+    fail_msg: "Current host ({{ ansible_fqdn }}) must be in slurm_controller_hosts"
+    quiet: true
+
+- name: Validate slurm_db_host is defined
+  ansible.builtin.assert:
+    that:
+      - slurm_db_host is defined
+      - slurm_db_host | length > 0
+    fail_msg: "slurm_db_host must be defined"
+    quiet: true
+
+- name: Add slurm controller host entries to /etc/hosts
+  ansible.builtin.blockinfile:
+    path: /etc/hosts
+    marker: "# {mark} SLURM CONTROLLERS (ANSIBLE MANAGED)"
+    insertbefore: "^# --- BEGIN PVE ---"
+    block: |
+      {% for fqdn, ip in slurm_controller_hosts.items() %}
+      {{ ip }} {{ fqdn }}
+      {% endfor %}
+  when: slurm_controller_hosts | length > 0
+
+- name: Install slurmctld package
+  ansible.builtin.apt:
+    name:
+      - slurmctld
+    state: present
+
+- name: Create slurm log directory
+  ansible.builtin.file:
+    path: /var/log/slurm
+    state: directory
+    owner: slurm
+    group: slurm
+    mode: '0755'
+
+- name: Create checkpoint directory for slurmctld
+  ansible.builtin.file:
+    path: /var/lib/slurm/checkpoint
+    state: directory
+    owner: slurm
+    group: slurm
+    mode: '0755'
+
+- name: Deploy slurm.conf
+  ansible.builtin.template:
+    src: slurm.conf.j2
+    dest: /etc/slurm/slurm.conf
+    owner: slurm
+    group: slurm
+    mode: '0644'
+  register: slurm_conf_result
+  notify: Reload slurmctld
+
+- name: Set fact for slurm config change (for cluster-wide restart)
+  ansible.builtin.set_fact:
+    slurm_config_changed: true
+  when: slurm_conf_result.changed
+
+- name: Deploy cgroup.conf
+  ansible.builtin.copy:
+    src: cgroup.conf
+    dest: /etc/slurm/cgroup.conf
+    owner: slurm
+    group: slurm
+    mode: '0644'
+  notify: Restart slurmctld
+
+- name: Wait for remote slurmdbd to be ready
+  ansible.builtin.wait_for:
+    port: 6819
+    host: "{{ slurm_db_host }}"
+    timeout: 60
+
+- name: Start and enable slurmctld service
+  ansible.builtin.service:
+    name: slurmctld
+    state: started
+    enabled: yes
