@@ -1,8 +1,20 @@
-- name: Validate vyos_base_config is defined
+---
+- name: Gather date/time facts
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - date_time
+
+- name: Validate required variables
   ansible.builtin.assert:
     that:
       - vyos_base_config is defined
-    fail_msg: "vyos_base_config is not defined"
+      - vyos_health_check_gateway is defined
+    fail_msg: "Required variables: vyos_base_config, vyos_health_check_gateway"
+
+- name: Combine base, DHCP mapping, and custom config for VyOS
+  ansible.builtin.set_fact:
+    vyos_v3_final_config: "{{ vyos_base_config + vyos_dhcp_mapping_config | default([]) + vyos_custom_config | default([]) }}"
 
 - name: Create VRRP health check script
   ansible.builtin.copy:
@@ -15,12 +27,19 @@
   vars:
     ansible_connection: ansible.builtin.ssh
 
-- name: Combine base, dhcp mapping, and custom config for VyOS
-  ansible.builtin.set_fact:
-    vyos_final_config: "{{ vyos_base_config + vyos_dhcp_mapping_config | default([]) + vyos_custom_config | default([]) }}"
-
-- name: Apply config to VyOS
+- name: Apply configuration to VyOS
   vyos.vyos.vyos_config:
+    lines: "{{ vyos_v3_final_config }}"
+    backup: "{{ vyos_v3_backup }}"
     match: none
-    lines: "{{ vyos_final_config }}"
     save: true
+    comment: "Applied by Ansible at {{ ansible_date_time.iso8601 }}"
+
+- name: Configure users
+  vyos.vyos.vyos_user:
+    name: "{{ item.name }}"
+    encrypted_password: "{{ item.encrypted_password }}"
+    public_keys: "{{ item.public_keys }}"
+  loop: "{{ vyos_users }}"
+  loop_control:
+    label: "{{ item.name }}"
