@@ -1,3 +1,0 @@
-{% for route in vyos_v2_static_routes %}
-set protocols static route {{ route.destination }} next-hop '{{ route.next_hop }}'
-{% endfor %}
