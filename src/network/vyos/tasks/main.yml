@@ -14,7 +14,7 @@
 
 - name: Combine base, DHCP mapping, and custom config for VyOS
   ansible.builtin.set_fact:
-    vyos_v3_final_config: "{{ vyos_base_config + vyos_dhcp_mapping_config | default([]) + vyos_custom_config | default([]) }}"
+    vyos_final_config: "{{ vyos_base_config + vyos_dhcp_mapping_config | default([]) + vyos_custom_config | default([]) }}"
 
 - name: Create VRRP health check script
   ansible.builtin.copy:
@@ -29,8 +29,8 @@
 
 - name: Apply configuration to VyOS
   vyos.vyos.vyos_config:
-    lines: "{{ vyos_v3_final_config }}"
-    backup: "{{ vyos_v3_backup }}"
+    lines: "{{ vyos_final_config }}"
+    backup: "{{ vyos_backup }}"
     match: none
     save: true
     comment: "Applied by Ansible at {{ ansible_date_time.iso8601 }}"
