@@ -3,7 +3,7 @@ Description=Clean up stale apt-cacher-ng InRelease temporary files
 
 [Service]
 Type=oneshot
-ExecStart=find /var/cache/apt-cacher-ng/ -regextype posix-extended -regex '.*InRelease\.[0-9]+$' -mmin +5 -delete
+ExecStart=find /var/cache/apt-cacher-ng/ -regextype posix-extended -regex '.*InRelease\.[0-9]+(\.head)?$' -mmin +5 -delete
 User=apt-cacher-ng
 
 # セキュリティ: 基本
