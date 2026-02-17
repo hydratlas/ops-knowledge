@@ -11,7 +11,7 @@
 - OSパッケージの最新版への更新
 - セキュリティパッチの適用
 - 依存関係の自動解決と更新
-- Debian系とRHEL系の両ディストリビューションへの対応
+- Debian系、RHEL系、Alpine Linuxの各ディストリビューションへの対応
 
 ## 要件と前提条件
 
@@ -25,7 +25,7 @@
 - プレイブックレベルで `become: true` の指定が必要
 
 ### 手動設定の要件
-- apt（Debian系）またはdnf/yum（RHEL系）コマンドが利用可能であること
+- apt（Debian系）、dnf/yum（RHEL系）、またはapk（Alpine）コマンドが利用可能であること
 
 ## 設定方法
 
@@ -90,6 +90,12 @@ sudo dnf check-update
 df -h /var/cache/dnf/
 ```
 
+**Alpine Linux:**
+```bash
+# 利用可能な更新を確認
+apk update && apk list -u
+```
+
 #### ステップ2: パッケージリストの更新
 
 **Debian/Ubuntu:**
@@ -105,6 +111,11 @@ sudo dnf clean all
 
 # リポジトリメタデータを更新
 sudo dnf makecache
+```
+
+**Alpine Linux:**
+```bash
+sudo apk update
 ```
 
 #### ステップ3: パッケージの更新
@@ -125,6 +136,11 @@ sudo dnf update -y
 
 # セキュリティ更新のみ適用する場合
 sudo dnf update --security -y
+```
+
+**Alpine Linux:**
+```bash
+sudo apk upgrade
 ```
 
 #### ステップ4: 更新後の確認
