@@ -10,11 +10,21 @@ LogDir: {{ apt_cacher_ng_log_dir }}
 Port: {{ apt_cacher_ng_port }}
 {% endif %}
 
-Remap-proxmox: http://download.proxmox.com/debian ; file:backends_proxmox
-Remap-debrep: file:deb_mirror*.gz /debian ; file:backends_debian
-Remap-uburep: file:ubuntu_mirrors /ubuntu ; file:backends_ubuntu
-Remap-debvol: file:debvol_mirror*.gz /debian-volatile ; file:backends_debvol
-Remap-security: file:security_mirror*.gz /debian-security ; file:backends_debsec
+{% if apt_cacher_ng_remap_proxmox | length > 0 %}
+Remap-proxmox: {{ apt_cacher_ng_remap_proxmox | join(' ') }} ; file:backends_proxmox
+{% endif %}
+{% if apt_cacher_ng_remap_debrep | length > 0 %}
+Remap-debrep: {{ apt_cacher_ng_remap_debrep | join(' ') }} ; file:backends_debian
+{% endif %}
+{% if apt_cacher_ng_remap_uburep | length > 0 %}
+Remap-uburep: {{ apt_cacher_ng_remap_uburep | join(' ') }} ; file:backends_ubuntu
+{% endif %}
+{% if apt_cacher_ng_remap_debvol | length > 0 %}
+Remap-debvol: {{ apt_cacher_ng_remap_debvol | join(' ') }} ; file:backends_debvol
+{% endif %}
+{% if apt_cacher_ng_remap_security | length > 0 %}
+Remap-security: {{ apt_cacher_ng_remap_security | join(' ') }} ; file:backends_debsec
+{% endif %}
 
 {% if apt_cacher_ng_ex_threshold %}
 ExTreshold: {{ apt_cacher_ng_ex_threshold }}

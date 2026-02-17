@@ -10,3 +10,19 @@ apt_cacher_ng_backends_proxmox: []
 apt_cacher_ng_backends_debian: []
 apt_cacher_ng_backends_debian_security: []
 apt_cacher_ng_backends_ubuntu: []
+apt_cacher_ng_remap_proxmox:
+  - "http://download.proxmox.com/debian"
+apt_cacher_ng_remap_debrep:
+  - "file:deb_mirror*.gz"
+  - "/debian"
+apt_cacher_ng_remap_uburep:
+  - "file:ubuntu_mirrors"
+  - "http://security.ubuntu.com/ubuntu"
+  - "/ubuntu"
+apt_cacher_ng_remap_debvol:
+  - "file:debvol_mirror*.gz"
+  - "/debian-volatile"
+apt_cacher_ng_remap_security:
+  - "http://security.debian.org/debian-security"
+  - "http://deb.debian.org/debian-security"
+  - "/debian-security"

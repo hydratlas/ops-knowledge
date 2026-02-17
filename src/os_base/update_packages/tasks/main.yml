@@ -3,16 +3,57 @@
     update_cache: yes
     cache_valid_time: 3600
     upgrade: dist
+  async: 600
+  poll: 0
+  register: _update_packages_debian
   when: ansible_facts['os_family'] == "Debian"
 
 - name: Ensure packages are updated (RHEL-based)
   ansible.builtin.dnf:
     name: '*'
     state: latest
+  async: 600
+  poll: 0
+  register: _update_packages_rhel
   when: ansible_facts['os_family'] == "RedHat"
 
 - name: Ensure packages are updated (Alpine)
   community.general.apk:
     update_cache: yes
     upgrade: yes
+  async: 600
+  poll: 0
+  register: _update_packages_alpine
   when: ansible_facts['os_family'] == "Alpine"
+
+- name: Wait for SSH to come back
+  ansible.builtin.wait_for_connection:
+    delay: 5
+    timeout: 300
+
+- name: Check update result (Debian-based)
+  ansible.builtin.async_status:
+    jid: "{{ _update_packages_debian.ansible_job_id }}"
+  register: _update_result_debian
+  until: _update_result_debian.finished
+  retries: 60
+  delay: 10
+  when: _update_packages_debian is not skipped
+
+- name: Check update result (RHEL-based)
+  ansible.builtin.async_status:
+    jid: "{{ _update_packages_rhel.ansible_job_id }}"
+  register: _update_result_rhel
+  until: _update_result_rhel.finished
+  retries: 60
+  delay: 10
+  when: _update_packages_rhel is not skipped
+
+- name: Check update result (Alpine)
+  ansible.builtin.async_status:
+    jid: "{{ _update_packages_alpine.ansible_job_id }}"
+  register: _update_result_alpine
+  until: _update_result_alpine.finished
+  retries: 60
+  delay: 10
+  when: _update_packages_alpine is not skipped

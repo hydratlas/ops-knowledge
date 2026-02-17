@@ -97,6 +97,12 @@
     state: absent
   notify: Restart apt-cacher-ng
 
+- name: Remove legacy security.debian.org cache directory
+  ansible.builtin.file:
+    path: /var/cache/apt-cacher-ng/security.debian.org
+    state: absent
+  notify: Restart apt-cacher-ng
+
 - name: Enable and start apt-cacher-ng
   ansible.builtin.systemd:
     name: apt-cacher-ng
