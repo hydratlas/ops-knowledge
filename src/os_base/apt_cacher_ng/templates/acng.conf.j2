@@ -10,21 +10,11 @@ LogDir: {{ apt_cacher_ng_log_dir }}
 Port: {{ apt_cacher_ng_port }}
 {% endif %}
 
-{% if apt_cacher_ng_remap_proxmox | length > 0 %}
-Remap-proxmox: {{ apt_cacher_ng_remap_proxmox | join(' ') }} ; file:backends_proxmox
+{% for name, repo in apt_cacher_ng_repositories.items() %}
+{% if repo.remap | default([]) | length > 0 %}
+Remap-{{ name }}: {{ repo.remap | join(' ') }} ; file:backends_{{ name }}
 {% endif %}
-{% if apt_cacher_ng_remap_debrep | length > 0 %}
-Remap-debrep: {{ apt_cacher_ng_remap_debrep | join(' ') }} ; file:backends_debian
-{% endif %}
-{% if apt_cacher_ng_remap_uburep | length > 0 %}
-Remap-uburep: {{ apt_cacher_ng_remap_uburep | join(' ') }} ; file:backends_ubuntu
-{% endif %}
-{% if apt_cacher_ng_remap_debvol | length > 0 %}
-Remap-debvol: {{ apt_cacher_ng_remap_debvol | join(' ') }} ; file:backends_debvol
-{% endif %}
-{% if apt_cacher_ng_remap_security | length > 0 %}
-Remap-security: {{ apt_cacher_ng_remap_security | join(' ') }} ; file:backends_debsec
-{% endif %}
+{% endfor %}
 
 {% if apt_cacher_ng_ex_threshold %}
 ExTreshold: {{ apt_cacher_ng_ex_threshold }}

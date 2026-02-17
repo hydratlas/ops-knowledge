@@ -14,44 +14,28 @@
     mode: "0644"
   notify: Restart apt-cacher-ng
 
-- name: Deploy backends_proxmox
+- name: Deploy backends files
   ansible.builtin.copy:
-    content: "{{ apt_cacher_ng_backends_proxmox | join('\n') }}\n"
-    dest: /etc/apt-cacher-ng/backends_proxmox
+    content: "{{ item.value.backends | join('\n') }}\n"
+    dest: "/etc/apt-cacher-ng/backends_{{ item.key }}"
     owner: root
     group: root
     mode: "0644"
-  when: apt_cacher_ng_backends_proxmox | length > 0
+  loop: "{{ apt_cacher_ng_repositories | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: item.value.backends | default([]) | length > 0
   notify: Restart apt-cacher-ng
 
-- name: Deploy backends_debian
-  ansible.builtin.copy:
-    content: "{{ apt_cacher_ng_backends_debian | join('\n') }}\n"
-    dest: /etc/apt-cacher-ng/backends_debian
-    owner: root
-    group: root
-    mode: "0644"
-  when: apt_cacher_ng_backends_debian | length > 0
-  notify: Restart apt-cacher-ng
-
-- name: Deploy backends_debsec
-  ansible.builtin.copy:
-    content: "{{ apt_cacher_ng_backends_debian_security | join('\n') }}\n"
-    dest: /etc/apt-cacher-ng/backends_debsec
-    owner: root
-    group: root
-    mode: "0644"
-  when: apt_cacher_ng_backends_debian_security | length > 0
-  notify: Restart apt-cacher-ng
-
-- name: Deploy backends_ubuntu
-  ansible.builtin.copy:
-    content: "{{ apt_cacher_ng_backends_ubuntu | join('\n') }}\n"
-    dest: /etc/apt-cacher-ng/backends_ubuntu
-    owner: root
-    group: root
-    mode: "0644"
-  when: apt_cacher_ng_backends_ubuntu | length > 0
+- name: Remove legacy backends files with inconsistent names
+  ansible.builtin.file:
+    path: "/etc/apt-cacher-ng/{{ item }}"
+    state: absent
+  loop:
+    - backends_debian
+    - backends_ubuntu
+    - backends_debsec
+    - backends_debvol
   notify: Restart apt-cacher-ng
 
 - name: Remove stale InRelease temporary files
@@ -100,6 +84,18 @@
 - name: Remove legacy security.debian.org cache directory
   ansible.builtin.file:
     path: /var/cache/apt-cacher-ng/security.debian.org
+    state: absent
+  notify: Restart apt-cacher-ng
+
+- name: Remove legacy ftp.jp.debian.org cache directory
+  ansible.builtin.file:
+    path: /var/cache/apt-cacher-ng/ftp.jp.debian.org
+    state: absent
+  notify: Restart apt-cacher-ng
+
+- name: Remove legacy jp.archive.ubuntu.com cache directory
+  ansible.builtin.file:
+    path: /var/cache/apt-cacher-ng/jp.archive.ubuntu.com
     state: absent
   notify: Restart apt-cacher-ng
 

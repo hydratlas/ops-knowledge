@@ -49,6 +49,19 @@ apt-cacher-ng パッケージキャッシュサーバーをインストール・
 | `apt_cacher_ng_log_dir` | ログディレクトリー | `/var/log/apt-cacher-ng` |
 | `apt_cacher_ng_ex_threshold` | 未参照ファイル削除までの日数 | `4` |
 | `apt_cacher_ng_pass_through_pattern` | HTTPS パススルーパターン | なし |
+| `apt_cacher_ng_repositories` | リポジトリー定義の辞書（下記参照） | `{}` |
+
+`apt_cacher_ng_repositories` は辞書型で、キーがリポジトリー名、値が `remap`（リマップURL一覧）と `backends`（バックエンドURL一覧）を持つ。キー名がそのまま `Remap-<名前>` ディレクティブと `backends_<名前>` ファイル名に使用される。
+
+```yaml
+apt_cacher_ng_repositories:
+  debrep:
+    remap:
+      - "http://deb.debian.org/debian"
+      - "/debian"
+    backends:
+      - "http://deb.debian.org/debian/"
+```
 
 #### 依存関係
 
