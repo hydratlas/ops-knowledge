@@ -1,0 +1,104 @@
+---
+- name: Install apt-cacher-ng
+  ansible.builtin.apt:
+    name: apt-cacher-ng
+    state: present
+    cache_valid_time: 3600
+
+- name: Deploy apt-cacher-ng configuration
+  ansible.builtin.template:
+    src: acng.conf.j2
+    dest: /etc/apt-cacher-ng/acng.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart apt-cacher-ng
+
+- name: Deploy backends_proxmox
+  ansible.builtin.copy:
+    content: "{{ apt_cacher_ng_backends_proxmox | join('\n') }}\n"
+    dest: /etc/apt-cacher-ng/backends_proxmox
+    owner: root
+    group: root
+    mode: "0644"
+  when: apt_cacher_ng_backends_proxmox | length > 0
+  notify: Restart apt-cacher-ng
+
+- name: Deploy backends_debian
+  ansible.builtin.copy:
+    content: "{{ apt_cacher_ng_backends_debian | join('\n') }}\n"
+    dest: /etc/apt-cacher-ng/backends_debian
+    owner: root
+    group: root
+    mode: "0644"
+  when: apt_cacher_ng_backends_debian | length > 0
+  notify: Restart apt-cacher-ng
+
+- name: Deploy backends_debsec
+  ansible.builtin.copy:
+    content: "{{ apt_cacher_ng_backends_debian_security | join('\n') }}\n"
+    dest: /etc/apt-cacher-ng/backends_debsec
+    owner: root
+    group: root
+    mode: "0644"
+  when: apt_cacher_ng_backends_debian_security | length > 0
+  notify: Restart apt-cacher-ng
+
+- name: Deploy backends_ubuntu
+  ansible.builtin.copy:
+    content: "{{ apt_cacher_ng_backends_ubuntu | join('\n') }}\n"
+    dest: /etc/apt-cacher-ng/backends_ubuntu
+    owner: root
+    group: root
+    mode: "0644"
+  when: apt_cacher_ng_backends_ubuntu | length > 0
+  notify: Restart apt-cacher-ng
+
+- name: Remove stale InRelease temporary files
+  ansible.builtin.shell:
+    cmd: find /var/cache/apt-cacher-ng/ -regextype posix-extended -regex '.*InRelease\.[0-9]+$' -delete
+  changed_when: false
+
+- name: Deploy cleanup service unit
+  ansible.builtin.copy:
+    src: apt-cacher-ng-cleanup.service
+    dest: /etc/systemd/system/apt-cacher-ng-cleanup.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd daemon
+
+- name: Deploy cleanup timer unit
+  ansible.builtin.copy:
+    src: apt-cacher-ng-cleanup.timer
+    dest: /etc/systemd/system/apt-cacher-ng-cleanup.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd daemon
+    - Restart apt-cacher-ng-cleanup timer
+
+- name: Enable and start cleanup timer
+  ansible.builtin.systemd:
+    name: apt-cacher-ng-cleanup.timer
+    enabled: true
+    state: started
+
+- name: Remove legacy security.ubuntu.com cache directory
+  ansible.builtin.file:
+    path: /var/cache/apt-cacher-ng/security.ubuntu.com
+    state: absent
+  notify: Restart apt-cacher-ng
+
+- name: Remove legacy deb.debian.org/debian-security cache directory
+  ansible.builtin.file:
+    path: /var/cache/apt-cacher-ng/deb.debian.org
+    state: absent
+  notify: Restart apt-cacher-ng
+
+- name: Enable and start apt-cacher-ng
+  ansible.builtin.systemd:
+    name: apt-cacher-ng
+    enabled: true
+    state: started

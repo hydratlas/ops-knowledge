@@ -1,0 +1,14 @@
+---
+- name: Restart apt-cacher-ng
+  ansible.builtin.systemd:
+    name: apt-cacher-ng
+    state: restarted
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart apt-cacher-ng-cleanup timer
+  ansible.builtin.systemd:
+    name: apt-cacher-ng-cleanup.timer
+    state: restarted

@@ -1,0 +1,37 @@
+[Unit]
+Description=Clean up stale apt-cacher-ng InRelease temporary files
+
+[Service]
+Type=oneshot
+ExecStart=find /var/cache/apt-cacher-ng/ -regextype posix-extended -regex '.*InRelease\.[0-9]+$' -mmin +5 -delete
+User=apt-cacher-ng
+
+# セキュリティ: 基本
+NoNewPrivileges=true
+CapabilityBoundingSet=
+
+# セキュリティ: ファイルシステム
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ReadWritePaths=/var/cache/apt-cacher-ng
+
+# セキュリティ: カーネル
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+
+# セキュリティ: ネットワーク・プロセス可視性
+RestrictAddressFamilies=none
+ProtectProc=invisible
+
+# セキュリティ: プロセス
+LockPersonality=true
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native

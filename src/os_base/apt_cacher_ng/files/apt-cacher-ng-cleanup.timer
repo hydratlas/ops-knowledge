@@ -1,0 +1,9 @@
+[Unit]
+Description=Periodic cleanup of stale apt-cacher-ng InRelease temporary files
+
+[Timer]
+OnCalendar=*:0/10
+Persistent=true
+
+[Install]
+WantedBy=timers.target
