@@ -34,8 +34,8 @@
 - name: Enable HTTP baseurl in yum repo files
   ansible.builtin.replace:
     path: "{{ item.path }}"
-    regexp: '^#?\s*baseurl=https://(.*)'
-    replace: 'baseurl=http://\1'
+    regexp: '^#?\s*baseurl=https?://(?:repo\.almalinux\.org/almalinux|vault\.almalinux\.org)/(.*)'
+    replace: 'baseurl={{ apt_cacher_ng_repositories.almalinux.client_url }}/\1'
   loop: "{{ _yum_repo_files.files | default([]) }}"
   loop_control:
     label: "{{ item.path }}"

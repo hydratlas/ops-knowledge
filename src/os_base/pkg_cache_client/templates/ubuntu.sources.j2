@@ -1,13 +1,13 @@
 {{ ansible_managed | comment }}
 
 Types: deb
-URIs: http://archive.ubuntu.com/ubuntu
+URIs: {{ apt_cacher_ng_repositories.uburep.client_url }}
 Suites: {{ ansible_distribution_release }} {{ ansible_distribution_release }}-updates {{ ansible_distribution_release }}-backports
 Components: {{ pkg_cache_ubuntu_components }}
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 
 Types: deb
-URIs: http://security.ubuntu.com/ubuntu
+URIs: {{ apt_cacher_ng_repositories.ubusec.client_url }}
 Suites: {{ ansible_distribution_release }}-security
 Components: {{ pkg_cache_ubuntu_components }}
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg

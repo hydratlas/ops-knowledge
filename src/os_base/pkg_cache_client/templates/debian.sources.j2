@@ -1,13 +1,13 @@
 {{ ansible_managed | comment }}
 
 Types: deb deb-src
-URIs: http://deb.debian.org/debian
+URIs: {{ apt_cacher_ng_repositories.debrep.client_url }}
 Suites: {{ ansible_distribution_release }} {{ ansible_distribution_release }}-updates {{ ansible_distribution_release }}-backports
 Components: {{ pkg_cache_debian_components }}
 Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 
 Types: deb deb-src
-URIs: http://deb.debian.org/debian-security
+URIs: {{ apt_cacher_ng_repositories.debsec.client_url }}
 Suites: {{ ansible_distribution_release }}-security
 Components: {{ pkg_cache_debian_components }}
 Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg

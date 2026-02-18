@@ -11,8 +11,9 @@ Port: {{ apt_cacher_ng_port }}
 {% endif %}
 
 {% for name, repo in apt_cacher_ng_repositories.items() %}
-{% if repo.remap | default([]) | length > 0 %}
-Remap-{{ name }}: {{ repo.remap | join(' ') }} ; file:backends_{{ name }}
+{% set remap_urls = ([repo.client_url] if repo.client_url is defined else []) + (repo.remap | default([])) %}
+{% if remap_urls | length > 0 %}
+Remap-{{ name }}: {{ remap_urls | join(' ') }} ; file:backends_{{ name }}
 {% endif %}
 {% endfor %}
 

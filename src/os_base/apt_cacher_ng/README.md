@@ -52,14 +52,20 @@ apt-cacher-ng パッケージキャッシュサーバーをインストール・
 | `apt_cacher_ng_pass_through_pattern` | HTTPS パススルーパターン | なし |
 | `apt_cacher_ng_repositories` | リポジトリー定義の辞書（下記参照） | `{}` |
 
-`apt_cacher_ng_repositories` は辞書型で、キーがリポジトリー名、値が `remap`（リマップURL一覧）と `backends`（バックエンドURL一覧）を持つ。キー名がそのまま `Remap-<名前>` ディレクティブと `backends_<名前>` ファイル名に使用される。
+`apt_cacher_ng_repositories` は辞書型で、キーがリポジトリー名、値が以下のフィールドを持つ。キー名がそのまま `Remap-<名前>` ディレクティブと `backends_<名前>` ファイル名に使用される。
+
+| フィールド | 必須 | 説明 |
+|-----------|------|------|
+| `client_url` | いいえ | クライアントが使用する正規のURL。リマップの先頭に自動挿入される。`pkg_cache_client` ロールのテンプレートから参照される |
+| `remap` | いいえ | `client_url` 以外の追加リマップURL一覧（レガシーURLの互換対応等） |
+| `backends` | いいえ | バックエンドURL一覧 |
 
 ```yaml
 apt_cacher_ng_repositories:
   debrep:
+    client_url: "http://deb.debian.org/debian"
     remap:
-      - "http://deb.debian.org/debian"
-      - "/debian"
+      - "http://ftp.jp.debian.org/debian"
     backends:
       - "http://deb.debian.org/debian/"
 ```

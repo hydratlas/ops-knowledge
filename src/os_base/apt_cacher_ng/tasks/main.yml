@@ -34,8 +34,8 @@
   loop:
     - backends_debian
     - backends_ubuntu
-    - backends_debsec
     - backends_debvol
+    - backends_security
   notify: Restart apt-cacher-ng
 
 - name: Remove stale InRelease temporary files
