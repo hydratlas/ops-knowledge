@@ -14,7 +14,7 @@
 
 - apt のプロキシー設定ファイル（`/etc/apt/apt.conf.d/02proxy`）の配置
 - パッケージダウンロードのキャッシュプロキシー経由化
-- `/etc/apt/mirrors/*.list` 内の公式ミラー URL を HTTPS から HTTP へ変換（apt-cacher-ng がキャッシュ可能にするため）
+- OS 標準の `.sources` ファイルを HTTP URI で上書き配備（apt-cacher-ng がキャッシュ可能にするため）
 - HTTPS リポジトリー（サードパーティー等）はプロキシーを迂回して直接接続
 
 #### RedHat 系（AlmaLinux）
@@ -49,6 +49,8 @@
 | 変数名 | デフォルト値 | 説明 |
 |--------|-------------|------|
 | `apt_cache_proxy_url` | `""` (空文字) | プロキシー URL（必須） |
+| `pkg_cache_debian_components` | `"main"` | Debian の `.sources` に記載するコンポーネント |
+| `pkg_cache_ubuntu_components` | `"main restricted universe multiverse"` | Ubuntu の `.sources` に記載するコンポーネント |
 
 #### 依存関係
 
@@ -82,13 +84,37 @@ Acquire::https::Proxy "DIRECT";
 EOF
 ```
 
-#### ステップ2: 公式ミラー URL を HTTP に変換
+#### ステップ2: `.sources` ファイルの配備
 
-Debian Trixie 以降ではミラーファイルがデフォルトで HTTPS を使用するため、apt-cacher-ng でキャッシュするには HTTP に変換する必要がある。
+OS 標準の `.sources` ファイルを HTTP URI で上書きする。apt-cacher-ng の Remap 設定にマッチする URI を使用する。
 
-```bash
-sudo sed -i 's|https://|http://|g' /etc/apt/mirrors/*.list
+Debian の場合（`/etc/apt/sources.list.d/debian.sources`）:
+
 ```
+Types: deb
+URIs: http://deb.debian.org/debian
+Suites: trixie trixie-updates
+Components: main
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+
+Types: deb
+URIs: http://deb.debian.org/debian-security
+Suites: trixie-security
+Components: main
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+```
+
+Ubuntu の場合（`/etc/apt/sources.list.d/ubuntu.sources`）:
+
+```
+Types: deb
+URIs: http://archive.ubuntu.com/ubuntu
+Suites: noble noble-updates noble-backports noble-security
+Components: main restricted universe multiverse
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+```
+
+Suites のコードネーム部分は使用中のリリースに合わせて変更する。
 
 #### ステップ3: 動作確認
 
@@ -143,7 +169,7 @@ apt-config dump | grep -i proxy
 #### Debian 系
 
 1. **プロキシーに接続できない場合**: プロキシーサーバーが稼働しているか、ネットワーク到達性があるか確認する
-2. **HTTPS リポジトリーで `403 CONNECT denied` が発生する場合**: `02proxy` に `Acquire::https::Proxy "DIRECT";` が設定されているか、またはミラー URL が HTTP に変換されているか確認する
+2. **HTTPS リポジトリーで `403 CONNECT denied` が発生する場合**: `02proxy` に `Acquire::https::Proxy "DIRECT";` が設定されているか、また `.sources` ファイルの URI が HTTP になっているか確認する
 3. **プロキシーを一時的にバイパスしたい場合**: `-o Acquire::http::Proxy=false` オプションを使用する
 
 ```bash

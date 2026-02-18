@@ -7,18 +7,20 @@
       Acquire::https::Proxy "DIRECT";
     mode: "0644"
 
-- name: Find apt mirror list files
-  ansible.builtin.find:
-    paths: /etc/apt/mirrors
-    patterns: "*.list"
-  register: _apt_mirror_files
-  failed_when: false
+- name: Deploy apt sources for caching (Debian)
+  ansible.builtin.template:
+    src: debian.sources.j2
+    dest: /etc/apt/sources.list.d/debian.sources
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_distribution == "Debian"
 
-- name: Convert apt mirror URLs from HTTPS to HTTP for caching
-  ansible.builtin.replace:
-    path: "{{ item.path }}"
-    regexp: 'https://'
-    replace: 'http://'
-  loop: "{{ _apt_mirror_files.files | default([]) }}"
-  loop_control:
-    label: "{{ item.path }}"
+- name: Deploy apt sources for caching (Ubuntu)
+  ansible.builtin.template:
+    src: ubuntu.sources.j2
+    dest: /etc/apt/sources.list.d/ubuntu.sources
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_distribution == "Ubuntu"
