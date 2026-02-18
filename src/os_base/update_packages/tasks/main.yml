@@ -1,3 +1,10 @@
+- name: Gather minimal facts for os_family detection
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - "!any"
+      - distribution
+
 - name: Ensure packages are updated (Debian-based)
   ansible.builtin.apt:
     update_cache: yes
