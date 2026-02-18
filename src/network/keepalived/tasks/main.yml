@@ -1,6 +1,13 @@
 ---
 # Tasks for keepalived role
 
+- name: Gather minimal facts for os_family detection
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - "!any"
+      - distribution
+
 - name: Create keepalived check script users
   ansible.builtin.user:
     name: "{{ item.user | default('keepalived_script') }}"

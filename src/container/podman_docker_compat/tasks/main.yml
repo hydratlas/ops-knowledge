@@ -1,6 +1,13 @@
 ---
 # Tasks for podman-docker role
 
+- name: Gather minimal facts for os_family detection
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - "!any"
+      - distribution
+
 - name: Install podman-docker compatibility package on Debian-based systems
   ansible.builtin.apt:
     name: 

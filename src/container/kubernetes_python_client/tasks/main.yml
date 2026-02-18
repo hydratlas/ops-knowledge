@@ -1,4 +1,11 @@
 ---
+- name: Gather minimal facts for os_family detection
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - "!any"
+      - distribution
+
 - name: Install python3-kubernetes package (Debian/Ubuntu)
   ansible.builtin.apt:
     name:

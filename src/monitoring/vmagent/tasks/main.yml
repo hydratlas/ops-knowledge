@@ -1,4 +1,11 @@
 ---
+- name: Gather minimal facts for os_family detection
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - "!any"
+      - distribution
+
 - name: Validate vmagent_remote_write_urls is defined
   ansible.builtin.assert:
     that:

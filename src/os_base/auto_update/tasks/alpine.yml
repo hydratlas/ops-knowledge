@@ -1,0 +1,15 @@
+---
+# Alpine Linux: apk upgrade を daily cron で実行
+- name: Create daily apk upgrade script
+  ansible.builtin.copy:
+    dest: /etc/periodic/daily/apk-autoupgrade
+    content: |
+      #!/bin/sh
+      apk update && apk upgrade
+    mode: "0755"
+
+- name: Ensure crond is enabled
+  ansible.builtin.service:
+    name: crond
+    enabled: true
+    state: started

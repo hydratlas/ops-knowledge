@@ -1,0 +1,24 @@
+---
+# RedHat系: dnf-automatic による自動更新
+- name: Install dnf-automatic
+  ansible.builtin.dnf:
+    name: dnf-automatic
+    state: present
+
+- name: Configure dnf-automatic to apply updates
+  ansible.builtin.ini_file:
+    path: /etc/dnf/automatic.conf
+    section: commands
+    option: apply_updates
+    value: "yes"
+    mode: "0644"
+
+- name: Reload systemd to pick up dnf-automatic-install.timer
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start dnf-automatic-install.timer
+  ansible.builtin.systemd:
+    name: dnf-automatic-install.timer
+    enabled: true
+    state: started

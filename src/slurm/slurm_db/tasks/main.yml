@@ -1,3 +1,10 @@
+- name: Gather minimal facts for FQDN detection
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - "!any"
+      - platform
+
 - name: Install MariaDB server
   ansible.builtin.apt:
     name:
