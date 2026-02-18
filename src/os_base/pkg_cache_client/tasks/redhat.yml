@@ -1,0 +1,41 @@
+---
+- name: Configure dnf proxy
+  ansible.builtin.ini_file:
+    path: /etc/dnf/dnf.conf
+    section: main
+    option: proxy
+    value: "{{ apt_cache_proxy_url }}"
+    mode: "0644"
+
+- name: Find yum repository files
+  ansible.builtin.find:
+    paths: /etc/yum.repos.d
+    patterns: "*.repo"
+  register: _yum_repo_files
+
+- name: Comment out metalink in yum repo files
+  ansible.builtin.replace:
+    path: "{{ item.path }}"
+    regexp: '^metalink=(.*)'
+    replace: '# metalink=\1'
+  loop: "{{ _yum_repo_files.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Comment out mirrorlist in yum repo files
+  ansible.builtin.replace:
+    path: "{{ item.path }}"
+    regexp: '^mirrorlist=(.*)'
+    replace: '# mirrorlist=\1'
+  loop: "{{ _yum_repo_files.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Enable HTTP baseurl in yum repo files
+  ansible.builtin.replace:
+    path: "{{ item.path }}"
+    regexp: '^#?\s*baseurl=https://(.*)'
+    replace: 'baseurl=http://\1'
+  loop: "{{ _yum_repo_files.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path }}"

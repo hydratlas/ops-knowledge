@@ -1,18 +1,4 @@
 ---
-- name: Gather OS distribution fact
-  ansible.builtin.setup:
-    gather_subset:
-      - "!all"
-      - distribution
-  when: ansible_os_family is not defined
-
-- name: Validate apt_cache_proxy_url is defined
-  ansible.builtin.assert:
-    that:
-      - apt_cache_proxy_url | length > 0
-    fail_msg: "apt_cache_proxy_url must be defined with a valid proxy URL"
-  when: ansible_os_family == "Debian"
-
 - name: Configure apt proxy
   ansible.builtin.copy:
     dest: /etc/apt/apt.conf.d/02proxy
@@ -20,7 +6,6 @@
       Acquire::http::Proxy "{{ apt_cache_proxy_url }}";
       Acquire::https::Proxy "DIRECT";
     mode: "0644"
-  when: ansible_os_family == "Debian"
 
 - name: Find apt mirror list files
   ansible.builtin.find:
@@ -28,7 +13,6 @@
     patterns: "*.list"
   register: _apt_mirror_files
   failed_when: false
-  when: ansible_os_family == "Debian"
 
 - name: Convert apt mirror URLs from HTTPS to HTTP for caching
   ansible.builtin.replace:
@@ -38,4 +22,3 @@
   loop: "{{ _apt_mirror_files.files | default([]) }}"
   loop_control:
     label: "{{ item.path }}"
-  when: ansible_os_family == "Debian"
