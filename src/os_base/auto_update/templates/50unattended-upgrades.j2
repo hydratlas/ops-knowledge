@@ -1,0 +1,17 @@
+Unattended-Upgrade::Origins-Pattern {
+{% if ansible_distribution == 'Debian' %}
+        "origin=Debian,codename=${distro_codename},label=Debian";
+        "origin=Debian,codename=${distro_codename},label=Debian-Security";
+        "origin=Debian,codename=${distro_codename}-security,label=Debian-Security";
+{% elif ansible_distribution == 'Ubuntu' %}
+        "origin=${distro_id},archive=${distro_codename}";
+        "origin=${distro_id},archive=${distro_codename}-security";
+        "origin=${distro_id}ESMApps,archive=${distro_codename}-apps-security";
+        "origin=${distro_id}ESM,archive=${distro_codename}-infra-security";
+{% endif %}
+{% for pattern in auto_update_extra_origins_patterns %}
+        "{{ pattern }}";
+{% endfor %}
+};
+
+Unattended-Upgrade::Automatic-Reboot "{{ auto_update_automatic_reboot | lower }}";
