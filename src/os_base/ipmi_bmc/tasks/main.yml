@@ -80,3 +80,63 @@
     - bmc_protocol == 'redfish'
     - bmc_rotate_credentials | bool
   tags: bmc_credential
+
+# ── ハードウェアインベントリ（Redfish 専用）──────────
+- name: Skip hardware inventory (IPMI does not support this feature)
+  ansible.builtin.debug:
+    msg: "Hardware inventory is only available with Redfish protocol"
+  when: bmc_protocol == 'ipmi'
+  tags: bmc_inventory
+
+- name: Collect hardware inventory (Redfish)
+  ansible.builtin.include_tasks:
+    file: inventory_redfish.yml
+    apply:
+      tags: bmc_inventory
+  when: bmc_protocol == 'redfish'
+  tags: bmc_inventory
+
+# ── ヘルスチェック（Redfish 専用）──────────────────
+- name: Skip health check (IPMI does not support this feature)
+  ansible.builtin.debug:
+    msg: "Health check is only available with Redfish protocol"
+  when: bmc_protocol == 'ipmi'
+  tags: bmc_health
+
+- name: Collect health report (Redfish)
+  ansible.builtin.include_tasks:
+    file: health_redfish.yml
+    apply:
+      tags: bmc_health
+  when: bmc_protocol == 'redfish'
+  tags: bmc_health
+
+# ── センサーデータ（Redfish 専用）──────────────────
+- name: Skip sensor data (IPMI does not support this feature)
+  ansible.builtin.debug:
+    msg: "Sensor data collection is only available with Redfish protocol"
+  when: bmc_protocol == 'ipmi'
+  tags: bmc_sensors
+
+- name: Collect sensor data (Redfish)
+  ansible.builtin.include_tasks:
+    file: sensors_redfish.yml
+    apply:
+      tags: bmc_sensors
+  when: bmc_protocol == 'redfish'
+  tags: bmc_sensors
+
+# ── ファームウェアバージョン（Redfish 専用）────────
+- name: Skip firmware inventory (IPMI does not support this feature)
+  ansible.builtin.debug:
+    msg: "Firmware inventory is only available with Redfish protocol"
+  when: bmc_protocol == 'ipmi'
+  tags: bmc_firmware
+
+- name: Collect firmware inventory (Redfish)
+  ansible.builtin.include_tasks:
+    file: firmware_redfish.yml
+    apply:
+      tags: bmc_firmware
+  when: bmc_protocol == 'redfish'
+  tags: bmc_firmware

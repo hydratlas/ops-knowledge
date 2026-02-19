@@ -1,0 +1,37 @@
+worker_processes auto;
+
+events {
+  worker_connections 1024;
+}
+
+http {
+  server {
+    listen {{ dell_proxy_listen_port }};
+    server_name _;
+
+    # iDRAC は /Catalog.xml.gz をリクエストするが、Dell CDN 上の実際のパスは
+    # /catalog/Catalog.xml.gz であるため、パスを書き換える
+    rewrite ^/[cC]atalog\.(.*)$ /catalog/Catalog.$1 break;
+
+    location / {
+      proxy_pass https://{{ dell_proxy_backend_host }};
+
+      # TLS ハンドシェイクで正しい SNI ホスト名を送信する
+      proxy_ssl_server_name on;
+
+      proxy_set_header Host {{ dell_proxy_backend_host }};
+      proxy_set_header User-Agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+      proxy_connect_timeout {{ dell_proxy_connect_timeout }};
+      proxy_send_timeout {{ dell_proxy_send_timeout }};
+      proxy_read_timeout {{ dell_proxy_read_timeout }};
+
+      proxy_hide_header X-Frame-Options;
+
+      # iDRAC が接続確認のために HEAD リクエストを送る場合、直接 200 を返す
+      if ($request_method = HEAD) {
+        return 200;
+      }
+    }
+  }
+}

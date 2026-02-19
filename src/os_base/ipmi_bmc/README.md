@@ -66,11 +66,15 @@ IPMI 2.0 および Redfish 対応 BMC（Baseboard Management Controller）の管
 
 ## タグ
 
-| タグ             | 説明                       |
-| ---------------- | -------------------------- |
-| `bmc_power`      | 電源操作を実行する         |
-| `bmc_boot`       | ブートデバイスを設定する   |
-| `bmc_credential` | 認証情報をローテーションする |
+| タグ             | 説明                                     | 対応プロトコル   |
+| ---------------- | ---------------------------------------- | ---------------- |
+| `bmc_power`      | 電源操作を実行する                       | IPMI / Redfish   |
+| `bmc_boot`       | ブートデバイスを設定する                 | IPMI / Redfish   |
+| `bmc_credential` | 認証情報をローテーションする             | IPMI / Redfish   |
+| `bmc_inventory`  | ハードウェアインベントリを収集する       | Redfish のみ     |
+| `bmc_health`     | システムヘルスレポートを取得する         | Redfish のみ     |
+| `bmc_sensors`    | センサーデータ（温度・ファン・電源）を取得する | Redfish のみ |
+| `bmc_firmware`   | ファームウェアバージョン一覧を取得する   | Redfish のみ     |
 
 ## 使用方法
 
@@ -106,7 +110,41 @@ ansible-playbook bmc.yml -l <bmc-host> -t bmc_credential \
 
 実行後、新しいパスワードを Vault 暗号化してインベントリ変数を更新すること。
 
+### ハードウェアインベントリ（Redfish のみ）
+
+```bash
+ansible-playbook bmc.yml -l <bmc-host> -t bmc_inventory
+```
+
+システム情報・CPU・メモリ・NIC・ストレージコントローラー・ディスクの情報を収集する。
+
+### ヘルスチェック（Redfish のみ）
+
+```bash
+ansible-playbook bmc.yml -l <bmc-host> -t bmc_health
+```
+
+システムヘルスレポートとシャーシ情報を取得する。
+
+### センサーデータ（Redfish のみ）
+
+```bash
+ansible-playbook bmc.yml -l <bmc-host> -t bmc_sensors
+```
+
+温度センサー・ファン回転数・電源ユニットの情報を取得する。
+
+### ファームウェアバージョン（Redfish のみ）
+
+```bash
+ansible-playbook bmc.yml -l <bmc-host> -t bmc_firmware
+```
+
+インストール済みファームウェアのバージョン一覧を取得する。
+
 ## 既知の制限事項
 
 - Redfish の `cycle` は Redfish 標準仕様に `PowerCycle` が未定義のベンダーがあるため `PowerForceRestart` にマッピングしている
 - `bmc_redfish_resource_id` はベンダーにより異なる（AMI MegaRAC / GIGABYTE: `Self`、Dell iDRAC: `System.Embedded.1` 等）
+- Redfish 情報収集機能（`bmc_inventory`、`bmc_health`、`bmc_sensors`、`bmc_firmware`）はベンダーによって一部コマンドが未対応の場合がある。未対応のコマンドはスキップされ、プレイブック全体は失敗しない
+- IPMI プロトコルのホストに対して Redfish 専用タグを指定した場合、スキップメッセージが表示される

@@ -1,0 +1,23 @@
+---
+# User configuration
+dell_proxy_user: "dell-proxy"
+dell_proxy_user_comment: "Dell downloads reverse proxy rootless user"
+dell_proxy_app_name: "dell-proxy"
+
+# Container configuration
+dell_proxy_container_image: "quay.io/nginx/nginx-unprivileged"
+dell_proxy_container_name: "dell-downloads-proxy"
+dell_proxy_listen_port: 8080
+
+# Service configuration
+dell_proxy_service_description: "Reverse Proxy for Dell Downloads (dl.dell.com)"
+dell_proxy_service_restart: "on-failure"
+dell_proxy_service_restart_sec: 5
+
+# Proxy configuration
+dell_proxy_backend_host: "dl.dell.com"
+
+# Timeout configuration
+dell_proxy_connect_timeout: "60s"
+dell_proxy_send_timeout: "60s"
+dell_proxy_read_timeout: "300s"

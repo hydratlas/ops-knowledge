@@ -1,0 +1,65 @@
+---
+- name: Include common Rootless Podman Quadlet setup
+  ansible.builtin.include_role:
+    name: container/podman_rootless_quadlet_base
+  vars:
+    quadlet_user: "{{ dell_proxy_user }}"
+    quadlet_user_comment: "{{ dell_proxy_user_comment }}"
+    quadlet_app_name: "{{ dell_proxy_app_name }}"
+    quadlet_skip_subids: false
+
+- name: Set dell-proxy specific facts from base role
+  ansible.builtin.set_fact:
+    dell_proxy_uid: "{{ quadlet_uid }}"
+    dell_proxy_gid: "{{ quadlet_gid }}"
+    dell_proxy_home: "{{ quadlet_home }}"
+    dell_proxy_config_dir: "{{ quadlet_config_dir }}"
+    dell_proxy_systemd_dir: "{{ quadlet_systemd_dir }}"
+
+- name: Create cache directory
+  ansible.builtin.file:
+    path: "{{ dell_proxy_home }}/.local/share/nginx-cache"
+    state: directory
+    owner: "{{ dell_proxy_user }}"
+    group: "{{ dell_proxy_user }}"
+    mode: "0755"
+
+- name: Create run directory
+  ansible.builtin.file:
+    path: "{{ dell_proxy_home }}/.local/share/nginx-run"
+    state: directory
+    owner: "{{ dell_proxy_user }}"
+    group: "{{ dell_proxy_user }}"
+    mode: "0755"
+
+- name: Create nginx configuration file
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: "{{ dell_proxy_config_dir }}/nginx.conf"
+    owner: "{{ dell_proxy_user }}"
+    group: "{{ dell_proxy_user }}"
+    mode: "0644"
+  notify: restart dell-proxy
+
+- name: Create Podman Quadlet container file
+  ansible.builtin.template:
+    src: dell-downloads-nginx.container.j2
+    dest: "{{ dell_proxy_systemd_dir }}/dell-proxy.container"
+    owner: "{{ dell_proxy_user }}"
+    group: "{{ dell_proxy_user }}"
+    mode: "0644"
+  notify: reload systemd user daemon and restart dell-proxy
+
+- name: Flush handlers to ensure systemd user daemon is reloaded
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start dell-proxy service
+  ansible.builtin.systemd:
+    name: dell-proxy.service
+    enabled: yes
+    state: started
+    scope: user
+  become: yes
+  become_user: "{{ dell_proxy_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ dell_proxy_uid }}"

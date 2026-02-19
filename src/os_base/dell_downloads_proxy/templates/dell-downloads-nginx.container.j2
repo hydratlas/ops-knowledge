@@ -1,0 +1,24 @@
+[Unit]
+Description={{ dell_proxy_service_description }}
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ dell_proxy_container_image }}
+ContainerName={{ dell_proxy_container_name }}
+UserNS=keep-id:uid=101,gid=101
+NoNewPrivileges=true
+ReadOnly=true
+PublishPort={{ dell_proxy_listen_port }}:{{ dell_proxy_listen_port }}
+Volume={{ dell_proxy_config_dir }}/nginx.conf:/etc/nginx/nginx.conf:ro,z
+Volume={{ dell_proxy_home }}/.local/share/nginx-cache:/var/cache/nginx:Z
+Volume={{ dell_proxy_home }}/.local/share/nginx-run:/var/run:Z
+AutoUpdate=registry
+LogDriver=journald
+
+[Service]
+Restart={{ dell_proxy_service_restart }}
+RestartSec={{ dell_proxy_service_restart_sec }}
+
+[Install]
+WantedBy=default.target

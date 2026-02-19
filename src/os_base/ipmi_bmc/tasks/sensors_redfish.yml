@@ -1,0 +1,69 @@
+---
+- name: "Get chassis thermals via Redfish on {{ inventory_hostname }}"
+  community.general.redfish_info:
+    category: Chassis
+    command: GetChassisThermals
+    baseuri: "{{ ansible_host }}"
+    username: "{{ bmc_redfish_username }}"
+    password: "{{ bmc_redfish_password }}"
+    validate_certs: "{{ bmc_redfish_validate_certs }}"
+  delegate_to: "{{ bmc_delegate_host }}"
+  register: _redfish_sensors_thermals
+  no_log: true
+  ignore_errors: true
+
+- name: Show chassis thermals
+  ansible.builtin.debug:
+    msg: "{{ _redfish_sensors_thermals.redfish_facts.thermals.entries | to_nice_json }}"
+  when: _redfish_sensors_thermals is not failed
+
+- name: Show chassis thermals not supported
+  ansible.builtin.debug:
+    msg: "GetChassisThermals is not supported on this BMC"
+  when: _redfish_sensors_thermals is failed
+
+- name: "Get fan inventory via Redfish on {{ inventory_hostname }}"
+  community.general.redfish_info:
+    category: Chassis
+    command: GetFanInventory
+    baseuri: "{{ ansible_host }}"
+    username: "{{ bmc_redfish_username }}"
+    password: "{{ bmc_redfish_password }}"
+    validate_certs: "{{ bmc_redfish_validate_certs }}"
+  delegate_to: "{{ bmc_delegate_host }}"
+  register: _redfish_sensors_fan
+  no_log: true
+  ignore_errors: true
+
+- name: Show fan inventory
+  ansible.builtin.debug:
+    msg: "{{ _redfish_sensors_fan.redfish_facts.fan.entries | to_nice_json }}"
+  when: _redfish_sensors_fan is not failed
+
+- name: Show fan inventory not supported
+  ansible.builtin.debug:
+    msg: "GetFanInventory is not supported on this BMC"
+  when: _redfish_sensors_fan is failed
+
+- name: "Get PSU inventory via Redfish on {{ inventory_hostname }}"
+  community.general.redfish_info:
+    category: Chassis
+    command: GetPsuInventory
+    baseuri: "{{ ansible_host }}"
+    username: "{{ bmc_redfish_username }}"
+    password: "{{ bmc_redfish_password }}"
+    validate_certs: "{{ bmc_redfish_validate_certs }}"
+  delegate_to: "{{ bmc_delegate_host }}"
+  register: _redfish_sensors_psu
+  no_log: true
+  ignore_errors: true
+
+- name: Show PSU inventory
+  ansible.builtin.debug:
+    msg: "{{ _redfish_sensors_psu.redfish_facts.psu.entries | to_nice_json }}"
+  when: _redfish_sensors_psu is not failed
+
+- name: Show PSU inventory not supported
+  ansible.builtin.debug:
+    msg: "GetPsuInventory is not supported on this BMC"
+  when: _redfish_sensors_psu is failed
