@@ -1,13 +1,30 @@
 ---
+- name: Gather facts on delegate host
+  ansible.builtin.setup:
+    gather_subset: min
+  delegate_to: "{{ bmc_delegate_host }}"
+  delegate_facts: true
+  run_once: true
+  tags: always
+
+- name: Ensure ipmitool is installed on delegate host
+  ansible.builtin.package:
+    name: ipmitool
+    state: present
+  delegate_to: "{{ bmc_delegate_host }}"
+  run_once: true
+  become: true
+  tags: always
+
 - name: Execute power operation
-  ansible.builtin.include_tasks: power.yml
+  ansible.builtin.import_tasks: power.yml
   tags: bmc_power
 
 - name: Set boot device
-  ansible.builtin.include_tasks: boot_device.yml
+  ansible.builtin.import_tasks: boot_device.yml
   tags: bmc_boot
 
 - name: Rotate credentials
-  ansible.builtin.include_tasks: credential_rotate.yml
+  ansible.builtin.import_tasks: credential_rotate.yml
   when: bmc_rotate_credentials | bool
   tags: bmc_credential
