@@ -1,0 +1,82 @@
+---
+- name: Validate bmc_protocol value
+  ansible.builtin.assert:
+    that:
+      - bmc_protocol in ['ipmi', 'redfish']
+    fail_msg: "bmc_protocol must be 'ipmi' or 'redfish', got '{{ bmc_protocol }}'"
+  tags: always
+
+# ── IPMI 事前準備 ─────────────────────────────────────
+- name: Gather facts on delegate host
+  ansible.builtin.setup:
+    gather_subset: min
+  delegate_to: "{{ bmc_delegate_host }}"
+  delegate_facts: true
+  run_once: true
+  when: bmc_protocol == 'ipmi'
+  tags: always
+
+- name: Ensure ipmitool is installed on delegate host
+  ansible.builtin.package:
+    name: ipmitool
+    state: present
+  delegate_to: "{{ bmc_delegate_host }}"
+  run_once: true
+  become: true
+  when: bmc_protocol == 'ipmi'
+  tags: always
+
+# ── 電源操作 ──────────────────────────────────────────
+- name: Execute power operation (IPMI)
+  ansible.builtin.include_tasks:
+    file: power.yml
+    apply:
+      tags: bmc_power
+  when: bmc_protocol == 'ipmi'
+  tags: bmc_power
+
+- name: Execute power operation (Redfish)
+  ansible.builtin.include_tasks:
+    file: power_redfish.yml
+    apply:
+      tags: bmc_power
+  when: bmc_protocol == 'redfish'
+  tags: bmc_power
+
+# ── ブートデバイス設定 ────────────────────────────────
+- name: Set boot device (IPMI)
+  ansible.builtin.include_tasks:
+    file: boot_device.yml
+    apply:
+      tags: bmc_boot
+  when: bmc_protocol == 'ipmi'
+  tags: bmc_boot
+
+- name: Set boot device (Redfish)
+  ansible.builtin.include_tasks:
+    file: boot_device_redfish.yml
+    apply:
+      tags: bmc_boot
+  when: bmc_protocol == 'redfish'
+  tags: bmc_boot
+
+# ── 認証情報ローテーション ────────────────────────────
+- name: Rotate credentials (IPMI)
+  ansible.builtin.include_tasks:
+    file: credential_rotate.yml
+    apply:
+      tags: bmc_credential
+  when:
+    - bmc_protocol == 'ipmi'
+    - bmc_rotate_credentials | bool
+  tags: bmc_credential
+
+- name: Rotate credentials (Redfish)
+  ansible.builtin.include_tasks:
+    file: credential_rotate_redfish.yml
+    apply:
+      tags: bmc_credential
+  when:
+    - bmc_protocol == 'redfish'
+    - bmc_rotate_credentials | bool
+  tags: bmc_credential

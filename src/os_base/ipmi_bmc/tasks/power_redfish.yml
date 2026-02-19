@@ -1,0 +1,51 @@
+---
+- name: Validate bmc_power_action for Redfish
+  ansible.builtin.assert:
+    that:
+      - bmc_power_action in _redfish_power_map or bmc_power_action == 'status'
+    fail_msg: "bmc_power_action must be one of: status, on, off, reset, cycle, soft"
+  vars:
+    _redfish_power_map:
+      "on": "PowerOn"
+      "off": "PowerForceOff"
+      "reset": "PowerForceRestart"
+      "cycle": "PowerForceRestart"
+      "soft": "PowerGracefulShutdown"
+
+- name: "Get power status via Redfish on {{ inventory_hostname }}"
+  community.general.redfish_info:
+    category: Systems
+    command: GetSystemInventory
+    baseuri: "{{ ansible_host }}"
+    username: "{{ bmc_redfish_username }}"
+    password: "{{ bmc_redfish_password }}"
+    validate_certs: "{{ bmc_redfish_validate_certs }}"
+  delegate_to: "{{ bmc_delegate_host }}"
+  register: _redfish_system_info
+  no_log: true
+  when: bmc_power_action == "status"
+
+- name: Show power status (Redfish)
+  ansible.builtin.debug:
+    msg: "Chassis Power is {{ _redfish_system_info.redfish_facts.system.entries[0][1].PowerState | lower }}"
+  when: bmc_power_action == "status"
+
+- name: "Execute power {{ bmc_power_action }} via Redfish on {{ inventory_hostname }}"
+  community.general.redfish_command:
+    category: Systems
+    command: "{{ _redfish_power_map[bmc_power_action] }}"
+    resource_id: "{{ bmc_redfish_resource_id }}"
+    baseuri: "{{ ansible_host }}"
+    username: "{{ bmc_redfish_username }}"
+    password: "{{ bmc_redfish_password }}"
+    validate_certs: "{{ bmc_redfish_validate_certs }}"
+  delegate_to: "{{ bmc_delegate_host }}"
+  no_log: true
+  vars:
+    _redfish_power_map:
+      "on": "PowerOn"
+      "off": "PowerForceOff"
+      "reset": "PowerForceRestart"
+      "cycle": "PowerForceRestart"
+      "soft": "PowerGracefulShutdown"
+  when: bmc_power_action != "status"

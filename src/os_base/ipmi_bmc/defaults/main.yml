@@ -1,4 +1,7 @@
 ---
+# プロトコル選択（ipmi / redfish）
+bmc_protocol: ipmi
+
 # IPMI 接続設定
 bmc_ipmi_interface: lanplus
 
@@ -16,3 +19,13 @@ bmc_new_ipmi_password: ""
 
 # IPMI ユーザー ID（Supermicro のデフォルトは 2）
 bmc_ipmi_user_id: 2
+
+# Redfish 接続設定
+bmc_redfish_username: ""
+bmc_redfish_password: ""
+bmc_redfish_validate_certs: false
+bmc_redfish_resource_id: "Self"
+
+# Redfish 認証情報ローテーション
+bmc_new_redfish_username: ""
+bmc_new_redfish_password: ""
