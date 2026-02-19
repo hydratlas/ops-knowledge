@@ -1,4 +1,11 @@
 ---
+- name: Allow unprivileged users to bind to port 80
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_unprivileged_port_start
+    value: "{{ dell_proxy_listen_port }}"
+    sysctl_file: /etc/sysctl.d/50-unprivileged-ports.conf
+    reload: true
+
 - name: Include common Rootless Podman Quadlet setup
   ansible.builtin.include_role:
     name: container/podman_rootless_quadlet_base

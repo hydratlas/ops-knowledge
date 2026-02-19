@@ -12,6 +12,7 @@
 
 - rootless Podman Quadlet による nginx コンテナで構成される
 - `container/podman_rootless_quadlet_base` ロールに依存する
+- sysctl `net.ipv4.ip_unprivileged_port_start` を設定し、ルートレスでポート 80 にバインドする
 - DNS の書き換え機能は含まない
 
 ## 動作
@@ -26,7 +27,8 @@
 | 変数名 | デフォルト値 | 説明 |
 |---|---|---|
 | `dell_proxy_user` | `dell-proxy` | 実行ユーザー名 |
-| `dell_proxy_listen_port` | `8080` | リッスンポート |
+| `dell_proxy_listen_port` | `80` | ホスト側リッスンポート |
+| `dell_proxy_container_port` | `8080` | コンテナ内部ポート |
 | `dell_proxy_backend_host` | `dl.dell.com` | プロキシ先ホスト |
 | `dell_proxy_connect_timeout` | `60s` | 接続タイムアウト |
 | `dell_proxy_send_timeout` | `60s` | 送信タイムアウト |
@@ -69,4 +71,4 @@ sudo -u dell-proxy XDG_RUNTIME_DIR=/run/user/$(id -u dell-proxy) systemctl --use
 
 ### iDRAC の設定
 
-iDRAC の Lifecycle Controller でファームウェア更新を行う際、ファイルの場所として HTTP を選択し、アドレスにプロキシホストの IP を、ポートに `8080`（またはカスタム設定したポート）を指定する。
+iDRAC の Lifecycle Controller でファームウェア更新を行う際、ファイルの場所として HTTP を選択し、アドレスにプロキシホストの IP を指定する。デフォルトのポート 80 を使用するため、ポートの指定は不要である。
