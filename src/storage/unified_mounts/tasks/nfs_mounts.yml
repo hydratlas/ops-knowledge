@@ -1,13 +1,4 @@
 ---
-# LXCではカーネル制約によりFS-Cache（fscオプション）が使用不可のため除去
-- name: "LXC: Strip fsc option from NFS mount options"
-  ansible.builtin.set_fact:
-    _unified_mounts_nfs_active: >-
-      [{% for item in _unified_mounts_nfs_active %}
-      {{ item | combine({'opts': item.opts | default('') | split(',') | reject('equalto', 'fsc') | join(',')}) | to_json }}{{ ',' if not loop.last else '' }}
-      {% endfor %}]
-  when: _unified_mounts_is_lxc
-
 # state=absentのNFSマウントを停止しユニットファイルを削除
 - name: Remove absent NFS mounts
   ansible.builtin.include_tasks: nfs_mounts_absent.yml

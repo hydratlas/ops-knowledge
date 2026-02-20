@@ -48,6 +48,20 @@
       {{ _unified_mounts_nfs | rejectattr('state', 'defined') | list +
          _unified_mounts_nfs | selectattr('state', 'defined') | rejectattr('state', 'equalto', 'absent') | list }}
 
+# cachefilesdが利用不可の環境ではFS-Cache（fscオプション）を除去
+# - LXC: カーネル制約によりFS-Cacheが使用不可
+# - Ubuntu 20.04: リポジトリにcachefilesdパッケージが存在しない
+- name: Strip fsc option from NFS mount options on unsupported platforms
+  ansible.builtin.set_fact:
+    _unified_mounts_nfs_active: >-
+      [{% for item in _unified_mounts_nfs_active %}
+      {{ item | combine({'opts': item.opts | default('') | split(',') | reject('equalto', 'fsc') | join(',')}) | to_json }}{{ ',' if not loop.last else '' }}
+      {% endfor %}]
+  when: >-
+    _unified_mounts_is_lxc or
+    (ansible_facts['distribution'] == 'Ubuntu' and
+     ansible_facts['distribution_version'] is version('22.04', '<'))
+
 # マウント種別に応じた必須パッケージの導入（nfs-utils, cachefilesd, cifs-utils）
 - name: Install required packages
   ansible.builtin.include_tasks: packages.yml

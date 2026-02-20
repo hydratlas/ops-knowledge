@@ -1,9 +1,9 @@
 ---
-# NFSマウントオプションにfscが含まれるかを判定
+# 有効なNFSマウントオプションにfscが含まれるかを判定（fsc除去済みの変数を使用）
 - name: Check if any NFS mount uses fsc option
   ansible.builtin.set_fact:
     _unified_mounts_uses_fsc: >-
-      {{ _unified_mounts_nfs | selectattr('opts', 'defined')
+      {{ _unified_mounts_nfs_active | selectattr('opts', 'defined')
          | selectattr('opts', 'search', 'fsc') | list | length > 0 }}
 
 # Debian系パッケージの導入（nfs-common, cachefilesd, cifs-utils）

@@ -22,6 +22,8 @@
         path: /etc/default/cachefilesd
         regexp: '^#?RUN='
         line: RUN=yes
+        create: true
+        mode: "0644"
       notify: Restart cachefilesd
 
     # cachefilesdの起動待機時間を短縮（デフォルト30秒→2秒）
@@ -30,6 +32,8 @@
         path: /etc/default/cachefilesd
         regexp: '^#?STARTTIME='
         line: STARTTIME=2
+        create: true
+        mode: "0644"
       notify: Restart cachefilesd
 
 # CIFSマウント定義時にcifs-utilsを導入
