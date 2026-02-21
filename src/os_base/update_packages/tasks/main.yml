@@ -38,7 +38,7 @@
     delay: 5
     timeout: 300
 
-- name: Check update result (Debian-based)
+- name: Wait for package update to finish (Debian-based)
   ansible.builtin.async_status:
     jid: "{{ _update_packages_debian.ansible_job_id }}"
   register: _update_result_debian
@@ -47,7 +47,7 @@
   delay: 10
   when: _update_packages_debian is not skipped
 
-- name: Check update result (RHEL-based)
+- name: Wait for package update to finish (RHEL-based)
   ansible.builtin.async_status:
     jid: "{{ _update_packages_rhel.ansible_job_id }}"
   register: _update_result_rhel
@@ -56,7 +56,7 @@
   delay: 10
   when: _update_packages_rhel is not skipped
 
-- name: Check update result (Alpine)
+- name: Wait for package update to finish (Alpine)
   ansible.builtin.async_status:
     jid: "{{ _update_packages_alpine.ansible_job_id }}"
   register: _update_result_alpine

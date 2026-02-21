@@ -1,0 +1,56 @@
+---
+- name: Install nginx
+  ansible.builtin.package:
+    name: nginx
+    state: present
+
+- name: Create document root directory
+  ansible.builtin.file:
+    path: "{{ static_file_server_document_root }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy nginx site configuration
+  ansible.builtin.template:
+    src: static-file-server.conf.j2
+    dest: /etc/nginx/http.d/static-file-server.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart nginx
+
+- name: Remove default nginx site configuration
+  ansible.builtin.file:
+    path: /etc/nginx/http.d/default.conf
+    state: absent
+  notify: Restart nginx
+
+- name: Create subdirectories for downloaded files
+  ansible.builtin.file:
+    path: "{{ static_file_server_document_root }}/{{ item.dest | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop: "{{ static_file_server_files }}"
+  when:
+    - static_file_server_files | length > 0
+    - item.dest | dirname | length > 0
+
+- name: Download files to document root
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "{{ static_file_server_document_root }}/{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ static_file_server_files }}"
+  when: static_file_server_files | length > 0
+
+- name: Enable and start nginx
+  ansible.builtin.service:
+    name: nginx
+    enabled: true
+    state: started
