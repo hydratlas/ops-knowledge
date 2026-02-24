@@ -26,3 +26,31 @@
     name: in.tftpd
     enabled: true
     state: started
+
+- name: Copy PXE bootloader from latest netboot image
+  ansible.builtin.copy:
+    src: "{{ tftp_server_root }}/{{ tftp_server_pxe_dir }}/{{ tftp_server_pxe_entries[0].base_dir }}/bootx64.efi"
+    dest: "{{ tftp_server_root }}/{{ tftp_server_pxe_dir }}/bootx64.efi"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+  when: tftp_server_pxe_entries is defined and tftp_server_pxe_entries | length > 0
+
+- name: Create PXE GRUB configuration directory
+  ansible.builtin.file:
+    path: "{{ tftp_server_root }}/{{ tftp_server_pxe_dir }}/grub"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: tftp_server_pxe_entries is defined and tftp_server_pxe_entries | length > 0
+
+- name: Deploy PXE GRUB configuration
+  ansible.builtin.template:
+    src: grub.cfg.j2
+    dest: "{{ tftp_server_root }}/{{ tftp_server_pxe_dir }}/grub/grub.cfg"
+    owner: root
+    group: root
+    mode: "0644"
+  when: tftp_server_pxe_entries is defined and tftp_server_pxe_entries | length > 0

@@ -1,5 +1,3 @@
 ---
 static_file_server_listen_port: 80
-static_file_server_document_root: /var/www/files
 static_file_server_server_name: _
-static_file_server_files: []

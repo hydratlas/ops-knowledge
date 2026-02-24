@@ -1,7 +1,0 @@
----
-samba_server_share_name: images
-samba_server_share_path: /srv/images
-samba_server_share_comment: OS Images
-samba_server_username: samba
-# samba_server_password: (必須・Vault暗号化推奨)
-samba_server_files: []
