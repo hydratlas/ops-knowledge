@@ -1,0 +1,11 @@
+---
+- name: Set tmpdir in vzdump.conf
+  ansible.builtin.lineinfile:
+    path: /etc/vzdump.conf
+    regexp: '^#?\s*tmpdir:'
+    line: 'tmpdir: /var/tmp'
+    create: true
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes

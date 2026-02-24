@@ -49,6 +49,22 @@
   loop: "{{ static_file_server_files }}"
   when: static_file_server_files | length > 0
 
+- name: Install GNU tar for archive extraction
+  community.general.apk:
+    name: tar
+    state: present
+  when: static_file_server_files | selectattr('extract', 'defined') | selectattr('extract') | list | length > 0
+
+- name: Extract archived files
+  ansible.builtin.unarchive:
+    src: "{{ static_file_server_document_root }}/{{ item.dest }}"
+    dest: "{{ static_file_server_document_root }}/{{ item.dest | dirname }}"
+    remote_src: true
+  loop: "{{ static_file_server_files }}"
+  when:
+    - static_file_server_files | length > 0
+    - item.extract | default(false)
+
 - name: Enable and start nginx
   ansible.builtin.service:
     name: nginx

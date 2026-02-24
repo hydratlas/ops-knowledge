@@ -1,0 +1,1 @@
+このロールはProxmox VEホストのvzdumpバックアップ時の一時ディレクトリーをローカルの/var/tmpに設定する。NFSマウント上でバックアップを行う際のPermission Deniedエラーを回避するため、/etc/vzdump.confにtmpdirパラメーターを明示的に指定する。これはProxmox公式ドキュメントで推奨されている方法であり、NFS側の権限変更は不要である。

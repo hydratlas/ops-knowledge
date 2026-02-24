@@ -1,0 +1,28 @@
+---
+- name: Install tftp-hpa
+  community.general.apk:
+    name: tftp-hpa
+    state: present
+
+- name: Create TFTP root directory
+  ansible.builtin.file:
+    path: "{{ tftp_server_root }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy in.tftpd configuration
+  ansible.builtin.template:
+    src: in.tftpd.j2
+    dest: /etc/conf.d/in.tftpd
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart in.tftpd
+
+- name: Enable and start in.tftpd
+  ansible.builtin.service:
+    name: in.tftpd
+    enabled: true
+    state: started

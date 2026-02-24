@@ -1,0 +1,28 @@
+---
+# Version and binary configuration
+node_exporter_version: "1.10.2"
+node_exporter_arch: "amd64"
+node_exporter_download_url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}.tar.gz"
+node_exporter_binary_path: "/usr/local/bin/node_exporter"
+
+# User configuration
+node_exporter_user: "node_exporter"
+node_exporter_group: "node_exporter"
+
+# Service configuration
+node_exporter_service_name: "node_exporter"
+node_exporter_service_description: "Prometheus Node Exporter"
+node_exporter_service_restart: "always"
+node_exporter_service_restart_sec: 5
+
+# Listening address
+node_exporter_listen_address: ":9100"
+
+# Extra CLI flags for node_exporter
+node_exporter_extra_flags: []
+
+# Legacy cleanup: files to remove after migration
+node_exporter_legacy_files: []
+
+# Legacy cleanup: services to stop, disable, and remove after migration
+node_exporter_legacy_services: []

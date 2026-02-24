@@ -1,0 +1,5 @@
+---
+tftp_server_root: /var/www/files
+tftp_server_address: 0.0.0.0
+tftp_server_port: 69
+tftp_server_options: --secure

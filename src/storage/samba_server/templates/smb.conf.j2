@@ -1,0 +1,16 @@
+{{ ansible_managed | comment }}
+
+[global]
+  workgroup = WORKGROUP
+  server string = {{ inventory_hostname }}
+  security = user
+  log file = /var/log/samba/%m.log
+  max log size = 50
+
+[{{ samba_server_share_name }}]
+  path = {{ samba_server_share_path }}
+  comment = {{ samba_server_share_comment }}
+  browseable = yes
+  read only = yes
+  valid users = {{ samba_server_username }}
+  force user = root

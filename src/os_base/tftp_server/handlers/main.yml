@@ -1,0 +1,5 @@
+---
+- name: Restart in.tftpd
+  ansible.builtin.service:
+    name: in.tftpd
+    state: restarted
