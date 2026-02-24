@@ -29,15 +29,12 @@
 
 - name: Create subdirectories for downloaded files
   ansible.builtin.file:
-    path: "{{ static_file_server_document_root }}/{{ item.dest | dirname }}"
+    path: "{{ static_file_server_document_root }}/{{ item }}"
     state: directory
     owner: root
     group: root
     mode: "0755"
-  loop: "{{ static_file_server_files }}"
-  when:
-    - static_file_server_files | length > 0
-    - item.dest | dirname | length > 0
+  loop: "{{ static_file_server_files | map(attribute='dest') | map('dirname') | select | unique }}"
 
 - name: Download files to document root
   ansible.builtin.get_url:
@@ -48,6 +45,10 @@
     mode: "0644"
   loop: "{{ static_file_server_files }}"
   when: static_file_server_files | length > 0
+  retries: 3
+  delay: 10
+  register: download_result
+  until: download_result is not failed
 
 - name: Install GNU tar for archive extraction
   community.general.apk:
