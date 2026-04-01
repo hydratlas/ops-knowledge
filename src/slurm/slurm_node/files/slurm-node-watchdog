@@ -1,0 +1,38 @@
+#!/bin/bash
+# Slurm dynamic node registration watchdog
+# Managed by Ansible - do not edit manually
+
+# slurmd が動作していなければ何もしない（systemd が管理する）
+if ! systemctl is-active --quiet slurmd; then
+    exit 0
+fi
+
+# scontrol が利用できない場合は何もできない
+if ! command -v scontrol &>/dev/null; then
+    logger -t slurm-node-watchdog "scontrol not found, cannot check registration"
+    exit 1
+fi
+
+# configless モードの設定ファイルを使用する
+export SLURM_CONF="/run/slurm/conf/slurm.conf"
+if [ ! -f "$SLURM_CONF" ]; then
+    # 設定ファイルがない場合、slurmd が設定を取得できていない可能性がある
+    logger -t slurm-node-watchdog "Config cache not found at $SLURM_CONF, restarting slurmd"
+    systemctl restart slurmd
+    exit 0
+fi
+
+# slurmctld に到達不能な場合は何もしない（ネットワーク障害時の不要な再起動を防ぐ）
+if ! scontrol ping &>/dev/null; then
+    exit 0
+fi
+
+# ノードが登録済みであれば何もしない（FQDN で確認する）
+NODE_FQDN=$(hostname -f)
+if scontrol show node "$NODE_FQDN" &>/dev/null; then
+    exit 0
+fi
+
+# ノードが未登録の場合、slurmd を再起動して再登録する
+logger -t slurm-node-watchdog "Node $NODE_FQDN is not registered with slurmctld, restarting slurmd"
+systemctl restart slurmd

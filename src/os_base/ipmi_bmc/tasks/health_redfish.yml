@@ -1,0 +1,46 @@
+---
+- name: "Get system health report via Redfish on {{ inventory_hostname }}"
+  community.general.redfish_info:
+    category: Systems
+    command: GetHealthReport
+    baseuri: "{{ ansible_host }}"
+    username: "{{ bmc_redfish_username }}"
+    password: "{{ bmc_redfish_password }}"
+    validate_certs: "{{ bmc_redfish_validate_certs }}"
+  delegate_to: "{{ bmc_delegate_host }}"
+  register: _redfish_health_system
+  no_log: true
+  ignore_errors: true
+
+- name: Show system health report
+  ansible.builtin.debug:
+    msg: "{{ _redfish_health_system.redfish_facts.health_report.entries | to_nice_json }}"
+  when: _redfish_health_system is not failed
+
+- name: Show system health report not supported
+  ansible.builtin.debug:
+    msg: "Systems GetHealthReport is not supported on this BMC"
+  when: _redfish_health_system is failed
+
+- name: "Get chassis inventory via Redfish on {{ inventory_hostname }}"
+  community.general.redfish_info:
+    category: Chassis
+    command: GetChassisInventory
+    baseuri: "{{ ansible_host }}"
+    username: "{{ bmc_redfish_username }}"
+    password: "{{ bmc_redfish_password }}"
+    validate_certs: "{{ bmc_redfish_validate_certs }}"
+  delegate_to: "{{ bmc_delegate_host }}"
+  register: _redfish_health_chassis
+  no_log: true
+  ignore_errors: true
+
+- name: Show chassis inventory
+  ansible.builtin.debug:
+    msg: "{{ _redfish_health_chassis.redfish_facts.chassis.entries | to_nice_json }}"
+  when: _redfish_health_chassis is not failed
+
+- name: Show chassis inventory not supported
+  ansible.builtin.debug:
+    msg: "GetChassisInventory is not supported on this BMC"
+  when: _redfish_health_chassis is failed

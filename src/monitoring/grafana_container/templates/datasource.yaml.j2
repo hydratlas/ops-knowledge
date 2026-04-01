@@ -1,0 +1,16 @@
+apiVersion: 1
+datasources:
+  - name: {{ item.name }}
+    type: {{ item.type }}
+    uid: {{ item.uid | default(item.name | lower | replace(' ', '-')) }}
+    access: {{ item.access }}
+    url: {{ item.url }}
+{% if item.isDefault is defined %}
+    isDefault: {{ item.isDefault | lower }}
+{% endif %}
+{% if item.jsonData is defined %}
+    jsonData:
+{% for key, value in item.jsonData.items() %}
+      {{ key }}: {{ value }}
+{% endfor %}
+{% endif %}

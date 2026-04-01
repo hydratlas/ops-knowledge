@@ -1,0 +1,3 @@
+---
+static_file_server_listen_port: 80
+static_file_server_server_name: _

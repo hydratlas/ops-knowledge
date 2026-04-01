@@ -1,0 +1,22 @@
+---
+- name: Gather OS distribution fact
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - distribution
+  when: ansible_os_family is not defined
+
+- name: Validate apt_cache_proxy_url is defined
+  ansible.builtin.assert:
+    that:
+      - apt_cache_proxy_url | length > 0
+    fail_msg: "apt_cache_proxy_url must be defined with a valid proxy URL"
+  when: ansible_os_family in ["Debian", "RedHat"]
+
+- name: Configure Debian package cache client
+  ansible.builtin.include_tasks: debian.yml
+  when: ansible_os_family == "Debian"
+
+- name: Configure RedHat package cache client
+  ansible.builtin.include_tasks: redhat.yml
+  when: ansible_os_family == "RedHat"

@@ -1,0 +1,21 @@
+---
+# NFSマウント定義時にnfs-utilsを導入
+- name: Install NFS client package
+  ansible.builtin.dnf:
+    name: nfs-utils
+    state: present
+  when: _unified_mounts_nfs | length > 0
+
+# fscオプション使用時にcachefilesdを導入
+- name: Install cachefilesd package
+  ansible.builtin.dnf:
+    name: cachefilesd
+    state: present
+  when: _unified_mounts_uses_fsc
+
+# CIFSマウント定義時にcifs-utilsを導入
+- name: Install CIFS client package
+  ansible.builtin.dnf:
+    name: cifs-utils
+    state: present
+  when: _unified_mounts_non_nfs | selectattr('fstype', 'equalto', 'cifs') | list | length > 0

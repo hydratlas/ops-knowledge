@@ -1,0 +1,51 @@
+---
+# RHEL 7以前はdnfモジュール非対応のためrpm -qで存在確認
+- name: Check if NFS client package is installed
+  ansible.builtin.command:
+    cmd: rpm -q nfs-utils
+  register: _rpm_nfs
+  changed_when: false
+  failed_when: false
+  when: _unified_mounts_nfs | length > 0
+
+# 未インストール時のみyumでnfs-utilsを導入
+- name: Install NFS client package
+  ansible.builtin.command:
+    cmd: yum install -y nfs-utils
+  when:
+    - _rpm_nfs is not skipped
+    - _rpm_nfs.rc != 0
+
+# RHEL 7以前はdnfモジュール非対応のためrpm -qで存在確認
+- name: Check if cachefilesd package is installed
+  ansible.builtin.command:
+    cmd: rpm -q cachefilesd
+  register: _rpm_cachefilesd
+  changed_when: false
+  failed_when: false
+  when: _unified_mounts_uses_fsc
+
+# 未インストール時のみyumでcachefilesdを導入
+- name: Install cachefilesd package
+  ansible.builtin.command:
+    cmd: yum install -y cachefilesd
+  when:
+    - _rpm_cachefilesd is not skipped
+    - _rpm_cachefilesd.rc != 0
+
+# RHEL 7以前はdnfモジュール非対応のためrpm -qで存在確認
+- name: Check if CIFS client package is installed
+  ansible.builtin.command:
+    cmd: rpm -q cifs-utils
+  register: _rpm_cifs
+  changed_when: false
+  failed_when: false
+  when: _unified_mounts_non_nfs | selectattr('fstype', 'equalto', 'cifs') | list | length > 0
+
+# 未インストール時のみyumでcifs-utilsを導入
+- name: Install CIFS client package
+  ansible.builtin.command:
+    cmd: yum install -y cifs-utils
+  when:
+    - _rpm_cifs is not skipped
+    - _rpm_cifs.rc != 0

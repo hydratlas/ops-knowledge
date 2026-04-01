@@ -1,0 +1,42 @@
+---
+- name: Configure apt proxy
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/02proxy
+    content: |
+      Acquire::http::Proxy "{{ apt_cache_proxy_url }}";
+      Acquire::https::Proxy "DIRECT";
+    mode: "0644"
+
+- name: Check if Proxmox VE
+  ansible.builtin.stat:
+    path: /etc/pve
+  register: __pve_dir
+  when: ansible_distribution == "Debian"
+
+- name: Deploy apt sources for caching (Debian)
+  ansible.builtin.template:
+    src: debian.sources.j2
+    dest: /etc/apt/sources.list.d/debian.sources
+    owner: root
+    group: root
+    mode: "0644"
+  when:
+    - ansible_distribution == "Debian"
+    - not __pve_dir.stat.exists
+
+- name: Remove apt sources managed by Proxmox VE
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/debian.sources
+    state: absent
+  when:
+    - ansible_distribution == "Debian"
+    - __pve_dir.stat.exists
+
+- name: Deploy apt sources for caching (Ubuntu)
+  ansible.builtin.template:
+    src: ubuntu.sources.j2
+    dest: /etc/apt/sources.list.d/ubuntu.sources
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_distribution == "Ubuntu"

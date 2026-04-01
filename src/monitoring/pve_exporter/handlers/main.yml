@@ -1,0 +1,21 @@
+---
+- name: reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: yes
+  when: ansible_os_family != "Alpine"
+  changed_when: true
+
+- name: restart pve_exporter (systemd)
+  ansible.builtin.systemd:
+    name: "{{ pve_exporter_service_name }}.service"
+    state: restarted
+    daemon_reload: true
+  when: ansible_os_family != "Alpine"
+  listen: restart pve_exporter
+
+- name: restart pve_exporter (OpenRC)
+  ansible.builtin.service:
+    name: "{{ pve_exporter_service_name }}"
+    state: restarted
+  when: ansible_os_family == "Alpine"
+  listen: restart pve_exporter

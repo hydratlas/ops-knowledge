@@ -1,0 +1,47 @@
+---
+- name: Validate bmc_boot_device for Redfish
+  ansible.builtin.assert:
+    that:
+      - bmc_boot_device in _redfish_boot_map
+    fail_msg: "bmc_boot_device must be one of: disk, pxe, cdrom, bios"
+  vars:
+    _redfish_boot_map:
+      disk: Hdd
+      pxe: Pxe
+      cdrom: Cd
+      bios: BiosSetup
+
+- name: "Set boot device to {{ bmc_boot_device }} via Redfish on {{ inventory_hostname }}"
+  community.general.redfish_command:
+    category: Systems
+    command: "{{ bmc_boot_persistent | bool | ternary('EnableContinuousBootOverride', 'SetOneTimeBoot') }}"
+    resource_id: "{{ bmc_redfish_resource_id }}"
+    bootdevice: "{{ _redfish_boot_map[bmc_boot_device] }}"
+    baseuri: "{{ ansible_host }}"
+    username: "{{ bmc_redfish_username }}"
+    password: "{{ bmc_redfish_password }}"
+    validate_certs: "{{ bmc_redfish_validate_certs }}"
+  delegate_to: "{{ bmc_delegate_host }}"
+  no_log: true
+  vars:
+    _redfish_boot_map:
+      disk: Hdd
+      pxe: Pxe
+      cdrom: Cd
+      bios: BiosSetup
+
+- name: Verify boot device setting via Redfish
+  community.general.redfish_info:
+    category: Systems
+    command: GetBootOverride
+    baseuri: "{{ ansible_host }}"
+    username: "{{ bmc_redfish_username }}"
+    password: "{{ bmc_redfish_password }}"
+    validate_certs: "{{ bmc_redfish_validate_certs }}"
+  delegate_to: "{{ bmc_delegate_host }}"
+  register: _redfish_boot_info
+  no_log: true
+
+- name: Show boot device setting (Redfish)
+  ansible.builtin.debug:
+    msg: "{{ _redfish_boot_info.redfish_facts.boot_override.entries }}"

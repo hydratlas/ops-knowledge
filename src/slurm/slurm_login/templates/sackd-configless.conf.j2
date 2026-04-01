@@ -1,0 +1,5 @@
+# Systemd override for sackd configless mode
+# Managed by Ansible - do not edit manually
+[Service]
+ExecStart=
+ExecStart=/usr/sbin/sackd --systemd --conf-server {{ slurm_controller_host }}:6817

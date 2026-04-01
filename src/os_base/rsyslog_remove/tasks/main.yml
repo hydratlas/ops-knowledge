@@ -1,0 +1,27 @@
+---
+- name: Stop and disable rsyslog service (systemd)
+  ansible.builtin.systemd:
+    name: rsyslog.service
+    state: stopped
+    enabled: false
+  failed_when: false
+  when: ansible_service_mgr == "systemd"
+
+- name: Stop rsyslog service (OpenRC)
+  ansible.builtin.command:
+    cmd: rc-service rsyslog stop
+  failed_when: false
+  changed_when: false
+  when: ansible_service_mgr == "openrc"
+
+- name: Disable rsyslog service (OpenRC)
+  ansible.builtin.command:
+    cmd: rc-update del rsyslog
+  failed_when: false
+  changed_when: false
+  when: ansible_service_mgr == "openrc"
+
+- name: Remove rsyslog package
+  ansible.builtin.package:
+    name: rsyslog
+    state: absent

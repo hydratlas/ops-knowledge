@@ -1,0 +1,28 @@
+- name: Verify slurm_jwt_key is defined
+  ansible.builtin.assert:
+    that:
+      - slurm_jwt_key is defined
+      - slurm_jwt_key | length > 0
+    fail_msg: "slurm_jwt_key must be defined and non-empty (Base64 encoded, 32 bytes)"
+    quiet: true
+
+- name: Install slurm-client package
+  ansible.builtin.apt:
+    name:
+      - slurm-client
+    state: present
+
+- name: Disable munge service (JWT auth is used instead)
+  ansible.builtin.systemd:
+    name: munge
+    state: stopped
+    enabled: no
+
+- name: Deploy JWT key
+  ansible.builtin.copy:
+    content: "{{ slurm_jwt_key | b64decode }}"
+    dest: /etc/slurm/slurm.key
+    owner: slurm
+    group: slurm
+    mode: '0600'
+  no_log: true

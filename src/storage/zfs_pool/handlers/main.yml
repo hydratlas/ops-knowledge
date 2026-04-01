@@ -1,0 +1,5 @@
+---
+- name: Reload ZFS
+  ansible.builtin.systemd:
+    name: zfs.target
+    state: restarted

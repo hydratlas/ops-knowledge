@@ -1,0 +1,12 @@
+---
+- name: Install btrfs-progs package
+  ansible.builtin.apt:
+    name: btrfs-progs
+    state: present
+    update_cache: true
+
+- name: Create btrfs filesystems
+  ansible.builtin.include_tasks: create_filesystem.yml
+  loop: "{{ btrfs_filesystems }}"
+  loop_control:
+    loop_var: btrfs_fs

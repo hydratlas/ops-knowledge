@@ -1,0 +1,16 @@
+# GSSAPI・Kerberos認証を無効化する（FreeIPA未登録ホストのため不要）
+GSSAPIAuthentication no
+KerberosAuthentication no
+
+# X11転送を無効化する
+X11Forwarding no
+
+# SSHトンネル（SOCKS プロキシ等）を許可する
+PermitTunnel yes
+# TCP転送を許可する
+AllowTcpForwarding yes
+
+# admグループに属さないユーザーはログインを禁止する
+Match Group !adm
+  ForceCommand /sbin/nologin
+  PermitTTY no

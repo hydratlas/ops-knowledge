@@ -1,0 +1,33 @@
+---
+# fstab管理からsystemdユニット管理への移行が必要か判定
+- name: Check for existing fstab entries for NFS mounts
+  ansible.builtin.shell:
+    cmd: "grep -q '^[^#].*{{ item.path }}[[:space:]]' /etc/fstab"
+  loop: "{{ _unified_mounts_nfs_active }}"
+  register: _fstab_check
+  failed_when: false
+  changed_when: false
+
+# 移行対象のパス一覧を抽出
+- name: Identify paths with fstab entries
+  ansible.builtin.set_fact:
+    _nfs_fstab_paths: >-
+      {{ _fstab_check.results | selectattr('rc', 'equalto', 0) | map(attribute='item.path') | list }}
+
+# fstab経由のマウントを遅延アンマウントしてsystemd管理に移行
+- name: Unmount NFS mounts with fstab entries (migration to systemd)
+  ansible.builtin.command:
+    cmd: "umount -l {{ item.path }}"
+  loop: "{{ _unified_mounts_nfs_active | selectattr('path', 'in', _nfs_fstab_paths) | list }}"
+  register: _unmount_result
+  failed_when: false
+  changed_when: _unmount_result.rc == 0
+  when: _nfs_fstab_paths | length > 0
+
+# fstabエントリを削除してsystemdへの移行を完了
+- name: Remove existing fstab entries for NFS mounts (migration to systemd)
+  ansible.builtin.mount:
+    path: "{{ item.path }}"
+    state: absent_from_fstab
+  loop: "{{ _unified_mounts_nfs_active | selectattr('path', 'in', _nfs_fstab_paths) | list }}"
+  when: _nfs_fstab_paths | length > 0

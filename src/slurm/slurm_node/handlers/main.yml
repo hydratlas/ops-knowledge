@@ -1,0 +1,11 @@
+- name: Restart slurmd
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    name: slurmd
+    state: restarted
+
+- name: Restart slurm-node-watchdog timer
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    name: slurm-node-watchdog.timer
+    state: restarted

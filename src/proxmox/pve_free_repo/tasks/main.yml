@@ -1,0 +1,47 @@
+---
+- name: Gather distribution facts
+  ansible.builtin.setup:
+    gather_subset:
+      - distribution
+  when: ansible_distribution_release is not defined
+
+- name: Backup enterprise repository file
+  ansible.builtin.command:
+    cmd: mv /etc/apt/sources.list.d/pve-enterprise.sources /etc/apt/sources.list.d/pve-enterprise.sources.bak
+    creates: /etc/apt/sources.list.d/pve-enterprise.sources.bak
+    removes: /etc/apt/sources.list.d/pve-enterprise.sources
+  notify: update apt cache
+
+- name: Backup ceph repository file
+  ansible.builtin.command:
+    cmd: mv /etc/apt/sources.list.d/ceph.sources /etc/apt/sources.list.d/ceph.sources.bak
+    creates: /etc/apt/sources.list.d/ceph.sources.bak
+    removes: /etc/apt/sources.list.d/ceph.sources
+  notify: update apt cache
+
+- name: Create PVE no-subscription repository
+  ansible.builtin.copy:
+    content: |
+      Types: deb
+      URIs: http://download.proxmox.com/debian/pve
+      Suites: {{ ansible_distribution_release }}
+      Components: pve-no-subscription
+      Signed-By: /usr/share/keyrings/proxmox-release-{{ ansible_distribution_release }}.gpg
+    dest: /etc/apt/sources.list.d/pve-no-subscription.sources
+    owner: root
+    group: root
+    mode: "0644"
+  notify: update apt cache
+#- name: Create Ceph no-subscription repository
+#  ansible.builtin.copy:
+#    content: |
+#      Types: deb
+#      URIs: http://download.proxmox.com/debian/ceph-{{ ceph_version }}
+#      Suites: {{ ansible_distribution_release }}
+#      Components: no-subscription
+#      Signed-By: /usr/share/keyrings/proxmox-release-{{ ansible_distribution_release }}.gpg
+#    dest: /etc/apt/sources.list.d/ceph.sources
+#    owner: root
+#    group: root
+#    mode: "0644"
+#  notify: update apt cache

@@ -1,0 +1,57 @@
+---
+- name: Include podman_rootless_quadlet_base role
+  ansible.builtin.include_role:
+    name: container/podman_rootless_quadlet_base
+  vars:
+    quadlet_user: "{{ victorialogs_user }}"
+    quadlet_user_comment: "{{ victorialogs_user_comment }}"
+    quadlet_app_name: "{{ victorialogs_app_name }}"
+
+- name: Set VictoriaLogs directory paths
+  ansible.builtin.set_fact:
+    victorialogs_data_dir: "{{ quadlet_home }}/.local/share/victoria-logs-data"
+
+- name: Create additional VictoriaLogs directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ victorialogs_user }}"
+    group: "{{ victorialogs_user }}"
+    mode: '0755'
+  loop:
+    - "{{ victorialogs_data_dir }}"
+
+- name: Include podman_rootless_quadlet_network role
+  ansible.builtin.include_role:
+    name: container/podman_rootless_quadlet_network
+  vars:
+    quadlet_network_name: "monitoring"
+    quadlet_network_description: "Monitoring Container Network"
+    quadlet_network_labels:
+      - "app=monitoring"
+    quadlet_network_owner: "{{ victorialogs_user }}"
+
+- name: Create VictoriaLogs Quadlet container file
+  ansible.builtin.template:
+    src: victoria-logs.container.j2
+    dest: "{{ quadlet_systemd_dir }}/victoria-logs.container"
+    owner: "{{ victorialogs_user }}"
+    group: "{{ victorialogs_user }}"
+    mode: '0644'
+  notify:
+    - reload systemd user daemon
+    - restart victoria_logs
+
+- name: Flush handlers to ensure systemd user daemon is reloaded
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start VictoriaLogs service
+  ansible.builtin.systemd:
+    name: victoria-logs.service
+    enabled: yes
+    state: started
+    scope: user
+  become: yes
+  become_user: "{{ victorialogs_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ quadlet_uid }}"

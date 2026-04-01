@@ -1,0 +1,21 @@
+---
+- name: Gather minimal facts for os_family detection
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - "!any"
+      - distribution
+
+- name: Install rsync on Debian-based systems
+  ansible.builtin.apt:
+    name:
+      - rsync
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Install rsync on RHEL-based systems
+  ansible.builtin.dnf:
+    name:
+      - rsync
+    state: present
+  when: ansible_os_family == "RedHat"

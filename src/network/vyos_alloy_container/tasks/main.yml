@@ -1,0 +1,36 @@
+---
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - vyos_alloy_loki_url is defined
+      - vyos_alloy_loki_url | length > 0
+    fail_msg: "vyos_alloy_loki_url is required but not defined"
+
+- name: Create Alloy configuration directory
+  ansible.builtin.file:
+    path: "{{ vyos_alloy_config_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Create Alloy data directory
+  ansible.builtin.file:
+    path: "{{ vyos_alloy_data_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Pull Alloy container image
+  ansible.builtin.command:
+    cmd: podman pull {{ vyos_alloy_image }}
+  changed_when: pull_result.stdout is search('Copying')
+  register: pull_result
+
+- name: Deploy Alloy configuration file
+  ansible.builtin.template:
+    src: config.alloy.j2
+    dest: "{{ vyos_alloy_config_file }}"
+    mode: "0644"
+  register: vyos_alloy_config_result
+
+- name: Set config changed fact
+  ansible.builtin.set_fact:
+    vyos_alloy_config_changed: "{{ vyos_alloy_config_result.changed }}"

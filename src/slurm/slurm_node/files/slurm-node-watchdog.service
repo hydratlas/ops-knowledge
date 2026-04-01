@@ -1,0 +1,7 @@
+# Managed by Ansible - do not edit manually
+[Unit]
+Description=Slurm node registration watchdog
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/slurm-node-watchdog

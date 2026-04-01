@@ -1,0 +1,138 @@
+---
+- name: "Get system inventory via Redfish on {{ inventory_hostname }}"
+  community.general.redfish_info:
+    category: Systems
+    command: GetSystemInventory
+    baseuri: "{{ ansible_host }}"
+    username: "{{ bmc_redfish_username }}"
+    password: "{{ bmc_redfish_password }}"
+    validate_certs: "{{ bmc_redfish_validate_certs }}"
+  delegate_to: "{{ bmc_delegate_host }}"
+  register: _redfish_inventory_system
+  no_log: true
+  ignore_errors: true
+
+- name: Show system inventory
+  ansible.builtin.debug:
+    msg: "{{ _redfish_inventory_system.redfish_facts.system.entries | to_nice_json }}"
+  when: _redfish_inventory_system is not failed
+
+- name: Show system inventory not supported
+  ansible.builtin.debug:
+    msg: "GetSystemInventory is not supported on this BMC"
+  when: _redfish_inventory_system is failed
+
+- name: "Get CPU inventory via Redfish on {{ inventory_hostname }}"
+  community.general.redfish_info:
+    category: Systems
+    command: GetCpuInventory
+    baseuri: "{{ ansible_host }}"
+    username: "{{ bmc_redfish_username }}"
+    password: "{{ bmc_redfish_password }}"
+    validate_certs: "{{ bmc_redfish_validate_certs }}"
+  delegate_to: "{{ bmc_delegate_host }}"
+  register: _redfish_inventory_cpu
+  no_log: true
+  ignore_errors: true
+
+- name: Show CPU inventory
+  ansible.builtin.debug:
+    msg: "{{ _redfish_inventory_cpu.redfish_facts.cpu.entries | to_nice_json }}"
+  when: _redfish_inventory_cpu is not failed
+
+- name: Show CPU inventory not supported
+  ansible.builtin.debug:
+    msg: "GetCpuInventory is not supported on this BMC"
+  when: _redfish_inventory_cpu is failed
+
+- name: "Get memory inventory via Redfish on {{ inventory_hostname }}"
+  community.general.redfish_info:
+    category: Systems
+    command: GetMemoryInventory
+    baseuri: "{{ ansible_host }}"
+    username: "{{ bmc_redfish_username }}"
+    password: "{{ bmc_redfish_password }}"
+    validate_certs: "{{ bmc_redfish_validate_certs }}"
+  delegate_to: "{{ bmc_delegate_host }}"
+  register: _redfish_inventory_memory
+  no_log: true
+  ignore_errors: true
+
+- name: Show memory inventory
+  ansible.builtin.debug:
+    msg: "{{ _redfish_inventory_memory.redfish_facts.memory.entries | to_nice_json }}"
+  when: _redfish_inventory_memory is not failed
+
+- name: Show memory inventory not supported
+  ansible.builtin.debug:
+    msg: "GetMemoryInventory is not supported on this BMC"
+  when: _redfish_inventory_memory is failed
+
+- name: "Get NIC inventory via Redfish on {{ inventory_hostname }}"
+  community.general.redfish_info:
+    category: Systems
+    command: GetNicInventory
+    baseuri: "{{ ansible_host }}"
+    username: "{{ bmc_redfish_username }}"
+    password: "{{ bmc_redfish_password }}"
+    validate_certs: "{{ bmc_redfish_validate_certs }}"
+  delegate_to: "{{ bmc_delegate_host }}"
+  register: _redfish_inventory_nic
+  no_log: true
+  ignore_errors: true
+
+- name: Show NIC inventory
+  ansible.builtin.debug:
+    msg: "{{ _redfish_inventory_nic.redfish_facts.nic.entries | to_nice_json }}"
+  when: _redfish_inventory_nic is not failed
+
+- name: Show NIC inventory not supported
+  ansible.builtin.debug:
+    msg: "GetNicInventory is not supported on this BMC"
+  when: _redfish_inventory_nic is failed
+
+- name: "Get storage controller inventory via Redfish on {{ inventory_hostname }}"
+  community.general.redfish_info:
+    category: Systems
+    command: GetStorageControllerInventory
+    baseuri: "{{ ansible_host }}"
+    username: "{{ bmc_redfish_username }}"
+    password: "{{ bmc_redfish_password }}"
+    validate_certs: "{{ bmc_redfish_validate_certs }}"
+  delegate_to: "{{ bmc_delegate_host }}"
+  register: _redfish_inventory_storage_controller
+  no_log: true
+  ignore_errors: true
+
+- name: Show storage controller inventory
+  ansible.builtin.debug:
+    msg: "{{ _redfish_inventory_storage_controller.redfish_facts.storage_controller.entries | to_nice_json }}"
+  when: _redfish_inventory_storage_controller is not failed
+
+- name: Show storage controller inventory not supported
+  ansible.builtin.debug:
+    msg: "GetStorageControllerInventory is not supported on this BMC"
+  when: _redfish_inventory_storage_controller is failed
+
+- name: "Get disk inventory via Redfish on {{ inventory_hostname }}"
+  community.general.redfish_info:
+    category: Systems
+    command: GetDiskInventory
+    baseuri: "{{ ansible_host }}"
+    username: "{{ bmc_redfish_username }}"
+    password: "{{ bmc_redfish_password }}"
+    validate_certs: "{{ bmc_redfish_validate_certs }}"
+  delegate_to: "{{ bmc_delegate_host }}"
+  register: _redfish_inventory_disk
+  no_log: true
+  ignore_errors: true
+
+- name: Show disk inventory
+  ansible.builtin.debug:
+    msg: "{{ _redfish_inventory_disk.redfish_facts.disk.entries | to_nice_json }}"
+  when: _redfish_inventory_disk is not failed
+
+- name: Show disk inventory not supported
+  ansible.builtin.debug:
+    msg: "GetDiskInventory is not supported on this BMC"
+  when: _redfish_inventory_disk is failed

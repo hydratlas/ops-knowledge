@@ -1,0 +1,7 @@
+---
+- name: Ensure authorized_keys for root user
+  ansible.builtin.authorized_key:
+    user: root
+    state: present
+    key: "{{ ansible_runner_user.ssh_authorized_keys | join('\n') }}"
+    exclusive: true

@@ -1,0 +1,22 @@
+[Unit]
+Description={{ cloudflared_service_description }}
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ cloudflared_image }}
+ContainerName={{ cloudflared_app_name }}
+AutoUpdate=registry
+LogDriver=journald
+EnvironmentFile=%h/.config/{{ cloudflared_app_name }}/cloudflared.env
+Exec=tunnel run
+NoNewPrivileges=true
+ReadOnly=true
+Volume=/etc/localtime:/etc/localtime:ro
+
+[Service]
+Restart={{ cloudflared_restart }}
+RestartSec={{ cloudflared_restart_sec }}
+
+[Install]
+WantedBy=default.target

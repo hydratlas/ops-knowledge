@@ -1,0 +1,12 @@
+{{ ansible_managed | comment }}
+
+set default=0
+set timeout=10
+
+{% for entry in tftp_server_pxe_entries %}
+menuentry "{{ entry.name }}" {
+    set gfxpayload=keep
+    linux {{ entry.base_dir }}/linux {{ entry.kernel_args }}
+    initrd {{ entry.base_dir }}/initrd
+}
+{% endfor %}

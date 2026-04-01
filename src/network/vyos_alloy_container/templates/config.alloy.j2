@@ -1,0 +1,54 @@
+loki.relabel "vyos" {
+  forward_to = []
+
+  rule {
+    source_labels = ["__syslog_message_hostname"]
+    target_label  = "hostname"
+  }
+
+  rule {
+    source_labels = ["__syslog_message_app_name"]
+    target_label  = "unit"
+  }
+
+  rule {
+    source_labels = ["__syslog_message_severity"]
+    target_label  = "priority"
+  }
+}
+
+loki.source.syslog "vyos" {
+  listener {
+    address        = "0.0.0.0:{{ vyos_alloy_syslog_port }}"
+    protocol       = "udp"
+    syslog_format  = "rfc3164"
+    labels         = { job = "vyos", source = "syslog" }
+  }
+  relabel_rules = loki.relabel.vyos.rules
+  forward_to    = [loki.process.vyos.receiver]
+}
+
+loki.process "vyos" {
+  forward_to = [loki.write.default.receiver]
+
+  stage.match {
+    selector = "{job=\"vyos\"} |~ \"\\\\[SRC-NAT-[0-9]+-MASQ\\\\]\""
+
+    stage.static_labels {
+      values = {
+        log_type = "nat",
+        priority = "info",
+      }
+    }
+  }
+}
+
+loki.write "default" {
+  endpoint {
+    url = "{{ vyos_alloy_loki_url }}"
+  }
+  wal {
+    enabled         = true
+    max_segment_age = "1h"
+  }
+}

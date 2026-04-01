@@ -1,0 +1,23 @@
+---
+- name: "Get firmware inventory via Redfish on {{ inventory_hostname }}"
+  community.general.redfish_info:
+    category: Update
+    command: GetFirmwareInventory
+    baseuri: "{{ ansible_host }}"
+    username: "{{ bmc_redfish_username }}"
+    password: "{{ bmc_redfish_password }}"
+    validate_certs: "{{ bmc_redfish_validate_certs }}"
+  delegate_to: "{{ bmc_delegate_host }}"
+  register: _redfish_firmware
+  no_log: true
+  ignore_errors: true
+
+- name: Show firmware inventory
+  ansible.builtin.debug:
+    msg: "{{ _redfish_firmware.redfish_facts.firmware.entries | to_nice_json }}"
+  when: _redfish_firmware is not failed
+
+- name: Show firmware inventory not supported
+  ansible.builtin.debug:
+    msg: "GetFirmwareInventory is not supported on this BMC"
+  when: _redfish_firmware is failed

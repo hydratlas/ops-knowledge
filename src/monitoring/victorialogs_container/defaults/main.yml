@@ -1,0 +1,24 @@
+---
+# VictoriaLogs user configuration
+victorialogs_user: "monitoring"
+victorialogs_user_comment: "VictoriaLogs rootless user"
+victorialogs_app_name: "victoria-logs"
+
+# Container configuration
+victorialogs_container_image: "docker.io/victoriametrics/victoria-logs:latest"
+victorialogs_container_name: "victoria-logs"
+victorialogs_container_port: 9428
+
+# Network configuration
+victorialogs_network_name: "monitoring.network"
+
+# Service configuration
+victorialogs_service_description: "VictoriaLogs Service"
+victorialogs_service_restart: "always"
+victorialogs_service_restart_sec: 5
+
+# Directory paths - will be set after including podman_rootless_quadlet_base
+victorialogs_data_dir: ""
+
+# VictoriaLogs configuration (CLI flags only, no config file needed)
+victorialogs_retention_period: "7d"

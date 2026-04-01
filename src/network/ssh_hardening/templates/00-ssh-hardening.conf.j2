@@ -1,0 +1,18 @@
+# パスワード認証を無効化し、公開鍵認証のみを許可する
+PasswordAuthentication no
+PermitEmptyPasswords no
+
+# rootログインの制御（デフォルト: 完全禁止）
+PermitRootLogin {{ ssh_hardening_permit_root_login }}
+
+# 暗号スイートの限定
+# 共通鍵暗号: AES-256-GCM、ChaCha20-Poly1305、AES-256-CTR のみ許可（128bit以下や脆弱な暗号を排除）
+Ciphers aes256-gcm@openssh.com,chacha20-poly1305@openssh.com,aes256-ctr
+# メッセージ認証コード: Encrypt-then-MAC方式の強力なアルゴリズムのみ許可（SHA2-512, SHA2-256, UMAC-128）
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com
+# 鍵交換アルゴリズム: 耐量子暗号(sntrup761)、Curve25519、DH group16/18のみ許可（group14以下の弱い鍵交換を排除）
+KexAlgorithms sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512
+# ホスト鍵アルゴリズム: Ed25519のみ許可
+HostKeyAlgorithms ssh-ed25519
+# クライアント公開鍵アルゴリズム: Ed25519のみ許可
+PubkeyAcceptedAlgorithms ssh-ed25519,sk-ssh-ed25519@openssh.com

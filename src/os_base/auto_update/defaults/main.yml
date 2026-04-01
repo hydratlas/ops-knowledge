@@ -1,0 +1,6 @@
+---
+auto_update_extra_origins_patterns:
+  - "site=pkg.cloudflare.com"
+  - "site=apt.grafana.com"
+  - "site=download.docker.com"
+auto_update_automatic_reboot: false

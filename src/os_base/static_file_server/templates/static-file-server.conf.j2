@@ -1,0 +1,21 @@
+{{ ansible_managed | comment }}
+
+server {
+    listen {{ static_file_server_listen_port }};
+    listen [::]:{{ static_file_server_listen_port }};
+
+    server_name {{ static_file_server_server_name }};
+
+    root {{ static_file_server_document_root }};
+
+    autoindex on;
+    autoindex_exact_size off;
+
+    sendfile on;
+    tcp_nopush on;
+    directio 16m;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}

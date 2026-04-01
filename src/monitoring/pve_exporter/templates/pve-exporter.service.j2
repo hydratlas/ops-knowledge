@@ -1,0 +1,47 @@
+[Unit]
+Description={{ pve_exporter_service_description }}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ pve_exporter_user }}
+Group={{ pve_exporter_group }}
+ExecStart={{ pve_exporter_venv_dir }}/bin/pve_exporter --config.file {{ pve_exporter_config_file }} --web.listen-address :{{ pve_exporter_port }}{% if not pve_exporter_collector_config %} --no-collector.config{% endif %}
+
+Restart={{ pve_exporter_service_restart }}
+RestartSec={{ pve_exporter_service_restart_sec }}
+
+# 権限制限
+NoNewPrivileges=true
+CapabilityBoundingSet=
+RestrictSUIDSGID=true
+
+# ファイルシステム保護
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ReadOnlyPaths={{ pve_exporter_config_dir }}
+
+# カーネル・システム保護
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+
+# 実行環境の制限
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictNamespaces=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@keyring
+
+# ネットワーク制限
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+[Install]
+WantedBy=multi-user.target

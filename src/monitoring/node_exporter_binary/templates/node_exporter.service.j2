@@ -1,0 +1,53 @@
+[Unit]
+Description={{ node_exporter_service_description }}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ node_exporter_user }}
+Group={{ node_exporter_group }}
+ExecStart={{ node_exporter_binary_path }} \
+  --web.listen-address={{ node_exporter_listen_address }} \
+{% if node_exporter_textfile_directory is defined %}
+  --collector.textfile.directory={{ node_exporter_textfile_directory }} \
+{% endif %}
+{% for flag in node_exporter_extra_flags %}
+  {{ flag }} \
+{% endfor %}
+
+
+Restart={{ node_exporter_service_restart }}
+RestartSec={{ node_exporter_service_restart_sec }}
+
+# セキュリティ: 基本
+NoNewPrivileges=true
+CapabilityBoundingSet=
+
+# セキュリティ: ファイルシステム
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+
+# セキュリティ: カーネル
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+
+# セキュリティ: ネットワーク・プロセス可視性
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+ProtectProc=invisible
+
+# セキュリティ: プロセス
+LockPersonality=true
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,82 @@
+---
+- name: Validate pve_exporter_pve_targets is defined
+  ansible.builtin.assert:
+    that:
+      - pve_exporter_pve_targets | default({}) | length > 0
+    fail_msg: "pve_exporter_pve_targets must be defined with at least one target"
+
+- name: Validate each target has required fields
+  ansible.builtin.assert:
+    that:
+      - item.value.user is defined and item.value.user != ""
+      - item.value.token_name is defined and item.value.token_name != ""
+      - item.value.token_value is defined and item.value.token_value != ""
+    fail_msg: "Target '{{ item.key }}' must have 'user', 'token_name', and 'token_value' defined"
+  loop: "{{ pve_exporter_pve_targets | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: Include podman_rootless_quadlet_base role
+  ansible.builtin.include_role:
+    name: container/podman_rootless_quadlet_base
+  vars:
+    quadlet_user: "{{ pve_exporter_user }}"
+    quadlet_user_comment: "PVE Exporter rootless user"
+    quadlet_app_name: "{{ pve_exporter_app_name }}"
+
+- name: Set PVE Exporter directory paths
+  ansible.builtin.set_fact:
+    pve_exporter_config_dir: "{{ quadlet_home }}/.config/prometheus"
+    pve_exporter_config_file: "{{ quadlet_home }}/.config/prometheus/pve.yml"
+
+- name: Create Prometheus configuration directory
+  ansible.builtin.file:
+    path: "{{ pve_exporter_config_dir }}"
+    state: directory
+    owner: "{{ pve_exporter_user }}"
+    group: "{{ pve_exporter_user }}"
+    mode: '0755'
+
+- name: Create PVE connection configuration file
+  ansible.builtin.template:
+    src: pve.yml.j2
+    dest: "{{ pve_exporter_config_file }}"
+    owner: "{{ pve_exporter_user }}"
+    group: "{{ pve_exporter_user }}"
+    mode: '0600'
+  notify: restart pve_exporter
+
+- name: Include podman_rootless_quadlet_network role
+  ansible.builtin.include_role:
+    name: container/podman_rootless_quadlet_network
+  vars:
+    quadlet_network_name: "monitoring"
+    quadlet_network_description: "Monitoring Container Network"
+    quadlet_network_labels:
+      - "app=monitoring"
+    quadlet_network_owner: "{{ pve_exporter_user }}"
+
+- name: Create PVE Exporter Quadlet container file
+  ansible.builtin.template:
+    src: pve-exporter.container.j2
+    dest: "{{ quadlet_systemd_dir }}/pve-exporter.container"
+    owner: "{{ pve_exporter_user }}"
+    group: "{{ pve_exporter_user }}"
+    mode: '0644'
+  notify:
+    - reload systemd user daemon
+    - restart pve_exporter
+
+- name: Flush handlers to ensure systemd user daemon is reloaded
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start PVE Exporter service
+  ansible.builtin.systemd:
+    name: pve-exporter.service
+    enabled: yes
+    state: started
+    scope: user
+  become: yes
+  become_user: "{{ pve_exporter_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ quadlet_uid }}"

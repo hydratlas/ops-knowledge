@@ -1,0 +1,18 @@
+---
+- name: "Execute power {{ bmc_power_action }} on {{ inventory_hostname }}"
+  ansible.builtin.command:
+    cmd: >-
+      ipmitool -I {{ bmc_ipmi_interface }}
+      -H {{ ansible_host }}
+      -U {{ bmc_ipmi_username }}
+      -P {{ bmc_ipmi_password }}
+      chassis power {{ bmc_power_action }}
+  delegate_to: "{{ bmc_delegate_host }}"
+  changed_when: bmc_power_action != "status"
+  register: bmc_power_result
+  no_log: true
+
+- name: Show power status
+  ansible.builtin.debug:
+    msg: "{{ bmc_power_result.stdout }}"
+  when: bmc_power_action == "status"

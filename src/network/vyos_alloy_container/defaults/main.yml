@@ -1,0 +1,7 @@
+---
+vyos_alloy_image: "docker.io/grafana/alloy:latest"
+vyos_alloy_memory: 256
+vyos_alloy_syslog_port: 5514
+vyos_alloy_config_dir: /config/alloy
+vyos_alloy_data_dir: /config/alloy/data
+vyos_alloy_config_file: /config/alloy/config.alloy

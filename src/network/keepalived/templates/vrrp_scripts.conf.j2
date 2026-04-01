@@ -1,0 +1,15 @@
+! VRRP script definitions
+! {{ ansible_managed }}
+
+{% for script in keepalived_check_scripts %}
+vrrp_script {{ script.vrrp_name }} {
+    script "{{ keepalived_check_scripts_dir }}/{{ script.name }}"
+    interval {{ script.interval | default(2) }}
+    weight {{ script.weight | default(-20) }}
+    fall {{ script.fall | default(2) }}
+    rise {{ script.rise | default(2) }}
+{% if script.user is defined %}
+    user {{ script.user }}
+{% endif %}
+}
+{% endfor %}

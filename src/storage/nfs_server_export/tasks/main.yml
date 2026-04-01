@@ -1,0 +1,33 @@
+- name: Gather OS family fact if not available
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - "!any"
+      - distribution
+  when: ansible_facts['os_family'] is not defined
+
+- name: Check if NFS export directories exist
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+  loop: "{{ nfs_exports }}"
+  register: nfs_export_dirs
+
+- name: Create NFS export directories if not exist
+  ansible.builtin.file:
+    path: "{{ item.item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.item.mode | default('0755') }}"
+  loop: "{{ nfs_export_dirs.results }}"
+  when: not item.stat.exists
+  notify: Restart NFS service
+
+- name: Configure /etc/exports from template
+  ansible.builtin.template:
+    src: exports.j2
+    dest: /etc/exports
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload NFS export configuration

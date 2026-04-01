@@ -1,0 +1,31 @@
+{{ ansible_managed | comment }}
+
+{% if apt_cacher_ng_cache_dir %}
+CacheDir: {{ apt_cacher_ng_cache_dir }}
+{% endif %}
+{% if apt_cacher_ng_log_dir %}
+LogDir: {{ apt_cacher_ng_log_dir }}
+{% endif %}
+{% if apt_cacher_ng_port %}
+Port: {{ apt_cacher_ng_port }}
+{% endif %}
+
+{% for name, repo in apt_cacher_ng_repositories.items() %}
+{% set remap_urls = ([repo.client_url] if repo.client_url is defined else []) + (repo.remap | default([])) %}
+{% if remap_urls | length > 0 %}
+Remap-{{ name }}: {{ remap_urls | join(' ') }} ; file:backends_{{ name }}
+{% endif %}
+{% endfor %}
+
+{% if apt_cacher_ng_ex_threshold %}
+ExTreshold: {{ apt_cacher_ng_ex_threshold }}
+{% endif %}
+{% if apt_cacher_ng_vfile_pattern_ex %}
+VfilePatternEx: {{ apt_cacher_ng_vfile_pattern_ex }}
+{% endif %}
+{% if apt_cacher_ng_vfile_use_range_ops %}
+VfileUseRangeOps: {{ apt_cacher_ng_vfile_use_range_ops }}
+{% endif %}
+{% if apt_cacher_ng_pass_through_pattern %}
+PassThroughPattern: {{ apt_cacher_ng_pass_through_pattern }}
+{% endif %}

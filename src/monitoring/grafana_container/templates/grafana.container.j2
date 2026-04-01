@@ -1,0 +1,31 @@
+[Unit]
+Description={{ grafana_service_description }}
+Wants=victoria-metrics.service
+Wants=loki.service
+Wants=victoria-logs.service
+After=victoria-metrics.service
+After=loki.service
+After=victoria-logs.service
+
+[Container]
+Image={{ grafana_container_image }}
+ContainerName={{ grafana_container_name }}
+Network={{ grafana_network_name }}
+EnvironmentFile={{ grafana_env_file }}
+AutoUpdate=registry
+LogDriver=journald
+UserNS=keep-id:uid=472,gid=472
+NoNewPrivileges=true
+ReadOnly=true
+PublishPort={{ grafana_container_port }}:3000
+Volume={{ grafana_data_dir }}:/var/lib/grafana:Z
+Volume={{ grafana_datasources_dir }}:/etc/grafana/provisioning/datasources:z
+Volume={{ grafana_dashboards_dir }}:/etc/grafana/provisioning/dashboards:z
+Volume=/etc/localtime:/etc/localtime:ro
+
+[Service]
+Restart={{ grafana_service_restart }}
+RestartSec={{ grafana_service_restart_sec }}
+
+[Install]
+WantedBy=default.target

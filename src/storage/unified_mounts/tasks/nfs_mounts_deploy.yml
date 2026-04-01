@@ -1,0 +1,49 @@
+---
+# マウントポイントのディレクトリを作成
+- name: Ensure mount points exist for NFS mounts
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: "{{ item.mode | default('0755') }}"
+  loop: "{{ _unified_mounts_nfs_active }}"
+
+# .mountユニットファイルをテンプレートから生成・配置
+- name: Deploy NFS mount unit files
+  ansible.builtin.template:
+    src: nfs.mount.j2
+    dest: "/etc/systemd/system/{{ item.path | regex_replace('^/', '') | regex_replace('/', '-') }}.mount"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ _unified_mounts_nfs_active }}"
+  register: _nfs_mount_units
+  notify: Reload systemd daemon
+
+# .automountユニットファイルを配置（LXCではautomount非対応のためスキップ）
+- name: Deploy NFS automount unit files
+  ansible.builtin.template:
+    src: nfs.automount.j2
+    dest: "/etc/systemd/system/{{ item.path | regex_replace('^/', '') | regex_replace('/', '-') }}.automount"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ _unified_mounts_nfs_active }}"
+  register: _nfs_automount_units
+  notify: Reload systemd daemon
+  when: not _unified_mounts_is_lxc
+
+# ユニットファイルに変更があったパスを抽出（再起動判定に使用）
+- name: Identify changed NFS mount paths
+  ansible.builtin.set_fact:
+    _nfs_changed_paths: >-
+      {{
+        ((_nfs_mount_units.results | default([]) | selectattr('changed', 'equalto', true) | map(attribute='item.path') | list) +
+         (_nfs_automount_units.results | default([]) | selectattr('changed', 'equalto', true) | map(attribute='item.path') | list))
+        | unique
+      }}
+
+# ユニット有効化の前にdaemon-reloadを確実に実行
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers

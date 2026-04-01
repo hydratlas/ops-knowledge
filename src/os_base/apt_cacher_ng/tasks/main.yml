@@ -1,0 +1,106 @@
+---
+- name: Install apt-cacher-ng
+  ansible.builtin.apt:
+    name: apt-cacher-ng
+    state: present
+    cache_valid_time: 3600
+
+- name: Deploy apt-cacher-ng configuration
+  ansible.builtin.template:
+    src: acng.conf.j2
+    dest: /etc/apt-cacher-ng/acng.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart apt-cacher-ng
+
+- name: Deploy backends files
+  ansible.builtin.copy:
+    content: "{{ item.value.backends | join('\n') }}\n"
+    dest: "/etc/apt-cacher-ng/backends_{{ item.key }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ apt_cacher_ng_repositories | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: item.value.backends | default([]) | length > 0
+  notify: Restart apt-cacher-ng
+
+- name: Remove legacy backends files with inconsistent names
+  ansible.builtin.file:
+    path: "/etc/apt-cacher-ng/{{ item }}"
+    state: absent
+  loop:
+    - backends_debian
+    - backends_ubuntu
+    - backends_debvol
+    - backends_security
+  notify: Restart apt-cacher-ng
+
+- name: Remove stale InRelease temporary files
+  ansible.builtin.shell:
+    cmd: find /var/cache/apt-cacher-ng/ -regextype posix-extended -regex '.*InRelease\.[0-9]+$' -delete
+  changed_when: false
+
+- name: Deploy cleanup service unit
+  ansible.builtin.copy:
+    src: apt-cacher-ng-cleanup.service
+    dest: /etc/systemd/system/apt-cacher-ng-cleanup.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd daemon
+
+- name: Deploy cleanup timer unit
+  ansible.builtin.copy:
+    src: apt-cacher-ng-cleanup.timer
+    dest: /etc/systemd/system/apt-cacher-ng-cleanup.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd daemon
+    - Restart apt-cacher-ng-cleanup timer
+
+- name: Enable and start cleanup timer
+  ansible.builtin.systemd:
+    name: apt-cacher-ng-cleanup.timer
+    enabled: true
+    state: started
+
+- name: Remove legacy security.ubuntu.com cache directory
+  ansible.builtin.file:
+    path: /var/cache/apt-cacher-ng/security.ubuntu.com
+    state: absent
+  notify: Restart apt-cacher-ng
+
+- name: Remove legacy deb.debian.org/debian-security cache directory
+  ansible.builtin.file:
+    path: /var/cache/apt-cacher-ng/deb.debian.org
+    state: absent
+  notify: Restart apt-cacher-ng
+
+- name: Remove legacy security.debian.org cache directory
+  ansible.builtin.file:
+    path: /var/cache/apt-cacher-ng/security.debian.org
+    state: absent
+  notify: Restart apt-cacher-ng
+
+- name: Remove legacy ftp.jp.debian.org cache directory
+  ansible.builtin.file:
+    path: /var/cache/apt-cacher-ng/ftp.jp.debian.org
+    state: absent
+  notify: Restart apt-cacher-ng
+
+- name: Remove legacy jp.archive.ubuntu.com cache directory
+  ansible.builtin.file:
+    path: /var/cache/apt-cacher-ng/jp.archive.ubuntu.com
+    state: absent
+  notify: Restart apt-cacher-ng
+
+- name: Enable and start apt-cacher-ng
+  ansible.builtin.systemd:
+    name: apt-cacher-ng
+    enabled: true
+    state: started

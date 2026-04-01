@@ -1,0 +1,15 @@
+---
+# Tunnel トークン（Vault で暗号化推奨）
+# Cloudflare ダッシュボードから取得
+cloudflared_token: ""
+
+# サービスを有効化・起動するかどうか
+cloudflared_service_enabled: true
+cloudflared_service_state: started
+
+# Alpine Linux: バイナリ直接ダウンロード設定
+cloudflared_binary_path: /usr/local/bin/cloudflared
+cloudflared_download_url: https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+cloudflared_auto_update: true
+cloudflared_auto_update_hour: "3"
+cloudflared_auto_update_minute: "30"

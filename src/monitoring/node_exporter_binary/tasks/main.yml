@@ -1,0 +1,122 @@
+---
+# Legacy cleanup
+- name: Stop and disable legacy services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: no
+  loop: "{{ node_exporter_legacy_services }}"
+  failed_when: false
+
+- name: Remove legacy service files
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ item }}"
+    state: absent
+  loop: "{{ node_exporter_legacy_services }}"
+  register: _legacy_services_removed
+  notify: reload systemd daemon
+
+- name: Remove legacy files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ node_exporter_legacy_files }}"
+
+# Installation
+- name: Create node_exporter system group
+  ansible.builtin.group:
+    name: "{{ node_exporter_group }}"
+    system: yes
+    state: present
+
+- name: Create node_exporter system user
+  ansible.builtin.user:
+    name: "{{ node_exporter_user }}"
+    group: "{{ node_exporter_group }}"
+    system: yes
+    shell: /usr/sbin/nologin
+    home: /nonexistent
+    create_home: no
+    comment: "Prometheus Node Exporter service user"
+
+- name: Check if node_exporter binary exists at expected version
+  ansible.builtin.stat:
+    path: "{{ node_exporter_binary_path }}"
+  register: _node_exporter_binary
+
+- name: Check installed node_exporter version
+  ansible.builtin.command:
+    cmd: "{{ node_exporter_binary_path }} --version"
+  register: _node_exporter_installed_version
+  changed_when: false
+  failed_when: false
+  when: _node_exporter_binary.stat.exists
+
+- name: Set node_exporter needs update fact
+  ansible.builtin.set_fact:
+    _node_exporter_needs_install: >-
+      {{ not _node_exporter_binary.stat.exists or
+         (node_exporter_version not in
+           ((_node_exporter_installed_version.stdout | default('')) +
+            (_node_exporter_installed_version.stderr | default('')))) }}
+
+- name: Download node_exporter archive
+  ansible.builtin.get_url:
+    url: "{{ node_exporter_download_url }}"
+    dest: "/tmp/node_exporter-{{ node_exporter_version }}.tar.gz"
+    mode: "0644"
+  when: _node_exporter_needs_install
+
+- name: Extract node_exporter binary
+  ansible.builtin.command:
+    cmd: >-
+      tar xzf /tmp/node_exporter-{{ node_exporter_version }}.tar.gz
+      -C {{ node_exporter_binary_path | dirname }}
+      --strip-components=1
+      node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}/node_exporter
+  when: _node_exporter_needs_install
+  notify: restart node_exporter
+
+- name: Remove node_exporter archive
+  ansible.builtin.file:
+    path: "/tmp/node_exporter-{{ node_exporter_version }}.tar.gz"
+    state: absent
+  when: _node_exporter_needs_install
+
+- name: Set binary permissions
+  ansible.builtin.file:
+    path: "{{ node_exporter_binary_path }}"
+    owner: root
+    group: "{{ node_exporter_group }}"
+    mode: "0755"
+  when: not ansible_check_mode or _node_exporter_binary.stat.exists
+
+- name: Create textfile collector directory
+  ansible.builtin.file:
+    path: "{{ node_exporter_textfile_directory }}"
+    state: directory
+    owner: "{{ node_exporter_user }}"
+    group: "{{ node_exporter_group }}"
+    mode: "0755"
+  when: node_exporter_textfile_directory is defined
+
+- name: Create systemd service file
+  ansible.builtin.template:
+    src: node_exporter.service.j2
+    dest: "/etc/systemd/system/{{ node_exporter_service_name }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - reload systemd daemon
+    - restart node_exporter
+
+- name: Flush handlers to ensure service manager is reloaded
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start node_exporter service
+  ansible.builtin.systemd:
+    name: "{{ node_exporter_service_name }}.service"
+    enabled: yes
+    state: started
+    daemon_reload: true

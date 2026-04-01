@@ -1,0 +1,1 @@
+このロールは、cloud-initの初期化完了を待機する機能を提供する。VMプロビジョニング直後のAnsible実行時に、cloud-initによるシステム設定と競合しないよう、cloud-init status --waitコマンドで初期化の完了を確認してから次のタスクに進む。cloud-initコマンドが存在しない環境では自動的にスキップされ、wait_cloud_init_enabled変数で待機処理の有効化・無効化を制御できる。root権限での実行が必要であり、プレイブックレベルでのbecome指定が求められる。

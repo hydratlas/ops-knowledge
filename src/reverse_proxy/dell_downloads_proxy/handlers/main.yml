@@ -1,0 +1,21 @@
+---
+- name: reload systemd user daemon and restart dell-proxy
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    scope: user
+  become: yes
+  become_user: "{{ dell_proxy_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ dell_proxy_uid }}"
+  changed_when: true
+  notify: restart dell-proxy
+
+- name: restart dell-proxy
+  ansible.builtin.systemd:
+    name: dell-proxy.service
+    state: restarted
+    scope: user
+  become: yes
+  become_user: "{{ dell_proxy_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ dell_proxy_uid }}"

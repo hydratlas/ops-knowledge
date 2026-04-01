@@ -1,0 +1,23 @@
+---
+# state: absentでないエントリーのマウントポイントディレクトリーを事前作成
+- name: Ensure mount points exist for non-NFS mounts
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: "{{ item.mode | default('0755') }}"
+  loop: "{{ _unified_mounts_non_nfs }}"
+  when: item.state | default('mounted') != 'absent'
+
+# fstab登録とマウント実行（state未指定時はmounted）
+- name: Configure and execute non-NFS mounts
+  ansible.builtin.mount:
+    path: "{{ item.path }}"
+    src: "{{ item.src }}"
+    fstype: "{{ item.fstype }}"
+    opts: "{{ item.opts | default(omit) }}"
+    dump: "{{ item.dump | default(0) }}"
+    passno: "{{ item.passno | default(0) }}"
+    state: "{{ item.state | default('mounted') }}"
+  loop: "{{ _unified_mounts_non_nfs }}"

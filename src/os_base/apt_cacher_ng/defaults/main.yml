@@ -1,0 +1,9 @@
+---
+apt_cacher_ng_port: ""
+apt_cacher_ng_cache_dir: ""
+apt_cacher_ng_log_dir: ""
+apt_cacher_ng_ex_threshold: ""
+apt_cacher_ng_pass_through_pattern: ""
+apt_cacher_ng_vfile_pattern_ex: ""
+apt_cacher_ng_vfile_use_range_ops: ""
+apt_cacher_ng_repositories: {}

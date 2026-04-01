@@ -1,0 +1,28 @@
+{% for export in nfs_exports %}
+{# 従来の明示的なclientsリストを処理 #}
+{% for client in export.clients | default([]) %}
+{{ export.path }} {{ client.host }}({{ client.options | default(export.options) }}){% if client.comment | default(None) %} # {{ client.comment }}{% endif %}
+
+{% endfor %}
+{# グループベースのclient定義を処理 #}
+{% for group in export.client_groups | default([]) %}
+{% for host in groups[group] | default([]) %}
+{% if hostvars[host]['ansible_host'] is defined %}
+{{ export.path }} {{ hostvars[host]['ansible_host'] }}/32({{ export.options }}) # {{ host }}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{# グループごとに異なるオプションを適用 #}
+{% for item in export.client_groups_with_options | default([]) %}
+{% for host in groups[item.group] | default([]) %}
+{% if hostvars[host]['ansible_host'] is defined %}
+{{ export.path }} {{ hostvars[host]['ansible_host'] }}/32({{ item.options }}) # {{ host }}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{# 追加クライアント（グループに属さないホスト）を処理 #}
+{% for client in export.extra_clients | default([]) %}
+{{ export.path }} {{ client.host }}({{ client.options | default(export.options) }}){% if client.comment | default(None) %} # {{ client.comment }}{% endif %}
+
+{% endfor %}
+{% endfor %}

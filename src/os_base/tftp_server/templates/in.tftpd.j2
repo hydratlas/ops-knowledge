@@ -1,0 +1,4 @@
+{{ ansible_managed | comment }}
+
+INTFTPD_PATH="{{ tftp_server_root }}"
+INTFTPD_OPTS="{{ tftp_server_options }} --address {{ tftp_server_address }}:{{ tftp_server_port }} ${INTFTPD_PATH}"

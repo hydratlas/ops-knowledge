@@ -1,0 +1,58 @@
+[Unit]
+Description={{ vmagent_service_description }}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ vmagent_user }}
+Group={{ vmagent_group }}
+ExecStart={{ vmagent_binary_path }} \
+  -httpListenAddr={{ vmagent_http_listen_addr }} \
+  -promscrape.config={{ vmagent_config_file }} \
+  -remoteWrite.tmpDataPath={{ vmagent_data_dir }}/remote-write-tmp \
+  -remoteWrite.maxDiskUsagePerURL={{ vmagent_remote_write_max_disk_usage_per_url }} \
+{% for url in vmagent_remote_write_urls %}
+  -remoteWrite.url={{ url }} \
+{% endfor %}
+  -promscrape.cluster.name={{ vmagent_cluster_name }} \
+{% for flag in vmagent_extra_flags %}
+  {{ flag }} \
+{% endfor %}
+
+Restart={{ vmagent_service_restart }}
+RestartSec={{ vmagent_service_restart_sec }}
+
+# セキュリティ: 基本
+NoNewPrivileges=true
+CapabilityBoundingSet=
+
+# セキュリティ: ファイルシステム
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ReadOnlyPaths={{ vmagent_config_dir }}
+ReadWritePaths={{ vmagent_data_dir }}
+
+# セキュリティ: カーネル
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+
+# セキュリティ: ネットワーク・プロセス可視性
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+ProtectProc=invisible
+
+# セキュリティ: プロセス
+LockPersonality=true
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

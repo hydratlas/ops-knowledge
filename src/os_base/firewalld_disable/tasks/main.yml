@@ -1,0 +1,33 @@
+---
+- name: Check if ufw command exists
+  command: which ufw
+  register: ufw_exists
+  failed_when: false
+  changed_when: false
+
+- name: Check ufw status
+  command: ufw status
+  register: ufw_status
+  when: ufw_exists.rc == 0
+  failed_when: false
+  changed_when: false
+
+- name: Disable ufw if it exists and is enabled
+  command: ufw disable
+  when: 
+    - ufw_exists.rc == 0
+    - ufw_status.stdout is defined
+    - "'inactive' not in ufw_status.stdout"
+
+- name: Check if firewalld is running
+  systemd:
+    name: firewalld.service
+  register: firewalld_status
+  failed_when: false
+
+- name: Disable firewalld if running
+  systemd:
+    name: firewalld.service
+    state: stopped
+    enabled: no
+  when: firewalld_status.status.ActiveState is defined and firewalld_status.status.ActiveState == "active"
