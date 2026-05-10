@@ -13,6 +13,14 @@
     value: "yes"
     mode: "0644"
 
+- name: Configure dnf-automatic reboot behavior
+  ansible.builtin.ini_file:
+    path: /etc/dnf/automatic.conf
+    section: commands
+    option: reboot
+    value: "{{ 'when-needed' if auto_update_automatic_reboot | bool else 'never' }}"
+    mode: "0644"
+
 - name: Reload systemd to pick up dnf-automatic-install.timer
   ansible.builtin.systemd:
     daemon_reload: true

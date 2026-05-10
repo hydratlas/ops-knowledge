@@ -24,6 +24,21 @@
     group: root
     mode: "0644"
 
+- name: Configure automatic reboot for unattended-upgrades
+  ansible.builtin.template:
+    src: 52unattended-upgrades-local.j2
+    dest: /etc/apt/apt.conf.d/52unattended-upgrades-local
+    owner: root
+    group: root
+    mode: "0644"
+  when: auto_update_automatic_reboot | bool
+
+- name: Remove automatic reboot configuration when disabled
+  ansible.builtin.file:
+    path: /etc/apt/apt.conf.d/52unattended-upgrades-local
+    state: absent
+  when: not (auto_update_automatic_reboot | bool)
+
 - name: Configure needrestart for automatic restart mode
   ansible.builtin.copy:
     dest: /etc/needrestart/conf.d/auto-restart.conf
