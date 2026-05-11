@@ -1,0 +1,27 @@
+---
+- name: Gather OS distribution fact
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - distribution
+  when: ansible_distribution is not defined
+
+- name: Disable community repository in /etc/apk/repositories
+  ansible.builtin.replace:
+    path: /etc/apk/repositories
+    regexp: '^(https?://\S+/v[\d.]+/community)\s*$'
+    replace: '#\1'
+  when:
+    - ansible_distribution == "Alpine"
+    - not community_enabled
+  notify: apk update
+
+- name: Enable community repository in /etc/apk/repositories
+  ansible.builtin.replace:
+    path: /etc/apk/repositories
+    regexp: '^#\s*(https?://\S+/v[\d.]+/community)\s*$'
+    replace: '\1'
+  when:
+    - ansible_distribution == "Alpine"
+    - community_enabled
+  notify: apk update

@@ -1,0 +1,4 @@
+---
+# Alpine Linux の community リポジトリを有効化するかどうか
+# false の場合は community 行をコメントアウトし、true の場合はアンコメントする
+community_enabled: false

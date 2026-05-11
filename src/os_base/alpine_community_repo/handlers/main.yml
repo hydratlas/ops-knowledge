@@ -1,0 +1,5 @@
+---
+- name: apk update
+  ansible.builtin.command:
+    cmd: apk update
+  changed_when: false
