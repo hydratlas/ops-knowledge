@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+# CISベンチマーク準拠でカーネルモジュールをロード不可にする設定。
+#
+# `install <module> /bin/false` でmodprobe経由のロードを抑止する。
+# `blacklist <module>` で別名解決によるautoloadも抑止する。
+
+{% for m in kernel_modules_disable_list %}
+# {{ m.name }} - CIS {{ m.cis }} - {{ m.note }}
+install {{ m.name }} /bin/false
+blacklist {{ m.name }}
+
+{% endfor %}

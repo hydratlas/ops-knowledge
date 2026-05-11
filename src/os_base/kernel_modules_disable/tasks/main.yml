@@ -1,0 +1,42 @@
+---
+- name: Gather minimal facts for os_family detection
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - "!any"
+      - distribution
+
+- name: Deploy modprobe configuration to disable CIS-listed kernel modules
+  ansible.builtin.template:
+    src: cis-disable-modules.conf.j2
+    dest: /etc/modprobe.d/cis-disable-modules.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: rebuild initramfs
+
+- name: Enumerate currently loaded kernel modules from /sys/module
+  ansible.builtin.find:
+    paths: /sys/module
+    file_type: directory
+    recurse: false
+  register: kernel_modules_disable_sys_module
+  when: kernel_modules_disable_unload_running
+
+- name: Build set of loaded module names
+  ansible.builtin.set_fact:
+    kernel_modules_disable_loaded: >-
+      {{ kernel_modules_disable_sys_module.files
+         | map(attribute='path') | map('basename') | list }}
+  when: kernel_modules_disable_unload_running
+
+- name: Unload running modules that are now disabled
+  community.general.modprobe:
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ kernel_modules_disable_list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - kernel_modules_disable_unload_running
+    - item.name in kernel_modules_disable_loaded
