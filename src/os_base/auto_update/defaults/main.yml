@@ -4,3 +4,5 @@ auto_update_extra_origins_patterns:
   - "site=apt.grafana.com"
   - "site=download.docker.com"
 auto_update_automatic_reboot: false
+auto_update_oncalendar: "*-*-* 23:00"
+auto_update_jitter_sec: "8h"

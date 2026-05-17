@@ -39,6 +39,32 @@
     state: absent
   when: not (auto_update_automatic_reboot | bool)
 
+- name: Ensure apt-daily-upgrade.timer drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/apt-daily-upgrade.timer.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: auto_update_automatic_reboot | bool
+
+- name: Configure apt-daily-upgrade.timer jitter drop-in
+  ansible.builtin.template:
+    src: jitter.conf.j2
+    dest: /etc/systemd/system/apt-daily-upgrade.timer.d/jitter.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: auto_update_automatic_reboot | bool
+  notify: Reload systemd and restart apt-daily-upgrade timer
+
+- name: Remove apt-daily-upgrade.timer jitter drop-in when disabled
+  ansible.builtin.file:
+    path: /etc/systemd/system/apt-daily-upgrade.timer.d/jitter.conf
+    state: absent
+  when: not (auto_update_automatic_reboot | bool)
+  notify: Reload systemd and restart apt-daily-upgrade timer
+
 - name: Configure needrestart for automatic restart mode
   ansible.builtin.copy:
     dest: /etc/needrestart/conf.d/auto-restart.conf
