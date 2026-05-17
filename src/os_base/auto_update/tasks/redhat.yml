@@ -21,10 +21,6 @@
     value: "{{ 'when-needed' if auto_update_automatic_reboot | bool else 'never' }}"
     mode: "0644"
 
-- name: Reload systemd to pick up dnf-automatic-install.timer
-  ansible.builtin.systemd:
-    daemon_reload: true
-
 - name: Enable and start dnf-automatic-install.timer
   ansible.builtin.systemd:
     name: dnf-automatic-install.timer
