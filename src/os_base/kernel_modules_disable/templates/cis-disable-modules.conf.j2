@@ -5,7 +5,7 @@
 # `blacklist <module>` で別名解決によるautoloadも抑止する。
 
 {% for m in kernel_modules_disable_list %}
-# {{ m.name }} - CIS {{ m.cis }} - {{ m.note }}
+# {{ m.name }} - {{ m.note }}
 install {{ m.name }} /bin/false
 blacklist {{ m.name }}
 

@@ -1,56 +1,58 @@
 ---
 # 本ロールでCISモジュール無効化を有効化するかどうか
-# false(既定)の場合は/etc/modprobe.d/cis-disable-modules.confを削除する
-# true時のみドロップインを配置し、必要ならinitramfsを再生成する
-# 「どのグループに適用するか」はgroup_vars側で本変数をtrueにして決める
 kernel_modules_disable_enabled: false
 
-# CISベンチマークに基づき無効化するカーネルモジュール一覧
-# - Ubuntu 24.04 LTS CIS Benchmark v1.0.0 (2024-08)
-# - AlmaLinux OS 10 CIS Benchmark v1.0.0 (2025-11) / RHEL10 v1.0.1 と同等
-#
-# usb-storage / overlay / squashfs は意図的に維持するため含めない
-# （USBメディア利用・コンテナイメージのoverlayfs・liveイメージ用途で必要）
+# 実行中のモジュールをアンロードするかどうか
+kernel_modules_disable_unload_running: false
 
+# 無効化するカーネルモジュール一覧
+# Ubuntu 24.04 LTS CIS Benchmark v1.0.0 / AlmaLinux 10 CIS Benchmark v1.0.0 を基準にしつつ、usb-storage / overlay / squashfs は意図的に維持するため含めない
 kernel_modules_disable_list:
   # --- ファイルシステム ---
-  - { name: cramfs,      cis: "L1 1.1.1.1",            note: "組み込み向け圧縮FS" }
-  - { name: freevxfs,    cis: "L1 1.1.1.2",            note: "Veritas FS" }
-  - { name: hfs,         cis: "L1 1.1.1.3",            note: "Mac OS Classic FS" }
-  - { name: hfsplus,     cis: "L1 1.1.1.4",            note: "macOS FS" }
-  - { name: jffs2,       cis: "L1 1.1.1.5",            note: "組み込みフラッシュFS" }
-  - { name: udf,         cis: "L2 1.1.1.7/1.1.1.8",    note: "DVD/光学メディア" }
+  - { name: cramfs,      note: "組み込み向け圧縮FS" }
+  - { name: freevxfs,    note: "Veritas FS" }
+  - { name: hfs,         note: "Mac OS Classic FS" }
+  - { name: hfsplus,     note: "macOS FS" }
+  - { name: jffs2,       note: "組み込みフラッシュFS" }
+  - { name: udf,         note: "DVD/光学メディア" }
 
   # --- ネットワークプロトコル(用途特殊) ---
-  - { name: dccp,        cis: "L2 3.2.1",              note: "Datagram Congestion Control Protocol" }
-  - { name: tipc,        cis: "L2 3.2.2",              note: "Transparent Inter-Process Communication" }
-  - { name: rds,         cis: "L2 3.2.3",              note: "Reliable Datagram Sockets" }
-  - { name: sctp,        cis: "L2 3.2.4",              note: "Stream Control Transmission Protocol" }
-  - { name: atm,         cis: "-",                     note: "ATM networking" }
-  - { name: can,         cis: "-",                     note: "CANバス(車載)" }
-  - { name: can_raw,     cis: "-",                     note: "CAN raw protocol" }
-  - { name: can_bcm,     cis: "-",                     note: "CAN broadcast manager" }
-  - { name: can_gw,      cis: "-",                     note: "CAN gateway" }
+  - { name: dccp,        note: "Datagram Congestion Control Protocol" }
+  - { name: tipc,        note: "Transparent Inter-Process Communication" }
+  - { name: rds,         note: "Reliable Datagram Sockets" }
+  - { name: sctp,        note: "Stream Control Transmission Protocol" }
+  - { name: atm,         note: "ATM networking" }
+  - { name: can,         note: "CANバス(車載)" }
+  - { name: can_raw,     note: "CAN raw protocol" }
+  - { name: can_bcm,     note: "CAN broadcast manager" }
+  - { name: can_gw,      note: "CAN gateway" }
 
-  # --- ネットワークプロトコル(レガシー) ---
-  - { name: ax25,        cis: "-",                     note: "アマチュア無線AX.25" }
-  - { name: netrom,      cis: "-",                     note: "アマチュア無線NetRom" }
-  - { name: rose,        cis: "-",                     note: "アマチュア無線Rose" }
-  - { name: x25,         cis: "-",                     note: "X.25 WAN" }
+  # --- ネットワークプロトコル(レガシー・一般) ---
+  - { name: ax25,        note: "アマチュア無線AX.25" }
+  - { name: netrom,      note: "アマチュア無線NetRom" }
+  - { name: rose,        note: "アマチュア無線Rose" }
+  - { name: x25,         note: "X.25 WAN" }
+
+  # --- ネットワークプロトコル(レガシー・AppleTalk関連) ---
+  - { name: appletalk,   note: "AppleTalkプロトコル" }
+  - { name: p8022,       note: "IEEE 802.2 LLC (AppleTalkのスタブ層)" }
+  - { name: p8023,       note: "IEEE 802.3 raw (AppleTalkのスタブ層)" }
+  - { name: psnap,       note: "SubNetwork Access Protocol (AppleTalk用補助層)" }
+  - { name: llc,         note: "Logical Link Control (AppleTalk/802.2の共通基盤)" }
+
+  # --- ネットワークプロトコル(レガシー・新しいカーネルでは削除済み) ---
+  - { name: decnet,      note: "DECnetプロトコル (kernel 6.1で削除済み)" }
+  - { name: ipx,         note: "Novell IPXプロトコル (kernel 5.15で削除済み)" }
 
   # --- ライン規律 / シリアル ---
-  - { name: n_hdlc,      cis: "-",                     note: "HDLC line discipline (過去にLPE)" }
+  - { name: n_hdlc,      note: "HDLC line discipline (過去にLPE)" }
 
   # --- IPsec関連 ---
-  - { name: esp4,        cis: "-",                     note: "IPsec ESP IPv4" }
-  - { name: esp6,        cis: "-",                     note: "IPsec ESP IPv6" }
-  - { name: ipcomp4,     cis: "-",                     note: "IPsec圧縮 IPv4" }
-  - { name: ipcomp6,     cis: "-",                     note: "IPsec圧縮 IPv6" }
+  - { name: esp4,        note: "IPsec ESP IPv4" }
+  - { name: esp6,        note: "IPsec ESP IPv6" }
+  - { name: ipcomp4,     note: "IPsec圧縮 IPv4" }
+  - { name: ipcomp6,     note: "IPsec圧縮 IPv6" }
 
   # --- RPC / 暗号 ---
-  - { name: rxrpc,       cis: "-",                     note: "kAFS RPC" }
-  - { name: algif_aead,  cis: "-",                     note: "AF_ALG非対称AEAD" }
-
-# 実行中のモジュールをアンロードするかどうか
-# 既存環境への影響を避けるためデフォルトはfalse(設定のみ書き込み、次回起動で反映)
-kernel_modules_disable_unload_running: false
+  - { name: rxrpc,       note: "kAFS RPC" }
+  - { name: algif_aead,  note: "AF_ALG非対称AEAD" }
