@@ -122,7 +122,7 @@ systemctl status pveproxy
 cat > /etc/apt/apt.conf.d/99-pve-no-subscription-nag << 'EOF'
 // Automatically reapply subscription notice removal after proxmox-widget-toolkit updates
 DPkg::Post-Invoke {
-  "if dpkg -V proxmox-widget-toolkit 2>/dev/null | grep -q proxmoxlib.js; then exit 0; fi; sed -i.bak 's/Ext\.Msg\.show({[[:space:]]*title: gettext(.No valid sub/void({ \/\/\0/' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js 2>/dev/null && systemctl restart pveproxy 2>/dev/null || true";
+  "if dpkg -V proxmox-widget-toolkit 2>/dev/null | grep -q proxmoxlib.js; then exit 0; fi; sed -z -i.bak 's/Ext\.Msg\.show({[[:space:]]*title: gettext(.No valid sub/void({ \/\/&/' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js 2>/dev/null && systemctl restart pveproxy 2>/dev/null || true";
 };
 EOF
 ```

@@ -1,7 +1,10 @@
 ---
-- name: Ensure authorized_keys for root user
-  ansible.builtin.authorized_key:
-    user: root
-    state: present
-    key: "{{ ansible_runner_user.ssh_authorized_keys | join('\n') }}"
-    exclusive: true
+- name: Ensure authorized_keys for root user (Proxmox VE)
+  ansible.builtin.blockinfile:
+    path: /etc/pve/priv/authorized_keys
+    create: false
+    marker: "# {mark} ANSIBLE MANAGED BLOCK (ansible_runner_user)"
+    block: "{{ ansible_runner_user.ssh_authorized_keys | join('\n') }}"
+    mode: "0600"
+    owner: root
+    group: www-data
