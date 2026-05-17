@@ -1,0 +1,20 @@
+---
+- name: Deploy sysctl drop-in to harden kernel.yama.ptrace_scope
+  ansible.builtin.copy:
+    content: |
+      kernel.yama.ptrace_scope = {{ sysctl_ptrace_scope_value }}
+    dest: /etc/sysctl.d/60-ptrace-scope.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when:
+    - sysctl_ptrace_scope_value is defined
+    - sysctl_ptrace_scope_value is not none
+  notify: reload sysctl
+
+- name: Remove sysctl drop-in for kernel.yama.ptrace_scope when unset
+  ansible.builtin.file:
+    path: /etc/sysctl.d/60-ptrace-scope.conf
+    state: absent
+  when: sysctl_ptrace_scope_value is not defined or sysctl_ptrace_scope_value is none
+  notify: reload sysctl
