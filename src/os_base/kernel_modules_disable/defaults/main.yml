@@ -6,7 +6,12 @@ kernel_modules_disable_enabled: false
 kernel_modules_disable_unload_running: false
 
 # 無効化するカーネルモジュール一覧
-# Ubuntu 24.04 LTS CIS Benchmark v1.0.0 / AlmaLinux 10 CIS Benchmark v1.0.0 を基準にしつつ、usb-storage / overlay / squashfs は意図的に維持するため含めない
+# Ubuntu 24.04 LTS CIS Benchmark v1.0.0 / AlmaLinux 10 CIS Benchmark v1.0.0 を基準する
+# usb-storage は含めない: 物理ホストでのUSBキーボード・USBメモリーによる保守作業やリカバリー作業で必要となるため
+# overlay は含めない: Podman・Docker・LXC などのコンテナランタイムが overlayfs に依存しているため
+# squashfs は含めない: snap パッケージや live ISO・インストールメディアのマウントで必要となるため
+# llc は含めない: bridge モジュールの STP 実装が依存しているため
+
 kernel_modules_disable_list:
   # --- ファイルシステム ---
   - { name: cramfs,      note: "組み込み向け圧縮FS" }
@@ -38,7 +43,6 @@ kernel_modules_disable_list:
   - { name: p8022,       note: "IEEE 802.2 LLC (AppleTalkのスタブ層)" }
   - { name: p8023,       note: "IEEE 802.3 raw (AppleTalkのスタブ層)" }
   - { name: psnap,       note: "SubNetwork Access Protocol (AppleTalk用補助層)" }
-  - { name: llc,         note: "Logical Link Control (AppleTalk/802.2の共通基盤)" }
 
   # --- ネットワークプロトコル(レガシー・新しいカーネルでは削除済み) ---
   - { name: decnet,      note: "DECnetプロトコル (kernel 6.1で削除済み)" }
