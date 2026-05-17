@@ -1,4 +1,10 @@
 ---
+# 本ロールでCISモジュール無効化を有効化するかどうか
+# false(既定)の場合は/etc/modprobe.d/cis-disable-modules.confを削除する
+# true時のみドロップインを配置し、必要ならinitramfsを再生成する
+# 「どのグループに適用するか」はgroup_vars側で本変数をtrueにして決める
+kernel_modules_disable_enabled: false
+
 # CISベンチマークに基づき無効化するカーネルモジュール一覧
 # - Ubuntu 24.04 LTS CIS Benchmark v1.0.0 (2024-08)
 # - AlmaLinux OS 10 CIS Benchmark v1.0.0 (2025-11) / RHEL10 v1.0.1 と同等
