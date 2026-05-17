@@ -38,14 +38,14 @@
     group: root
     mode: "0644"
   when: auto_update_automatic_reboot | bool
-  notify: Reload systemd and restart dnf-automatic-install timer
+  notify: Reload systemd daemon
 
 - name: Remove dnf-automatic-install.timer jitter drop-in when disabled
   ansible.builtin.file:
     path: /etc/systemd/system/dnf-automatic-install.timer.d/jitter.conf
     state: absent
   when: not (auto_update_automatic_reboot | bool)
-  notify: Reload systemd and restart dnf-automatic-install timer
+  notify: Reload systemd daemon
 
 - name: Enable and start dnf-automatic-install.timer
   ansible.builtin.systemd:

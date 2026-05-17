@@ -56,14 +56,14 @@
     group: root
     mode: "0644"
   when: auto_update_automatic_reboot | bool
-  notify: Reload systemd and restart apt-daily-upgrade timer
+  notify: Reload systemd daemon
 
 - name: Remove apt-daily-upgrade.timer jitter drop-in when disabled
   ansible.builtin.file:
     path: /etc/systemd/system/apt-daily-upgrade.timer.d/jitter.conf
     state: absent
   when: not (auto_update_automatic_reboot | bool)
-  notify: Reload systemd and restart apt-daily-upgrade timer
+  notify: Reload systemd daemon
 
 - name: Configure needrestart for automatic restart mode
   ansible.builtin.copy:

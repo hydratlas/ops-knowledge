@@ -1,14 +1,4 @@
 ---
-- name: Reload systemd and restart apt-daily-upgrade timer
+- name: Reload systemd daemon
   ansible.builtin.systemd:
-    name: apt-daily-upgrade.timer
     daemon_reload: true
-    state: restarted
-    enabled: true
-
-- name: Reload systemd and restart dnf-automatic-install timer
-  ansible.builtin.systemd:
-    name: dnf-automatic-install.timer
-    daemon_reload: true
-    state: restarted
-    enabled: true
