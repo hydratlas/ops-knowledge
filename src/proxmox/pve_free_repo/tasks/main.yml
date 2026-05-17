@@ -32,16 +32,18 @@
     group: root
     mode: "0644"
   notify: update apt cache
-#- name: Create Ceph no-subscription repository
-#  ansible.builtin.copy:
-#    content: |
-#      Types: deb
-#      URIs: http://download.proxmox.com/debian/ceph-{{ ceph_version }}
-#      Suites: {{ ansible_distribution_release }}
-#      Components: no-subscription
-#      Signed-By: /usr/share/keyrings/proxmox-release-{{ ansible_distribution_release }}.gpg
-#    dest: /etc/apt/sources.list.d/ceph.sources
-#    owner: root
-#    group: root
-#    mode: "0644"
-#  notify: update apt cache
+
+- name: Create Ceph no-subscription repository
+  ansible.builtin.copy:
+    content: |
+      Types: deb
+      URIs: http://download.proxmox.com/debian/ceph-{{ ceph_version }}
+      Suites: {{ ansible_distribution_release }}
+      Components: no-subscription
+      Signed-By: /usr/share/keyrings/proxmox-release-{{ ansible_distribution_release }}.gpg
+    dest: /etc/apt/sources.list.d/ceph.sources
+    owner: root
+    group: root
+    mode: "0644"
+  when: enable_ceph_repo | bool
+  notify: update apt cache

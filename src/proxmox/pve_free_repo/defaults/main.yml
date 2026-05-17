@@ -2,3 +2,5 @@
 # Ceph version to use for the repository
 # Available versions: reef, squid
 ceph_version: squid
+# Whether to create the Ceph no-subscription repository
+enable_ceph_repo: false
