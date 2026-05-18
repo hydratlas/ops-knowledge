@@ -49,6 +49,8 @@ scrub はデータの整合性をチェックし、balance はデータの再配
 
 何も指定せずに `roles: [storage/btrfs_maintenance]` とすれば、パッケージ既定のスケジュールで動作する。
 
+`site.yml` では `physical:tofu_virtual` を対象に、`ansible_mounts` を `gather_subset: mounts` で取得したうえで Btrfs マウントを持つホストにのみ自動適用される（ゼロコンフィグ）。LXC は親ホスト側でメンテナンスされるため対象から除外している。
+
 ## 確認
 
 ロール適用後に状態を確認するには以下を実行する。
