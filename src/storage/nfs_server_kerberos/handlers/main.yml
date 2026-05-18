@@ -1,11 +1,7 @@
 ---
-- name: Re-export NFS shares
-  ansible.builtin.command: exportfs -r
-  listen: nfs-server-kerberos-keytab-changed
-  changed_when: true
+# キータブ追記後、まず rpc-svcgssd を上げてから exportfs -r で sec=krb5 エクスポートを
+# 再展開する順序にする（GSS デーモンが起動している状態で再展開する方が確実）。
 
-# rpc-svcgssd.service は Debian 系 NFS サーバーで failed のまま残るため、
-# キータブ追加後に reset-failed してから起動を試みる。
 - name: Reset failed state of rpc-svcgssd.service
   ansible.builtin.command: systemctl reset-failed rpc-svcgssd.service
   listen: nfs-server-kerberos-keytab-changed
@@ -20,3 +16,8 @@
   listen: nfs-server-kerberos-keytab-changed
   when: ansible_facts['os_family'] == "Debian"
   failed_when: false
+
+- name: Re-export NFS shares
+  ansible.builtin.command: exportfs -r
+  listen: nfs-server-kerberos-keytab-changed
+  changed_when: true

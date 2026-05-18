@@ -1,0 +1,19 @@
+---
+# FreeIPA に NFS サーバー用のサービスプリンシパル (nfs/<fqdn>@REALM) を
+# 一括で登録するロール。
+#
+# 想定実行ホスト: ipaservers（freeipa.ansible_freeipa モジュールは IPA サーバー上で動作する）。
+# 既に登録済みの場合は no-op となる。
+- name: Ensure FreeIPA service principals nfs/<fqdn> are present
+  freeipa.ansible_freeipa.ipaservice:
+    ipaadmin_password: "{{ ipaadmin_password }}"
+    name: "nfs/{{ item }}"
+    host:
+      - "{{ item }}"
+    allow_create_keytab_host:
+      - "{{ item }}"
+    allow_retrieve_keytab_host:
+      - "{{ item }}"
+    state: present
+  loop: "{{ freeipa_nfs_service_hosts }}"
+  run_once: true
