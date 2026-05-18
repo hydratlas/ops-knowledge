@@ -1,0 +1,5 @@
+---
+# IPMI ローカルツール（ipmitool, openipmi）を導入するか。
+# 物理機では Node Exporter の IPMI collector が /dev/ipmi* を必要とするため
+# true に設定する。仮想機では false のままにする。
+node_exporter_install_ipmi: false

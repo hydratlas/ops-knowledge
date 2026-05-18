@@ -8,6 +8,15 @@
     update_cache: yes
     install_recommends: no
 
+- name: Install IPMI tools for ipmi collector
+  ansible.builtin.apt:
+    name:
+      - ipmitool
+      - openipmi
+    state: present
+    install_recommends: no
+  when: node_exporter_install_ipmi | bool
+
 - name: Enable and start prometheus-node-exporter
   ansible.builtin.systemd:
     name: prometheus-node-exporter
