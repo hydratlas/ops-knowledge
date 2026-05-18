@@ -1,0 +1,6 @@
+---
+# NFSoRDMA を有効化する場合は host_vars / group_vars で true にする。
+# 真のとき /etc/nfs.conf の [nfsd] に rdma=y と rdma-port を書き込み、
+# svcrdma カーネルモジュールをロードして nfs-server を再起動する。
+nfs_server_rdma_enabled: false
+nfs_server_rdma_port: 20049

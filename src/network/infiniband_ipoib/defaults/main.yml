@@ -1,0 +1,37 @@
+---
+# IPoIB Connected Mode 用のパッケージ
+infiniband_ipoib_packages:
+  - rdma-core
+
+# ブート時にロードしておきたいカーネルモジュール
+infiniband_ipoib_modules:
+  - ib_ipoib
+  - rdma_cm
+  - ib_umad
+
+# IPoIB のリンク種別。Connected Mode は MTU 65520 が使える
+infiniband_ipoib_mode: "connected"
+infiniband_ipoib_mtu: 65520
+
+# netplan 設定ファイルの配置先
+infiniband_ipoib_netplan_path: "/etc/netplan/90-infiniband.yaml"
+
+# /etc/modules-load.d 配置先
+infiniband_ipoib_modules_load_path: "/etc/modules-load.d/infiniband-ipoib.conf"
+
+# udev ルール配置先（IB インターフェースに mode=connected を適用）
+infiniband_ipoib_udev_rule_path: "/etc/udev/rules.d/90-ipoib-mode.rules"
+
+# IPoIB インターフェース定義（host_vars で上書き）
+# 例:
+#   infiniband_ipoib_interfaces:
+#     - name: ibp65s0
+#       match_mac: "80:00:02:08:fe:80:00:00:00:00:00:00:ec:0d:9a:ff:ff:e8:16:85"
+#       address: "10.130.61.1/30"
+infiniband_ipoib_interfaces: []
+
+# /etc/hosts に追記するエントリー（host_vars で上書き）
+# 例:
+#   infiniband_ipoib_hosts_entries:
+#     - { ip: "10.130.61.1", names: "nas2024-ssd-hi-oz.hi.home.arpa" }
+infiniband_ipoib_hosts_entries: []

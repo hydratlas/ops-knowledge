@@ -1,0 +1,18 @@
+# Managed by Ansible (roles/network/infiniband_ipoib)
+# IPoIB の interface はカーネル予測名 (例: ibp65s0 / ibs8) で記述する。
+# netplan は altname にもマッチするため、kernel name と altname のどちらを書いてもよい。
+network:
+  version: 2
+  ethernets:
+{% for iface in infiniband_ipoib_interfaces %}
+    {{ iface.name }}:
+      match:
+        name: "{{ iface.name }}"
+      mtu: {{ infiniband_ipoib_mtu }}
+      addresses:
+        - {{ iface.address }}
+      accept-ra: false
+      link-local: []
+      dhcp4: false
+      dhcp6: false
+{% endfor %}

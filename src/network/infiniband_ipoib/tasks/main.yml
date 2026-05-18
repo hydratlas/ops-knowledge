@@ -1,0 +1,90 @@
+---
+- name: Ensure ConnectX-3 (mlx4_core) is present
+  ansible.builtin.shell: |
+    set -o pipefail
+    lspci -d 15b3: -nn | grep -i 'ConnectX-3' || true
+  args:
+    executable: /bin/bash
+  register: infiniband_ipoib_lspci
+  changed_when: false
+  check_mode: false
+
+- name: Skip role when no ConnectX-3 is present
+  ansible.builtin.meta: end_host
+  when: infiniband_ipoib_lspci.stdout | trim == ""
+
+- name: Skip role when no IPoIB interfaces are defined for this host
+  ansible.builtin.meta: end_host
+  when: (infiniband_ipoib_interfaces | length) == 0
+
+- name: Install IPoIB / RDMA userspace packages
+  ansible.builtin.apt:
+    name: "{{ infiniband_ipoib_packages }}"
+    state: present
+    update_cache: true
+
+- name: Deploy modules-load.d configuration for IPoIB
+  ansible.builtin.template:
+    src: modules-load.conf.j2
+    dest: "{{ infiniband_ipoib_modules_load_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Load IPoIB / RDMA kernel modules now
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ infiniband_ipoib_modules }}"
+
+- name: Deploy udev rule to switch IPoIB to {{ infiniband_ipoib_mode }} mode
+  ansible.builtin.template:
+    src: ipoib-mode.rules.j2
+    dest: "{{ infiniband_ipoib_udev_rule_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: udev-reload-trigger
+
+# 既存インターフェース（udev add 後に作成されていたもの）にも mode を適用する。
+# netplan で MTU 65520 を効かせるには Connected Mode への切替が先に必要。
+- name: Ensure IPoIB mode is applied to existing interfaces
+  ansible.builtin.shell: |
+    set -e
+    changed=""
+    for iface in {{ infiniband_ipoib_interfaces | map(attribute='name') | join(' ') }}; do
+      [ -f /sys/class/net/$iface/mode ] || continue
+      cur=$(cat /sys/class/net/$iface/mode)
+      if [ "$cur" != "{{ infiniband_ipoib_mode }}" ]; then
+        echo "{{ infiniband_ipoib_mode }}" > /sys/class/net/$iface/mode
+        changed="${changed}${iface} "
+      fi
+    done
+    echo "CHANGED=${changed}"
+  register: infiniband_ipoib_mode_set
+  changed_when: (infiniband_ipoib_mode_set.stdout | regex_search('CHANGED=(\\S+)')) is not none
+
+- name: Deploy netplan IPoIB configuration
+  ansible.builtin.template:
+    src: netplan.yaml.j2
+    dest: "{{ infiniband_ipoib_netplan_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: netplan-apply
+
+- name: Manage /etc/hosts entries for IPoIB peers
+  ansible.builtin.blockinfile:
+    path: /etc/hosts
+    marker: "# {mark} ANSIBLE MANAGED BLOCK infiniband_ipoib"
+    block: |
+      {% for h in infiniband_ipoib_hosts_entries %}
+      {{ h.ip }} {{ h.names }}
+      {% endfor %}
+  when: (infiniband_ipoib_hosts_entries | length) > 0
+
+# mode を切り替えるとリンクがリセットされる。MTU と IP を貼り直すため netplan apply を再発火させる
+- name: Re-apply netplan after mode change
+  ansible.builtin.command: netplan apply
+  changed_when: true
+  when: infiniband_ipoib_mode_set.changed

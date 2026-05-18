@@ -1,0 +1,12 @@
+---
+- name: Reload udev rules and trigger
+  ansible.builtin.shell: |
+    udevadm control --reload
+    udevadm trigger --subsystem-match=net --action=change
+  changed_when: true
+  listen: udev-reload-trigger
+
+- name: Apply netplan configuration
+  ansible.builtin.command: netplan apply
+  changed_when: true
+  listen: netplan-apply

@@ -31,3 +31,49 @@
     state: started
     enabled: yes
   when: ansible_facts['os_family'] == "Debian"
+
+# /etc/nfs.conf [nfsd] の rdma / rdma-port を設定する。
+# nfs_server_rdma_enabled が真のときのみ書き込み、偽のときは行を削除する。
+- name: Configure NFSoRDMA (rdma) in /etc/nfs.conf
+  community.general.ini_file:
+    path: /etc/nfs.conf
+    section: nfsd
+    option: rdma
+    value: "y"
+    state: "{{ 'present' if (nfs_server_rdma_enabled | default(false) | bool) else 'absent' }}"
+    no_extra_spaces: true
+    mode: "0644"
+  notify: restart-nfs-server
+
+- name: Configure NFSoRDMA listen port (rdma-port) in /etc/nfs.conf
+  community.general.ini_file:
+    path: /etc/nfs.conf
+    section: nfsd
+    option: rdma-port
+    value: "{{ nfs_server_rdma_port | default(20049) }}"
+    state: "{{ 'present' if (nfs_server_rdma_enabled | default(false) | bool) else 'absent' }}"
+    no_extra_spaces: true
+    mode: "0644"
+  notify: restart-nfs-server
+
+# RDMA トランスポートのため svcrdma カーネルモジュールをロードしてブート時にも復活させる
+- name: Ensure svcrdma module is loaded
+  community.general.modprobe:
+    name: svcrdma
+    state: present
+  when: nfs_server_rdma_enabled | default(false) | bool
+
+- name: Persist svcrdma module across reboots
+  ansible.builtin.copy:
+    content: "svcrdma\n"
+    dest: /etc/modules-load.d/nfs-rdma.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: nfs_server_rdma_enabled | default(false) | bool
+
+- name: Remove persisted svcrdma module config when RDMA is disabled
+  ansible.builtin.file:
+    path: /etc/modules-load.d/nfs-rdma.conf
+    state: absent
+  when: not (nfs_server_rdma_enabled | default(false) | bool)

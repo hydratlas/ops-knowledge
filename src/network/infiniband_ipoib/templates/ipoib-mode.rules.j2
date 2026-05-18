@@ -1,0 +1,5 @@
+# Managed by Ansible (roles/network/infiniband_ipoib)
+# IPoIB インターフェース (ATTR{type}==32 = ARPHRD_INFINIBAND) の出現時に
+# mode を {{ infiniband_ipoib_mode }} に切り替える。
+# Connected Mode 化により MTU {{ infiniband_ipoib_mtu }} まで設定可能になる。
+ACTION=="add", SUBSYSTEM=="net", ATTR{type}=="32", RUN+="/bin/sh -c 'echo {{ infiniband_ipoib_mode }} > /sys/class/net/%k/mode'"
