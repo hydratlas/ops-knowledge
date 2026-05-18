@@ -1,0 +1,7 @@
+---
+# Kerberos レルム名（HOME.ARPA）
+nfs_server_kerberos_realm: HOME.ARPA
+
+# サービスプリンシパルのキータブ取得先 IPA サーバー
+# 既定では ipaclient_servers の先頭を使用する
+nfs_server_kerberos_ipa_server: "{{ ipaclient_servers[0] }}"

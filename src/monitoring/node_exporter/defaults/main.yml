@@ -3,3 +3,13 @@
 # 物理機では Node Exporter の IPMI collector が /dev/ipmi* を必要とするため
 # true に設定する。仮想機では false のままにする。
 node_exporter_install_ipmi: false
+
+# smartmontools を導入するか。
+# prometheus-node-exporter-collectors の smartmon.sh が smartctl を必要とするため、
+# ローカルディスクの SMART メトリクスを取得したいホストでは true に設定する。
+node_exporter_install_smartmontools: false
+
+# nvme-cli を導入するか。
+# prometheus-node-exporter-collectors の nvme_metrics.sh が nvme コマンドを
+# 必要とするため、NVMe デバイスのメトリクスを取得したいホストでは true に設定する。
+node_exporter_install_nvme_cli: false

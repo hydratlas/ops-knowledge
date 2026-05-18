@@ -1,0 +1,84 @@
+---
+# NFS サーバーに対する Kerberos サービスプリンシパル (nfs/<fqdn>@REALM) を
+# FreeIPA に登録し、ローカル /etc/krb5.keytab に取り込む idempotent ロール。
+#
+# 背景:
+#   - /etc/exports に sec=krb5 のエントリがあっても、ホストに nfs/ プリンシパル
+#     が無いと rpc.svcgssd が GSS_S_NO_CRED で失敗し、krb5 エクスポートが
+#     展開されない。
+#   - 既に nfs/<fqdn> プリンシパルがキータブにある場合は no-op となる。
+
+- name: Gather minimal facts required by this role
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - "!any"
+      - distribution
+      - network
+  when: ansible_facts['os_family'] is not defined
+        or ansible_facts['fqdn'] is not defined
+
+- name: Check whether nfs/<fqdn> principal already exists in /etc/krb5.keytab
+  ansible.builtin.command:
+    cmd: klist -k /etc/krb5.keytab
+  register: _nfs_kerberos_klist
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Set fact whether nfs/<fqdn> principal is missing
+  ansible.builtin.set_fact:
+    _nfs_kerberos_principal_missing: >-
+      {{ _nfs_kerberos_klist.rc != 0
+         or not (_nfs_kerberos_klist.stdout
+                 | regex_search('\\s+nfs/' ~ (ansible_facts['fqdn'] | lower)
+                                ~ '@' ~ nfs_server_kerberos_realm,
+                                ignorecase=True)) }}
+
+- name: Ensure FreeIPA service principal nfs/<fqdn> is present
+  freeipa.ansible_freeipa.ipaservice:
+    ipaadmin_password: "{{ ipaadmin_password }}"
+    name: "nfs/{{ ansible_facts['fqdn'] }}"
+    host:
+      - "{{ ansible_facts['fqdn'] }}"
+    allow_create_keytab_host:
+      - "{{ ansible_facts['fqdn'] }}"
+    allow_retrieve_keytab_host:
+      - "{{ ansible_facts['fqdn'] }}"
+    state: present
+  delegate_to: "{{ nfs_server_kerberos_ipa_server }}"
+  vars:
+    # delegate_to 時にコントロールノードから IPA サーバーへ ssh するため
+    # 委譲先の接続変数を明示する
+    ansible_connection: ssh
+    ansible_host: "{{ hostvars[nfs_server_kerberos_ipa_server].ansible_host
+                       | default(nfs_server_kerberos_ipa_server) }}"
+    ansible_user: "{{ hostvars[nfs_server_kerberos_ipa_server].ansible_user
+                       | default('ansible') }}"
+    ansible_ssh_common_args: "{{ hostvars[nfs_server_kerberos_ipa_server].ansible_ssh_common_args
+                                  | default('') }}"
+    ansible_become: true
+  when: _nfs_kerberos_principal_missing | bool
+
+- name: Acquire host TGT for ipa-getkeytab authentication
+  ansible.builtin.command:
+    cmd: "kinit -k -t /etc/krb5.keytab host/{{ ansible_facts['fqdn'] }}@{{ nfs_server_kerberos_realm }}"
+  changed_when: false
+  when: _nfs_kerberos_principal_missing | bool
+
+- name: Retrieve nfs/<fqdn> keytab into /etc/krb5.keytab
+  ansible.builtin.command:
+    cmd: >-
+      ipa-getkeytab
+      -s {{ nfs_server_kerberos_ipa_server }}
+      -p nfs/{{ ansible_facts['fqdn'] }}
+      -k /etc/krb5.keytab
+  when: _nfs_kerberos_principal_missing | bool
+  notify: nfs-server-kerberos-keytab-changed
+
+- name: Destroy host TGT acquired for ipa-getkeytab
+  ansible.builtin.command:
+    cmd: kdestroy
+  changed_when: false
+  failed_when: false
+  when: _nfs_kerberos_principal_missing | bool

@@ -1,0 +1,22 @@
+---
+- name: Re-export NFS shares
+  ansible.builtin.command: exportfs -r
+  listen: nfs-server-kerberos-keytab-changed
+  changed_when: true
+
+# rpc-svcgssd.service は Debian 系 NFS サーバーで failed のまま残るため、
+# キータブ追加後に reset-failed してから起動を試みる。
+- name: Reset failed state of rpc-svcgssd.service
+  ansible.builtin.command: systemctl reset-failed rpc-svcgssd.service
+  listen: nfs-server-kerberos-keytab-changed
+  when: ansible_facts['os_family'] == "Debian"
+  failed_when: false
+  changed_when: true
+
+- name: Start rpc-svcgssd.service
+  ansible.builtin.systemd:
+    name: rpc-svcgssd.service
+    state: started
+  listen: nfs-server-kerberos-keytab-changed
+  when: ansible_facts['os_family'] == "Debian"
+  failed_when: false

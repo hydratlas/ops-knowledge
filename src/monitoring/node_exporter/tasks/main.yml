@@ -17,6 +17,22 @@
     install_recommends: no
   when: node_exporter_install_ipmi | bool
 
+- name: Install smartmontools for smartmon collector
+  ansible.builtin.apt:
+    name:
+      - smartmontools
+    state: present
+    install_recommends: no
+  when: node_exporter_install_smartmontools | bool
+
+- name: Install nvme-cli for nvme collector
+  ansible.builtin.apt:
+    name:
+      - nvme-cli
+    state: present
+    install_recommends: no
+  when: node_exporter_install_nvme_cli | bool
+
 - name: Enable and start prometheus-node-exporter
   ansible.builtin.systemd:
     name: prometheus-node-exporter
