@@ -1,0 +1,3 @@
+---
+btrfs_maintenance_balance_period: "weekly"
+btrfs_maintenance_scrub_period: "weekly"

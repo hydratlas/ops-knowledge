@@ -1,0 +1,15 @@
+---
+# 設定対象の Snapper コンフィグ
+# name: snapper -c <name> のコンフィグ名
+# path: 対象サブボリュームのマウントパス
+snapper_configs:
+  - name: root
+    path: /
+
+# 全コンフィグに一括適用する設定値（/etc/snapper/configs/<name> 内のキー）
+# create-config 直後の既定値を上書きしたい項目のみ列挙する
+snapper_config_overrides:
+  TIMELINE_LIMIT_YEARLY: "0"
+
+# Snapper のタイマーを有効化するか
+snapper_enable_timers: true

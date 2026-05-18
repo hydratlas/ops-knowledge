@@ -1,0 +1,11 @@
+---
+- name: "Check whether snapper config '{{ snapper_cfg.name }}' exists"
+  ansible.builtin.stat:
+    path: "/etc/snapper/configs/{{ snapper_cfg.name }}"
+  register: snapper_cfg_stat
+
+- name: "Create snapper config '{{ snapper_cfg.name }}' for {{ snapper_cfg.path }}"
+  ansible.builtin.command:
+    cmd: "snapper -c {{ snapper_cfg.name }} create-config {{ snapper_cfg.path }}"
+  when: not snapper_cfg_stat.stat.exists
+  changed_when: true

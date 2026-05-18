@@ -1,0 +1,5 @@
+---
+- name: Refresh btrfsmaintenance timers
+  ansible.builtin.systemd:
+    name: btrfsmaintenance-refresh.service
+    state: started
