@@ -1,18 +1,22 @@
 ---
-- name: "Check '{{ snapper_cfg.path }}/.snapshots' existence"
+- name: "Resolve snapshots path for snapper config '{{ snapper_cfg.name }}'"
+  ansible.builtin.set_fact:
+    snapper_snapshots_path: "{{ (snapper_cfg.path | regex_replace('/$', '')) ~ '/.snapshots' }}"
+
+- name: "Check '{{ snapper_snapshots_path }}' existence"
   ansible.builtin.stat:
-    path: "{{ snapper_cfg.path }}/.snapshots"
+    path: "{{ snapper_snapshots_path }}"
   register: snapper_snapshots_dir
 
-- name: "Create nested subvolume '{{ snapper_cfg.path }}/.snapshots'"
+- name: "Create nested subvolume '{{ snapper_snapshots_path }}'"
   ansible.builtin.command:
-    cmd: "btrfs subvolume create {{ snapper_cfg.path }}/.snapshots"
+    cmd: "btrfs subvolume create {{ snapper_snapshots_path }}"
   when: not snapper_snapshots_dir.stat.exists
   changed_when: true
 
-- name: "Set ownership and mode for '{{ snapper_cfg.path }}/.snapshots'"
+- name: "Set ownership and mode for '{{ snapper_snapshots_path }}'"
   ansible.builtin.file:
-    path: "{{ snapper_cfg.path }}/.snapshots"
+    path: "{{ snapper_snapshots_path }}"
     owner: root
     group: root
     mode: "0750"
@@ -21,7 +25,7 @@
 
 - name: "Place snapper config '{{ snapper_cfg.name }}' from template"
   ansible.builtin.copy:
-    src: /etc/snapper/config-templates/default
+    src: /usr/share/snapper/config-templates/default
     dest: "/etc/snapper/configs/{{ snapper_cfg.name }}"
     remote_src: true
     owner: root
