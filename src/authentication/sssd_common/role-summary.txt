@@ -1,0 +1,1 @@
+このロールは、FreeIPA クライアントに登録済みのホストで SSSD の共通設定を整える。`ipa-client-install` が生成した `/etc/sssd/sssd.conf` の `[sssd]` セクションから `services=` 行を削除して socket activation 方式へ移行させ、`sssd-*.socket` の `failed` を解消する。あわせてドメインセクションに `sudo_provider = ipa` を追加し、FreeIPA で集中管理された sudo ルールを SSSD 経由で取得できるようにする。`sssd` パッケージのインストール、設定ファイルの 0600 パーミッション矯正、変更時の SSSD サービス再起動までを一貫して行う。

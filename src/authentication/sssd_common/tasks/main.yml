@@ -1,0 +1,72 @@
+- name: Gather distribution facts
+  ansible.builtin.setup:
+    gather_subset:
+      - '!all'
+      - '!min'
+      - distribution
+  when: ansible_os_family is not defined
+
+- name: Ensure sssd is installed
+  ansible.builtin.package:
+    name: sssd
+    state: present
+
+- name: Gather service facts
+  ansible.builtin.service_facts:
+
+- name: Remove 'services=' line from [sssd] section to enable socket activation
+  ansible.builtin.ini_file:
+    path: /etc/sssd/sssd.conf
+    section: sssd
+    option: services
+    state: absent
+    no_extra_spaces: false
+  notify: Restart sssd
+
+- name: Set 'sudo_provider = ipa' in SSSD domain configuration
+  ansible.builtin.ini_file:
+    path: /etc/sssd/sssd.conf
+    section: "domain/{{ ipaclient_domain }}"
+    option: "sudo_provider"
+    value: "ipa"
+    no_extra_spaces: false
+  notify: Restart sssd
+  when: ipaclient_domain is defined
+
+- name: Check whether sssd-pac.socket unit exists
+  ansible.builtin.stat:
+    path: /usr/lib/systemd/system/sssd-pac.socket
+  register: sssd_pac_socket_unit
+
+- name: Mask sssd-pac.socket (PAC responder is only needed for AD trust)
+  ansible.builtin.systemd:
+    name: sssd-pac.socket
+    masked: true
+    state: stopped
+  when:
+    - ansible_os_family == 'Debian'
+    - sssd_pac_socket_unit.stat.exists
+
+- name: Reset failed state of sssd-pac.socket
+  ansible.builtin.command:
+    cmd: systemctl reset-failed sssd-pac.socket
+  changed_when: false
+  failed_when: false
+  when:
+    - ansible_os_family == 'Debian'
+    - sssd_pac_socket_unit.stat.exists
+
+- name: Check if /etc/sssd/sssd.conf exists
+  ansible.builtin.stat:
+    path: /etc/sssd/sssd.conf
+  register: sssd_conf_stat
+
+- name: Ensure secure permissions for sssd.conf
+  ansible.builtin.file:
+    path: /etc/sssd/sssd.conf
+    owner: root
+    group: root
+    mode: '0600'
+  when: 
+    - ipaclient_domain is defined
+    - sssd_conf_stat.stat.exists

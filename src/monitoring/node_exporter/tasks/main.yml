@@ -6,6 +6,7 @@
       - prometheus-node-exporter-collectors
     state: present
     update_cache: yes
+    install_recommends: no
 
 - name: Enable and start prometheus-node-exporter
   ansible.builtin.systemd:

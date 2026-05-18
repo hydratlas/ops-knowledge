@@ -16,14 +16,29 @@
   when: bmc_protocol == 'ipmi'
   tags: always
 
-- name: Ensure ipmitool is installed on delegate host
-  ansible.builtin.package:
+- name: Ensure ipmitool is installed on delegate host (Debian family)
+  ansible.builtin.apt:
+    name: ipmitool
+    state: present
+    install_recommends: no
+  delegate_to: "{{ bmc_delegate_host }}"
+  run_once: true
+  become: true
+  when:
+    - bmc_protocol == 'ipmi'
+    - hostvars[bmc_delegate_host].ansible_os_family == 'Debian'
+  tags: always
+
+- name: Ensure ipmitool is installed on delegate host (RedHat family)
+  ansible.builtin.dnf:
     name: ipmitool
     state: present
   delegate_to: "{{ bmc_delegate_host }}"
   run_once: true
   become: true
-  when: bmc_protocol == 'ipmi'
+  when:
+    - bmc_protocol == 'ipmi'
+    - hostvars[bmc_delegate_host].ansible_os_family == 'RedHat'
   tags: always
 
 # ── 電源操作 ──────────────────────────────────────────
