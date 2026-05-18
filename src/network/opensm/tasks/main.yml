@@ -1,0 +1,71 @@
+---
+- name: Install OpenSM and IB diagnostic packages
+  ansible.builtin.apt:
+    name: "{{ opensm_packages }}"
+    state: present
+    update_cache: true
+
+- name: Mask default single-instance opensm.service
+  ansible.builtin.systemd:
+    name: opensm.service
+    masked: true
+    enabled: false
+    state: stopped
+  when: opensm_default_unit_mask | bool
+  failed_when: false
+
+- name: Ensure OpenSM log directory exists
+  ansible.builtin.file:
+    path: "{{ opensm_log_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy opensm@.service template unit
+  ansible.builtin.template:
+    src: opensm@.service.j2
+    dest: "{{ opensm_unit_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: opensm-daemon-reload
+
+- name: Run handlers before enabling instances
+  ansible.builtin.meta: flush_handlers
+
+- name: Discover IB port GUIDs when not specified
+  when: (opensm_port_guids | length) == 0
+  block:
+    - name: Enumerate IB ports with InfiniBand link layer
+      ansible.builtin.shell: |
+        set -o pipefail
+        for p in /sys/class/infiniband/*/ports/*; do
+          link=$(cat "$p/link_layer" 2>/dev/null || true)
+          [ "$link" = "InfiniBand" ] || continue
+          gid=$(cat "$p/gids/0" 2>/dev/null || true)
+          [ -n "$gid" ] || continue
+          echo "$gid" | awk -F: '{printf "%s%s%s%s\n", $5, $6, $7, $8}'
+        done | sort -u
+      args:
+        executable: /bin/bash
+      register: opensm_guid_scan
+      changed_when: false
+
+    - name: Set opensm_port_guids from discovery
+      ansible.builtin.set_fact:
+        opensm_port_guids: "{{ opensm_guid_scan.stdout_lines | map('trim') | reject('equalto','') | list }}"
+
+- name: Fail when no IB port GUIDs are available
+  ansible.builtin.assert:
+    that:
+      - (opensm_port_guids | length) > 0
+    fail_msg: "No InfiniBand port GUIDs were discovered. Ensure mlx4 IB ports exist before applying network/opensm."
+
+- name: Enable and start OpenSM instances for each port GUID
+  ansible.builtin.systemd:
+    name: "opensm@{{ item }}.service"
+    enabled: true
+    state: started
+    daemon_reload: true
+  loop: "{{ opensm_port_guids }}"

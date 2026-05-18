@@ -1,0 +1,13 @@
+[Unit]
+Description=OpenSM subnet manager (bound to port GUID 0x%i)
+After=network.target rdma-hw.target
+Wants=rdma-hw.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/opensm -g 0x%i -f {{ opensm_log_dir }}/opensm-%i.log
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

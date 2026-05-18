@@ -1,0 +1,5 @@
+---
+# 1 = InfiniBand, 2 = Ethernet, 3 = auto (VPI)
+# ConnectX-3 (mlx4) のポートモードを起動時から強制する
+mlx4_port_types_array: "1,1"
+mlx4_port_types_conf_path: "/etc/modprobe.d/mlx4_core.conf"

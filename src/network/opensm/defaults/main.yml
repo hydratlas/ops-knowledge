@@ -1,0 +1,16 @@
+---
+opensm_packages:
+  - opensm
+  - infiniband-diags
+  - rdma-core
+
+# 空のままなら IB port GUID を自動検出する。明示指定したい場合は host_vars で上書き
+# 例:
+#   opensm_port_guids:
+#     - "ec0d9affffe81685"
+#     - "ec0d9affffe81686"
+opensm_port_guids: []
+
+opensm_log_dir: "/var/log/opensm"
+opensm_unit_path: "/etc/systemd/system/opensm@.service"
+opensm_default_unit_mask: true

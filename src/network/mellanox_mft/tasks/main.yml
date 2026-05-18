@@ -1,0 +1,86 @@
+---
+- name: Check installed MFT version
+  ansible.builtin.command: dpkg-query -W -f='${Version}' mft
+  register: mellanox_mft_installed
+  changed_when: false
+  failed_when: false
+
+- name: Detect already-installed target version
+  ansible.builtin.set_fact:
+    mellanox_mft_already_installed: >-
+      {{ mellanox_mft_installed.rc == 0
+         and mellanox_mft_installed.stdout == mellanox_mft_version }}
+
+- name: Install or replace MFT
+  when: not mellanox_mft_already_installed
+  block:
+    - name: Release apt hold on mstflint (if held)
+      ansible.builtin.command: apt-mark unhold mstflint
+      register: mellanox_mft_unhold
+      changed_when: "'Canceled hold' in mellanox_mft_unhold.stdout"
+      failed_when: false
+
+    - name: Remove distro mstflint package
+      ansible.builtin.apt:
+        name: mstflint
+        state: absent
+      when: mellanox_mft_remove_mstflint | bool
+
+    - name: Install build dependencies for MFT DKMS modules
+      ansible.builtin.apt:
+        name:
+          - gcc
+          - make
+          - dkms
+          - "linux-headers-{{ ansible_kernel }}"
+        state: present
+        update_cache: true
+
+    - name: Ensure MFT work directory exists
+      ansible.builtin.file:
+        path: "{{ mellanox_mft_workdir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Download MFT tarball
+      ansible.builtin.get_url:
+        url: "{{ mellanox_mft_download_url }}"
+        dest: "{{ mellanox_mft_workdir }}/{{ mellanox_mft_pkg_basename }}.tgz"
+        checksum: "sha256:{{ mellanox_mft_download_sha256 }}"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Extract MFT tarball
+      ansible.builtin.unarchive:
+        src: "{{ mellanox_mft_workdir }}/{{ mellanox_mft_pkg_basename }}.tgz"
+        dest: "{{ mellanox_mft_workdir }}"
+        remote_src: true
+        creates: "{{ mellanox_mft_workdir }}/{{ mellanox_mft_pkg_basename }}/install.sh"
+        owner: root
+        group: root
+
+    - name: Run MFT install.sh
+      ansible.builtin.command: "./install.sh"
+      args:
+        chdir: "{{ mellanox_mft_workdir }}/{{ mellanox_mft_pkg_basename }}"
+      register: mellanox_mft_install_run
+      changed_when: "'Installing package' in mellanox_mft_install_run.stdout"
+
+- name: Check whether /dev/mst is populated
+  ansible.builtin.find:
+    paths: /dev/mst
+    file_type: any
+  register: mellanox_mft_devmst
+  failed_when: false
+  changed_when: false
+
+- name: Start mst to create /dev/mst device nodes
+  ansible.builtin.command: /usr/bin/mst start
+  when:
+    - mellanox_mft_enable_service | bool
+    - mellanox_mft_devmst.matched | default(0) == 0
+  register: mellanox_mft_start
+  changed_when: "'Create devices' in mellanox_mft_start.stdout"

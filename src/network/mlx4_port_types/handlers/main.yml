@@ -1,0 +1,10 @@
+---
+- name: Reload mlx4 stack
+  ansible.builtin.shell: |
+    set -e
+    modprobe -r ib_ipoib mlx4_ib mlx4_en mlx4_core 2>&1 || true
+    modprobe mlx4_core
+    modprobe mlx4_ib || true
+    modprobe mlx4_en || true
+  changed_when: true
+  listen: reload-mlx4

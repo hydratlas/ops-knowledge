@@ -1,0 +1,9 @@
+---
+mellanox_mft_version: "4.21.0-99"
+mellanox_mft_arch: "x86_64"
+mellanox_mft_pkg_basename: "mft-{{ mellanox_mft_version }}-{{ mellanox_mft_arch }}-deb"
+mellanox_mft_download_url: "https://www.mellanox.com/downloads/MFT/{{ mellanox_mft_pkg_basename }}.tgz"
+mellanox_mft_download_sha256: "215ff22d42ec69c571618d03d0979e0530122731d9b6e68d30eee524f588d468"
+mellanox_mft_workdir: "/opt/mft"
+mellanox_mft_remove_mstflint: true
+mellanox_mft_enable_service: true

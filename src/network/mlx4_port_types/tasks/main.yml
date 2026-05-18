@@ -1,0 +1,22 @@
+---
+- name: Ensure ConnectX-3 (mlx4_core) is present
+  ansible.builtin.shell: |
+    set -o pipefail
+    lspci -d 15b3: -nn | grep -i 'ConnectX-3' || true
+  args:
+    executable: /bin/bash
+  register: mlx4_port_types_lspci
+  changed_when: false
+
+- name: Skip role when no ConnectX-3 is present
+  ansible.builtin.meta: end_host
+  when: mlx4_port_types_lspci.stdout | trim == ""
+
+- name: Deploy mlx4_core port_type_array configuration
+  ansible.builtin.template:
+    src: mlx4_core.conf.j2
+    dest: "{{ mlx4_port_types_conf_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload-mlx4
