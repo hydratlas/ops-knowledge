@@ -13,7 +13,7 @@ sudo btrfs balance start -mconvert=raid1,soft -dconvert=raid1,soft --bg /
 [btrfs_maintenance ロールの「手動手順」](../../../storage/btrfs_maintenance/README.md#手動手順)を参照。
 
 ## Snapperのインストールと設定・確認
-[snapper ロールの「手動手順」](../../../storage/snapper/README.md#手動手順)を参照。
+[snapper ロールの「共通事項」](../../../storage/snapper/README.md#共通事項)を参照。`@snapshots` 構成・単一サブボリューム構成のいずれでも、「手動」または Ansible ロールによる設定をそのまま適用できる。
 
 ## grub-btrfsのインストールと設定
 スナップショットから起動できるようにする。なんらかの理由で起動ができなくなったとき、助かる可能性が上がる。

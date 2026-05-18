@@ -1,11 +1,41 @@
 ---
-- name: "Check whether snapper config '{{ snapper_cfg.name }}' exists"
+- name: "Check '{{ snapper_cfg.path }}/.snapshots' existence"
   ansible.builtin.stat:
-    path: "/etc/snapper/configs/{{ snapper_cfg.name }}"
-  register: snapper_cfg_stat
+    path: "{{ snapper_cfg.path }}/.snapshots"
+  register: snapper_snapshots_dir
 
-- name: "Create snapper config '{{ snapper_cfg.name }}' for {{ snapper_cfg.path }}"
+- name: "Create nested subvolume '{{ snapper_cfg.path }}/.snapshots'"
   ansible.builtin.command:
-    cmd: "snapper -c {{ snapper_cfg.name }} create-config {{ snapper_cfg.path }}"
-  when: not snapper_cfg_stat.stat.exists
+    cmd: "btrfs subvolume create {{ snapper_cfg.path }}/.snapshots"
+  when: not snapper_snapshots_dir.stat.exists
   changed_when: true
+
+- name: "Set ownership and mode for '{{ snapper_cfg.path }}/.snapshots'"
+  ansible.builtin.file:
+    path: "{{ snapper_cfg.path }}/.snapshots"
+    owner: root
+    group: root
+    mode: "0750"
+    state: directory
+  when: not snapper_snapshots_dir.stat.exists
+
+- name: "Place snapper config '{{ snapper_cfg.name }}' from template"
+  ansible.builtin.copy:
+    src: /etc/snapper/config-templates/default
+    dest: "/etc/snapper/configs/{{ snapper_cfg.name }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0640"
+    force: false
+
+- name: "Set SUBVOLUME for snapper config '{{ snapper_cfg.name }}'"
+  community.general.ini_file:
+    path: "/etc/snapper/configs/{{ snapper_cfg.name }}"
+    section: null
+    option: SUBVOLUME
+    value: "\"{{ snapper_cfg.path }}\""
+    no_extra_spaces: true
+    owner: root
+    group: root
+    mode: "0640"
