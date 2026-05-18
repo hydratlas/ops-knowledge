@@ -1,0 +1,24 @@
+---
+- name: Check if snapper package is installed
+  ansible.builtin.command:
+    cmd: dpkg-query -W -f='${Status}' snapper
+  register: snapper_pkg_status
+  failed_when: false
+  changed_when: false
+
+- name: Stop and disable snapper timers
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+  loop:
+    - snapper-timeline.timer
+    - snapper-cleanup.timer
+  when: "'install ok installed' in snapper_pkg_status.stdout"
+
+- name: Purge snapper package
+  ansible.builtin.apt:
+    name: snapper
+    state: absent
+    purge: true
+    autoremove: true

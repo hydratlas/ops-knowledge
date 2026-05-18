@@ -1,0 +1,47 @@
+---
+- name: Install snapper package
+  ansible.builtin.apt:
+    name: snapper
+    state: present
+    install_recommends: false
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create snapper configurations
+  ansible.builtin.include_tasks: create_config.yml
+  loop: "{{ snapper_configs }}"
+  loop_control:
+    loop_var: snapper_cfg
+
+- name: Apply override values to snapper configs
+  community.general.ini_file:
+    path: "/etc/snapper/configs/{{ item.0.name }}"
+    section: null
+    option: "{{ item.1.key }}"
+    value: "\"{{ item.1.value }}\""
+    no_extra_spaces: true
+    owner: root
+    group: root
+    mode: "0640"
+  loop: "{{ snapper_configs | product(snapper_config_overrides | dict2items) | list }}"
+  loop_control:
+    label: "{{ item.0.name }}:{{ item.1.key }}"
+
+- name: Register configs in /etc/default/snapper
+  ansible.builtin.lineinfile:
+    path: /etc/default/snapper
+    regexp: '^SNAPPER_CONFIGS='
+    line: 'SNAPPER_CONFIGS="{{ snapper_configs | map(attribute=''name'') | join('' '') }}"'
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Enable and start snapper timers
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - snapper-timeline.timer
+    - snapper-cleanup.timer
+  when: snapper_enable_timers | bool
