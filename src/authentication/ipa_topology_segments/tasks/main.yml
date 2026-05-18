@@ -1,0 +1,9 @@
+- name: Ensure topology segments are present
+  freeipa.ansible_freeipa.ipatopologysegment:
+    ipaadmin_password: "{{ ipaadmin_password }}"
+    suffix: "{{ item.suffix }}"
+    left: "{{ item.left }}"
+    right: "{{ item.right }}"
+    state: present
+  loop: "{{ ipatopology_segments }}"
+  run_once: true
