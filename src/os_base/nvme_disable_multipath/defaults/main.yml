@@ -1,0 +1,8 @@
+---
+# NVMe マルチパスを無効化する（カーネルパラメーター nvme_core.multipath=N を付与する）かどうか
+# 既定はオフ。複数の NVMe ドライブが同一の NGUID/EUI64 を報告する不具合（例: ADATA LEGEND 960）を
+# 持つホストでのみ true にする。
+nvme_disable_multipath_enabled: false
+
+# GRUB ドロップインの配置先
+nvme_disable_multipath_dropin_path: /etc/default/grub.d/99-nvme-disable-multipath.cfg

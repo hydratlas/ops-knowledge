@@ -1,0 +1,38 @@
+---
+- name: Gather minimal facts for os_family detection
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - "!any"
+      - distribution
+
+- name: Ensure /etc/default/grub.d directory exists
+  ansible.builtin.file:
+    path: "{{ nvme_disable_multipath_dropin_path | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: nvme_disable_multipath_enabled
+
+- name: Deploy GRUB drop-in to disable NVMe multipath
+  ansible.builtin.copy:
+    dest: "{{ nvme_disable_multipath_dropin_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by Ansible role os_base/nvme_disable_multipath
+      # 複数の NVMe ドライブが同一の NGUID/EUI64 を返すファームウェアバグ（例: ADATA LEGEND 960）
+      # に対し、NVMe マルチパス機構を無効化することで duplicate IDs によるデータ破損リスクを
+      # 根絶する。
+      GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX nvme_core.multipath=N"
+  when: nvme_disable_multipath_enabled
+  notify: update grub
+
+- name: Remove GRUB drop-in when NVMe multipath disable is not enabled
+  ansible.builtin.file:
+    path: "{{ nvme_disable_multipath_dropin_path }}"
+    state: absent
+  when: not nvme_disable_multipath_enabled
+  notify: update grub
