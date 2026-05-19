@@ -8,19 +8,19 @@ vmagentはPrometheus互換のメトリクス収集エージェントであり、
 
 ## 必須変数
 
-| 変数名 | 説明 |
-|---|---|
+| 変数名                      | 説明                                       |
+| --------------------------- | ------------------------------------------ |
 | `vmagent_remote_write_urls` | リモートライト先のURLリスト（1つ以上必須） |
 
 ## 主要な変数
 
-| 変数名 | デフォルト値 | 説明 |
-|---|---|---|
-| `vmagent_version` | `v1.112.0` | vmagentのバージョン |
-| `vmagent_http_listen_addr` | `:8429` | HTTPリッスンアドレス |
-| `vmagent_scrape_configs` | nodeジョブのみ | Prometheusスクレイプ設定 |
-| `vmagent_remote_write_max_disk_usage_per_url` | `1GB` | リモートライト先がダウンした際のディスクバッファ上限（URL単位） |
-| `vmagent_extra_flags` | `[]` | 追加のCLIフラグ |
+| 変数名                                        | デフォルト値   | 説明                                                            |
+| --------------------------------------------- | -------------- | --------------------------------------------------------------- |
+| `vmagent_version`                             | `v1.136.9`     | vmagentのバージョン                                             |
+| `vmagent_http_listen_addr`                    | `:8429`        | HTTPリッスンアドレス                                            |
+| `vmagent_scrape_configs`                      | nodeジョブのみ | Prometheusスクレイプ設定                                        |
+| `vmagent_remote_write_max_disk_usage_per_url` | `1GB`          | リモートライト先がダウンした際のディスクバッファ上限（URL単位） |
+| `vmagent_extra_flags`                         | `[]`           | 追加のCLIフラグ                                                 |
 
 ## 使用例
 

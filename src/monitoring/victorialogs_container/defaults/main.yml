@@ -5,7 +5,7 @@ victorialogs_user_comment: "VictoriaLogs rootless user"
 victorialogs_app_name: "victoria-logs"
 
 # Container configuration
-victorialogs_container_image: "docker.io/victoriametrics/victoria-logs:latest"
+victorialogs_container_image: "docker.io/victoriametrics/victoria-logs:v1.50.0"
 victorialogs_container_name: "victoria-logs"
 victorialogs_container_port: 9428
 

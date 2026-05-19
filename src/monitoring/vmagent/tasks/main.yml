@@ -33,24 +33,51 @@
     path: "{{ vmagent_binary_path }}"
   register: _vmagent_binary
 
+# `vmagent-prod --version` outputs a string like
+# `vmagent-20260116-201709-tags-v1.134.0-0-geaf7a68c92` on stdout (exit 0).
+# Extract the `vX.Y.Z` segment that follows `tags-` to identify the installed release.
+- name: Detect installed vmagent version
+  ansible.builtin.command:
+    cmd: "{{ vmagent_binary_path }} --version"
+  register: _vmagent_installed_version_raw
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: _vmagent_binary.stat.exists
+
+- name: Set installed vmagent version fact
+  ansible.builtin.set_fact:
+    _vmagent_installed_version: >-
+      {{ (((_vmagent_installed_version_raw.stdout | default(''))
+            ~ (_vmagent_installed_version_raw.stderr | default('')))
+          | regex_search('tags-(v[0-9]+\.[0-9]+\.[0-9]+)', '\1')
+          | default([], true)) | first | default('', true) }}
+  when: _vmagent_binary.stat.exists
+
+- name: Determine whether vmagent binary must be (re)installed
+  ansible.builtin.set_fact:
+    _vmagent_install_required: >-
+      {{ ((not _vmagent_binary.stat.exists)
+          or (_vmagent_installed_version | default('') != vmagent_version)) | bool }}
+
 - name: Download vmagent archive
   ansible.builtin.get_url:
     url: "{{ vmagent_download_url }}"
     dest: "/tmp/vmagent-{{ vmagent_version }}.tar.gz"
     mode: "0644"
-  when: not _vmagent_binary.stat.exists
+  when: _vmagent_install_required
 
 - name: Extract vmagent binary
   ansible.builtin.command:
     cmd: tar xzf /tmp/vmagent-{{ vmagent_version }}.tar.gz -C {{ vmagent_binary_path | dirname }} vmagent-prod
-  when: not _vmagent_binary.stat.exists
+  when: _vmagent_install_required
   notify: restart vmagent
 
 - name: Remove vmagent archive
   ansible.builtin.file:
     path: "/tmp/vmagent-{{ vmagent_version }}.tar.gz"
     state: absent
-  when: not _vmagent_binary.stat.exists
+  when: _vmagent_install_required
 
 - name: Set binary permissions
   ansible.builtin.file:
