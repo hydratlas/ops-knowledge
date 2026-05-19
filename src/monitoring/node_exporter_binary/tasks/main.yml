@@ -39,33 +39,44 @@
     create_home: no
     comment: "Prometheus Node Exporter service user"
 
-- name: Check if node_exporter binary exists at expected version
+- name: Check if node_exporter binary exists
   ansible.builtin.stat:
     path: "{{ node_exporter_binary_path }}"
   register: _node_exporter_binary
 
-- name: Check installed node_exporter version
+# `node_exporter --version` outputs a line like
+# `node_exporter, version 1.11.1 (branch: HEAD, revision: ...)` on stdout (exit 0).
+# Extract the `X.Y.Z` version string to identify the installed release.
+- name: Detect installed node_exporter version
   ansible.builtin.command:
     cmd: "{{ node_exporter_binary_path }} --version"
-  register: _node_exporter_installed_version
+  register: _node_exporter_installed_version_raw
   changed_when: false
   failed_when: false
+  check_mode: false
   when: _node_exporter_binary.stat.exists
 
-- name: Set node_exporter needs update fact
+- name: Set installed node_exporter version fact
   ansible.builtin.set_fact:
-    _node_exporter_needs_install: >-
-      {{ not _node_exporter_binary.stat.exists or
-         (node_exporter_version not in
-           ((_node_exporter_installed_version.stdout | default('')) +
-            (_node_exporter_installed_version.stderr | default('')))) }}
+    _node_exporter_installed_version: >-
+      {{ (((_node_exporter_installed_version_raw.stdout | default(''))
+            ~ (_node_exporter_installed_version_raw.stderr | default('')))
+          | regex_search('node_exporter, version ([0-9]+\.[0-9]+\.[0-9]+)', '\1')
+          | default([], true)) | first | default('', true) }}
+  when: _node_exporter_binary.stat.exists
+
+- name: Determine whether node_exporter binary must be (re)installed
+  ansible.builtin.set_fact:
+    _node_exporter_install_required: >-
+      {{ ((not _node_exporter_binary.stat.exists)
+          or (_node_exporter_installed_version | default('') != node_exporter_version)) | bool }}
 
 - name: Download node_exporter archive
   ansible.builtin.get_url:
     url: "{{ node_exporter_download_url }}"
     dest: "/tmp/node_exporter-{{ node_exporter_version }}.tar.gz"
     mode: "0644"
-  when: _node_exporter_needs_install
+  when: _node_exporter_install_required
 
 - name: Extract node_exporter binary
   ansible.builtin.command:
@@ -74,14 +85,14 @@
       -C {{ node_exporter_binary_path | dirname }}
       --strip-components=1
       node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}/node_exporter
-  when: _node_exporter_needs_install
+  when: _node_exporter_install_required
   notify: restart node_exporter
 
 - name: Remove node_exporter archive
   ansible.builtin.file:
     path: "/tmp/node_exporter-{{ node_exporter_version }}.tar.gz"
     state: absent
-  when: _node_exporter_needs_install
+  when: _node_exporter_install_required
 
 - name: Set binary permissions
   ansible.builtin.file:
