@@ -1,0 +1,10 @@
+[Unit]
+Description=Watch proxmoxlib.js and re-apply subscription notice removal on change
+After=pveproxy.service
+
+[Path]
+PathChanged=/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+Unit=pve-remove-subscription-notice.service
+
+[Install]
+WantedBy=multi-user.target

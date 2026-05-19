@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+
+FILE=/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+
+[ -f "$FILE" ] || exit 0
+
+if grep -q 'void({ //Ext\.Msg\.show' "$FILE"; then
+    exit 0
+fi
+
+sed -z -i 's/Ext\.Msg\.show({[[:space:]]*title: gettext(.No valid sub/void({ \/\/&/' "$FILE"
+
+if grep -q 'void({ //Ext\.Msg\.show' "$FILE"; then
+    systemctl restart pveproxy
+fi

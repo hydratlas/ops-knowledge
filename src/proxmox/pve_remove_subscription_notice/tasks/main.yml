@@ -1,18 +1,53 @@
 ---
-- name: Remove subscription notice by modifying proxmoxlib.js
-  ansible.builtin.replace:
-    path: /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
-    regexp: '(?<!//)(Ext\.Msg\.show\(\{\s+title: gettext\(''No valid sub)'
-    replace: 'void({ //\1'
-    backup: yes
-  notify: restart pveproxy
-
-- name: Create APT hook to reapply patch after package updates
+- name: Install subscription notice removal script
   ansible.builtin.copy:
-    dest: /etc/apt/apt.conf.d/99-pve-no-subscription-nag
-    content: |
-      // Automatically reapply subscription notice removal after proxmox-widget-toolkit updates
-      DPkg::Post-Invoke {
-        "if dpkg -V proxmox-widget-toolkit 2>/dev/null | grep -q proxmoxlib.js; then exit 0; fi; sed -z -i.bak 's/Ext\\.Msg\\.show({[[:space:]]*title: gettext(.No valid sub/void({ \\/\\/&/' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js 2>/dev/null && systemctl restart pveproxy 2>/dev/null || true";
-      };
+    src: pve-remove-subscription-notice
+    dest: /usr/local/sbin/pve-remove-subscription-notice
+    owner: root
+    group: root
+    mode: '0755'
+  notify: restart pve-remove-subscription-notice.path
+
+- name: Install systemd service unit
+  ansible.builtin.copy:
+    src: pve-remove-subscription-notice.service
+    dest: /etc/systemd/system/pve-remove-subscription-notice.service
+    owner: root
+    group: root
     mode: '0644'
+  notify:
+    - reload systemd
+    - restart pve-remove-subscription-notice.path
+
+- name: Install systemd path unit
+  ansible.builtin.copy:
+    src: pve-remove-subscription-notice.path
+    dest: /etc/systemd/system/pve-remove-subscription-notice.path
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - reload systemd
+    - restart pve-remove-subscription-notice.path
+
+- name: Apply pending systemd unit changes
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start the path watcher
+  ansible.builtin.systemd:
+    name: pve-remove-subscription-notice.path
+    enabled: true
+    state: started
+
+- name: Check whether the patch is already applied
+  ansible.builtin.command:
+    cmd: grep -q 'void({ //Ext\.Msg\.show' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+  register: pve_subscription_notice_patch_check
+  failed_when: false
+  changed_when: false
+
+- name: Apply the patch via the oneshot service
+  ansible.builtin.systemd:
+    name: pve-remove-subscription-notice.service
+    state: started
+  when: pve_subscription_notice_patch_check.rc != 0

@@ -1,0 +1,8 @@
+[Unit]
+Description=Re-apply subscription notice removal patch to proxmoxlib.js
+ConditionPathExists=/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
+After=pveproxy.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pve-remove-subscription-notice

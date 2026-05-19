@@ -1,6 +1,9 @@
 ---
-- name: restart pveproxy
+- name: reload systemd
   ansible.builtin.systemd:
-    name: pveproxy
+    daemon_reload: true
+
+- name: restart pve-remove-subscription-notice.path
+  ansible.builtin.systemd:
+    name: pve-remove-subscription-notice.path
     state: restarted
-    daemon_reload: yes
