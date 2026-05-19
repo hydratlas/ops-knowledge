@@ -1,5 +1,10 @@
 ---
-- name: Update system CA trust
+- name: Update RedHat system CA trust
   ansible.builtin.command:
     cmd: /usr/bin/update-ca-trust extract
-  listen: refresh system ca bundle
+  listen: refresh-redhat-system-ca-bundle
+
+- name: Update Debian system CA trust
+  ansible.builtin.command:
+    cmd: /usr/sbin/update-ca-certificates
+  listen: refresh-debian-system-ca-bundle

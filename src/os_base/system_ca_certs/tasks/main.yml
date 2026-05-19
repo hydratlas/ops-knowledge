@@ -9,7 +9,7 @@
 - name: Manage system CA trust store on RedHat-family hosts
   when: ansible_os_family == 'RedHat'
   block:
-    - name: Ensure anchor directory exists
+    - name: Ensure anchor directory exists (RedHat)
       ansible.builtin.file:
         path: /etc/pki/ca-trust/source/anchors
         state: directory
@@ -17,11 +17,47 @@
         group: root
         mode: "0755"
 
-    - name: Install modern CA bundle to system trust store
+    # CentOS 6 などでは /etc/pki/tls/certs/ca-bundle.crt が ca-trust 配下への
+    # symlink ではなく静的ファイルのまま残っており、update-ca-trust extract を
+    # 実行してもこのファイルが更新されない。force-enable を一度走らせると
+    # ca-bundle.crt が ca-trust の extracted バンドルへの symlink に置き換わる。
+    - name: Check legacy CA bundle path (RedHat)
+      ansible.builtin.stat:
+        path: /etc/pki/tls/certs/ca-bundle.crt
+      register: _system_ca_certs_legacy_bundle
+
+    - name: Enable ca-trust managed legacy bundle (RedHat)
+      ansible.builtin.command:
+        cmd: /usr/bin/update-ca-trust force-enable
+      when:
+        - _system_ca_certs_legacy_bundle.stat.exists
+        - not _system_ca_certs_legacy_bundle.stat.islnk
+
+    - name: Install modern CA bundle to system trust store (RedHat)
       ansible.builtin.copy:
         src: "{{ system_ca_certs_source }}"
         dest: "/etc/pki/ca-trust/source/anchors/{{ system_ca_certs_anchor_filename }}"
         owner: root
         group: root
         mode: "0644"
-      notify: refresh system ca bundle
+      notify: refresh-redhat-system-ca-bundle
+
+- name: Manage system CA trust store on Debian-family hosts
+  when: ansible_os_family == 'Debian'
+  block:
+    - name: Ensure local CA certificates directory exists (Debian)
+      ansible.builtin.file:
+        path: /usr/local/share/ca-certificates
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install modern CA bundle to system trust store (Debian)
+      ansible.builtin.copy:
+        src: "{{ system_ca_certs_source }}"
+        dest: "/usr/local/share/ca-certificates/{{ system_ca_certs_anchor_filename }}"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: refresh-debian-system-ca-bundle
