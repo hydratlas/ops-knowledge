@@ -5,7 +5,7 @@ victoria_metrics_user_comment: "VictoriaMetrics rootless user"
 victoria_metrics_app_name: "victoria-metrics"
 
 # Container configuration
-victoria_metrics_container_image: "docker.io/victoriametrics/victoria-metrics:latest"
+victoria_metrics_container_image: "docker.io/victoriametrics/victoria-metrics:v1.136.9"
 victoria_metrics_container_name: "victoria-metrics"
 victoria_metrics_container_port: 8428
 
