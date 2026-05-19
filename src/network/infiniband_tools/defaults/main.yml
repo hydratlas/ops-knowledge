@@ -2,8 +2,10 @@
 # InfiniBand 接続サーバーに常設する benchmark / 診断ツール群
 # - perftest: ib_write_bw / ib_read_bw / ib_send_bw など RDMA 性能計測コマンド
 # - infiniband-diags: ibstat / iblinkinfo / ibv_devices など IB 診断コマンド
+# - ibverbs-utils: ibv_devinfo / ibv_asyncwatch など verbs ユーティリティ（max_qp 等 HCA caps 確認用）
 # - fio: NFSoRDMA / ローカルストレージの性能計測に用いる汎用 I/O ベンチマーク
 infiniband_tools_packages:
   - perftest
   - infiniband-diags
+  - ibverbs-utils
   - fio
