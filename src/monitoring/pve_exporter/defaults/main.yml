@@ -34,3 +34,6 @@ pve_exporter_pve_targets: {}
 
 # Collector flags (optional)
 pve_exporter_collector_config: true
+
+# Weekly auto-upgrade (Alpine/OpenRC only, via /etc/periodic/weekly)
+pve_exporter_upgrade_enabled: true

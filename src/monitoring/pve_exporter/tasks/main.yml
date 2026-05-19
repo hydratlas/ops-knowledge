@@ -119,3 +119,22 @@
     state: started
     runlevel: default
   when: ansible_os_family == "Alpine"
+
+- name: Install weekly auto-upgrade script (Alpine)
+  ansible.builtin.template:
+    src: pve-exporter-upgrade.j2
+    dest: /etc/periodic/weekly/pve-exporter-upgrade
+    owner: root
+    group: root
+    mode: '0755'
+  when:
+    - ansible_os_family == "Alpine"
+    - pve_exporter_upgrade_enabled | bool
+
+- name: Remove weekly auto-upgrade script when disabled (Alpine)
+  ansible.builtin.file:
+    path: /etc/periodic/weekly/pve-exporter-upgrade
+    state: absent
+  when:
+    - ansible_os_family == "Alpine"
+    - not (pve_exporter_upgrade_enabled | bool)

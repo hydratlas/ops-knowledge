@@ -1,0 +1,18 @@
+#!/bin/sh
+# Managed by Ansible (role: monitoring/pve_exporter)
+# Weekly upgrade of prometheus-pve-exporter. Restarts the service only when
+# the installed version actually changes.
+set -eu
+
+VENV="{{ pve_exporter_venv_dir }}"
+PIP="$VENV/bin/pip"
+SERVICE="{{ pve_exporter_service_name }}"
+
+BEFORE=$("$PIP" show prometheus-pve-exporter 2>/dev/null | awk '/^Version:/ {print $2}')
+"$PIP" install --upgrade --quiet prometheus-pve-exporter
+AFTER=$("$PIP" show prometheus-pve-exporter 2>/dev/null | awk '/^Version:/ {print $2}')
+
+if [ "$BEFORE" != "$AFTER" ]; then
+  rc-service "$SERVICE" restart
+  logger -t pve-exporter-upgrade "upgraded ${BEFORE:-none} -> ${AFTER:-unknown}"
+fi

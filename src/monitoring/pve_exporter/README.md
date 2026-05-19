@@ -172,9 +172,12 @@ curl http://localhost:9221/metrics
 
 ### パッケージの更新
 
+Alpine（OpenRC）ホストでは`/etc/periodic/weekly/pve-exporter-upgrade`が`crond`によって週次で実行され、バージョンに変化があった場合のみサービスを再起動する。無効化したい場合は変数`pve_exporter_upgrade_enabled: false`を指定する。手動で更新する場合は次のコマンドを使う。
+
 ```bash
 sudo /opt/pve-exporter/bin/pip install --upgrade prometheus-pve-exporter
-sudo systemctl restart pve-exporter.service
+sudo systemctl restart pve-exporter.service    # systemdの場合
+sudo rc-service pve-exporter restart            # OpenRCの場合
 ```
 
 ### トラブルシューティング
@@ -203,7 +206,7 @@ sudo groupdel monitoring
 | 依存関係           | Python 3.9+                    | Podman                         |
 | インストール先     | `/opt/pve-exporter` (venv)     | rootlessコンテナ               |
 | サービス管理       | systemd / OpenRC（Alpine）     | user systemd                   |
-| 更新方法           | pip upgrade                    | コンテナイメージ自動更新       |
+| 更新方法           | pip upgrade（Alpineは週次自動）| コンテナイメージ自動更新       |
 | セキュリティ       | systemd hardening              | コンテナ隔離 + systemd         |
 
 ## 参考
