@@ -1,0 +1,5 @@
+# 制御ノード（DevContainer）上のCAバンドルファイル
+system_ca_certs_source: /etc/ssl/certs/ca-certificates.crt
+
+# 各OSのアンカーディレクトリーに配置するファイル名
+system_ca_certs_anchor_filename: modern-ca-bundle.crt

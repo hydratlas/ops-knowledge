@@ -4,8 +4,10 @@
 # Custom-built Python with embedded OpenSSL stores the compiled-in CA
 # certificate path (e.g. ~/.local/openssl-3.5.5/ssl/cert.pem), but
 # `make install_sw` does not create the SSL config directory. This role
-# detects the expected path and creates a symlink to the system CA bundle
-# if the file is missing.
+# detects the expected path and ensures it is a symlink pointing at the
+# system CA bundle. EOL ディストリビューションではシステムバンドル自体が
+# 古いため、本ロールの前に `os_base/system_ca_certs` を適用してシステム
+# バンドルを更新しておくこと。
 
 - name: Detect Python SSL CA file path
   ansible.builtin.command:
@@ -14,35 +16,32 @@
       -c "import ssl; print(ssl.get_default_verify_paths().openssl_cafile)"
   register: _ca_openssl_cafile
   changed_when: false
+  check_mode: false
 
-- name: Check if CA file already exists
+- name: Find system CA certificate bundle
   ansible.builtin.stat:
-    path: "{{ _ca_openssl_cafile.stdout | trim }}"
-  register: _ca_file_stat
+    path: "{{ item }}"
+  loop:
+    - /etc/ssl/certs/ca-certificates.crt
+    - /etc/pki/tls/certs/ca-bundle.crt
+  register: _ca_system_bundles
 
-- name: Create CA certificate symlink for custom-built Python
-  when: not _ca_file_stat.stat.exists
-  block:
-    - name: Find system CA certificate bundle
-      ansible.builtin.stat:
-        path: "{{ item }}"
-      loop:
-        - /etc/ssl/certs/ca-certificates.crt
-        - /etc/pki/tls/certs/ca-bundle.crt
-      register: _ca_system_bundles
+- name: Determine system CA certificate path
+  ansible.builtin.set_fact:
+    _ca_system_cert: "{{ (_ca_system_bundles.results | selectattr('stat.exists') | first).item }}"
 
-    - name: Determine system CA certificate path
-      ansible.builtin.set_fact:
-        _ca_system_cert: "{{ (_ca_system_bundles.results | selectattr('stat.exists') | first).item }}"
+- name: Skip role when Python already points at the system bundle itself
+  ansible.builtin.meta: end_host
+  when: (_ca_openssl_cafile.stdout | trim) == _ca_system_cert
 
-    - name: Create SSL directory
-      ansible.builtin.file:
-        path: "{{ _ca_openssl_cafile.stdout | trim | dirname }}"
-        state: directory
-        mode: "0755"
+- name: Ensure SSL directory exists
+  ansible.builtin.file:
+    path: "{{ _ca_openssl_cafile.stdout | trim | dirname }}"
+    state: directory
 
-    - name: Create CA certificate symlink
-      ansible.builtin.file:
-        src: "{{ _ca_system_cert }}"
-        dest: "{{ _ca_openssl_cafile.stdout | trim }}"
-        state: link
+- name: Ensure CA certificate symlink points at the system bundle
+  ansible.builtin.file:
+    src: "{{ _ca_system_cert }}"
+    dest: "{{ _ca_openssl_cafile.stdout | trim }}"
+    state: link
+    force: true

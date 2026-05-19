@@ -1,0 +1,29 @@
+---
+- name: Gather minimal facts for os_family detection
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - "!any"
+      - distribution
+
+- name: Ensure ConnectX HCA is present (skip role otherwise)
+  ansible.builtin.shell: |
+    set -o pipefail
+    lspci -d 15b3: -nn || true
+  args:
+    executable: /bin/bash
+  register: infiniband_tools_lspci
+  changed_when: false
+  check_mode: false
+
+- name: Skip role when no Mellanox HCA is detected
+  ansible.builtin.meta: end_host
+  when: infiniband_tools_lspci.stdout | trim == ""
+
+- name: Install InfiniBand benchmark / diagnostic tools (Debian)
+  ansible.builtin.apt:
+    name: "{{ infiniband_tools_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"

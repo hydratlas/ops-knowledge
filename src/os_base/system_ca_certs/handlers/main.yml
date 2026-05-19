@@ -1,0 +1,5 @@
+---
+- name: Update system CA trust
+  ansible.builtin.command:
+    cmd: /usr/bin/update-ca-trust extract
+  listen: refresh system ca bundle

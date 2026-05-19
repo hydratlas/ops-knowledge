@@ -1,0 +1,27 @@
+---
+- name: Gather minimal OS facts
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - distribution
+  when: ansible_os_family is not defined
+
+- name: Manage system CA trust store on RedHat-family hosts
+  when: ansible_os_family == 'RedHat'
+  block:
+    - name: Ensure anchor directory exists
+      ansible.builtin.file:
+        path: /etc/pki/ca-trust/source/anchors
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install modern CA bundle to system trust store
+      ansible.builtin.copy:
+        src: "{{ system_ca_certs_source }}"
+        dest: "/etc/pki/ca-trust/source/anchors/{{ system_ca_certs_anchor_filename }}"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: refresh system ca bundle
