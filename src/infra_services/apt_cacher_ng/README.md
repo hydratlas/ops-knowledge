@@ -84,14 +84,14 @@ apt_cacher_ng_repositories:
 - hosts: apt_cache_servers
   become: true
   roles:
-    - role: os_base/apt_cacher_ng
+    - role: infra_services/apt_cacher_ng
 ```
 
 ```yaml
 - hosts: apt_cache_servers
   become: true
   roles:
-    - role: os_base/apt_cacher_ng
+    - role: infra_services/apt_cacher_ng
       vars:
         apt_cacher_ng_port: 9999
         apt_cacher_ng_ex_threshold: 7

@@ -51,11 +51,11 @@
 | `apt_cache_proxy_url` | `""` (空文字) | プロキシー URL（必須） |
 | `pkg_cache_debian_components` | `"main"` | Debian の `.sources` に記載するコンポーネント |
 | `pkg_cache_ubuntu_components` | `"main restricted universe multiverse"` | Ubuntu の `.sources` に記載するコンポーネント |
-| `apt_cacher_ng_repositories` | (インベントリーで定義) | リポジトリー定義の辞書。各エントリの `client_url` フィールドをテンプレートで参照する。詳細は `os_base/apt_cacher_ng` ロールを参照 |
+| `apt_cacher_ng_repositories` | (インベントリーで定義) | リポジトリー定義の辞書。各エントリの `client_url` フィールドをテンプレートで参照する。詳細は `infra_services/apt_cacher_ng` ロールを参照 |
 
 #### 依存関係
 
-なし。ただし、プロキシーサーバー（`os_base/apt_cacher_ng` ロール等）が別途稼働していることが前提である。`apt_cacher_ng_repositories` 変数はインベントリーの `group_vars` で定義し、サーバー側（`apt_cacher_ng`）とクライアント側（本ロール）の両方で共有する。
+なし。ただし、プロキシーサーバー（`infra_services/apt_cacher_ng` ロール等）が別途稼働していることが前提である。`apt_cacher_ng_repositories` 変数はインベントリーの `group_vars` で定義し、サーバー側（`apt_cacher_ng`）とクライアント側（本ロール）の両方で共有する。
 
 #### タグとハンドラー
 

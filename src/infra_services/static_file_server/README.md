@@ -69,14 +69,14 @@
 - hosts: static_file_servers
   become: true
   roles:
-    - role: os_base/static_file_server
+    - role: infra_services/static_file_server
 ```
 
 ```yaml
 - hosts: static_file_servers
   become: true
   roles:
-    - role: os_base/static_file_server
+    - role: infra_services/static_file_server
       vars:
         static_file_server_listen_port: 8080
         static_file_server_document_root: /srv/files
@@ -87,7 +87,7 @@
 - hosts: static_file_servers
   become: true
   roles:
-    - role: os_base/static_file_server
+    - role: infra_services/static_file_server
       vars:
         static_file_server_files:
           - url: https://example.com/firmware/v1.0/bios.bin
