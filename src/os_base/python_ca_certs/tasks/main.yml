@@ -9,11 +9,19 @@
 # 古いため、本ロールの前に `os_base/system_ca_certs` を適用してシステム
 # バンドルを更新しておくこと。
 
+- name: Gather Python interpreter facts
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - python
+  when: ansible_facts.python is not defined
+
 - name: Detect Python SSL CA file path
   ansible.builtin.command:
-    cmd: >-
-      {{ ansible_python_interpreter | default('/usr/bin/python3') }}
-      -c "import ssl; print(ssl.get_default_verify_paths().openssl_cafile)"
+    argv:
+      - "{{ ansible_facts.python.executable }}"
+      - "-c"
+      - "import ssl; print(ssl.get_default_verify_paths().openssl_cafile)"
   register: _ca_openssl_cafile
   changed_when: false
   check_mode: false
