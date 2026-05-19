@@ -32,6 +32,19 @@
     enabled: yes
   when: ansible_facts['os_family'] == "Debian"
 
+# /etc/nfs.conf [nfsd] の threads を設定する。
+# nfs_server_threads が null 以外のとき書き込み、null のとき行を削除する。
+- name: Configure nfsd thread count in /etc/nfs.conf
+  community.general.ini_file:
+    path: /etc/nfs.conf
+    section: nfsd
+    option: threads
+    value: "{{ nfs_server_threads | string }}"
+    state: "{{ 'present' if (nfs_server_threads is not none) else 'absent' }}"
+    no_extra_spaces: true
+    mode: "0644"
+  notify: restart-nfs-server
+
 # /etc/nfs.conf [nfsd] の rdma / rdma-port を設定する。
 # nfs_server_rdma_enabled が真のときのみ書き込み、偽のときは行を削除する。
 - name: Configure NFSoRDMA (rdma) in /etc/nfs.conf

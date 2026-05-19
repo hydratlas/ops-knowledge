@@ -4,3 +4,8 @@
 # svcrdma カーネルモジュールをロードして nfs-server を再起動する。
 nfs_server_rdma_enabled: false
 nfs_server_rdma_port: 20049
+
+# nfsd カーネルスレッド数。null（既定）の場合は /etc/nfs.conf の [nfsd] threads
+# を明示設定しない（ディストリビューションのデフォルトに従う。Ubuntu 24.04 では 8）。
+# 高帯域 NIC（10 GbE 以上、NFSoRDMA など）では 64〜128 程度を指定する。
+nfs_server_threads: null
