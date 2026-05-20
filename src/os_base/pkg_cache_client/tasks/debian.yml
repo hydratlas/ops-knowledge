@@ -6,6 +6,7 @@
       Acquire::http::Proxy "{{ apt_cache_proxy_url }}";
       Acquire::https::Proxy "DIRECT";
     mode: "0644"
+  notify: Refresh apt cache
 
 - name: Check if Proxmox VE
   ansible.builtin.stat:
@@ -23,6 +24,7 @@
   when:
     - ansible_distribution == "Debian"
     - not __pve_dir.stat.exists
+  notify: Refresh apt cache
 
 - name: Remove apt sources managed by Proxmox VE
   ansible.builtin.file:
@@ -31,6 +33,7 @@
   when:
     - ansible_distribution == "Debian"
     - __pve_dir.stat.exists
+  notify: Refresh apt cache
 
 - name: Deploy apt sources for caching (Ubuntu)
   ansible.builtin.template:
@@ -40,3 +43,7 @@
     group: root
     mode: "0644"
   when: ansible_distribution == "Ubuntu"
+  notify: Refresh apt cache
+
+- name: Flush handlers to refresh apt cache before subsequent roles
+  ansible.builtin.meta: flush_handlers
