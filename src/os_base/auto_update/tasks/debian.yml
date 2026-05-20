@@ -6,6 +6,8 @@
       - unattended-upgrades
       - needrestart
     state: present
+    update_cache: true
+    cache_valid_time: 3600
 
 - name: Enable automatic updates
   ansible.builtin.copy:
