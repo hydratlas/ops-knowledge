@@ -28,7 +28,7 @@ EOS
     if ! hash efibootmgr 2>/dev/null; then
       DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y efibootmgr
     fi
-    efibootmgr --create --disk "${DISK2}" --label debian --loader '\EFI\debian\shimx64.efi'
+    efibootmgr --create --disk "${DISK2}" --part 1 --label debian --loader '\EFI\debian\shimx64.efi'
 
     # EFI system partitionの冗長化を自動化する
     chroot "${MOUNT_POINT}" /bin/bash -eux -- << EOS
@@ -61,7 +61,7 @@ mount -o bind /dev "${MOUNT_POINT}/dev"
 mount -o bind /sys/firmware/efi/efivars "${MOUNT_POINT}/sys/firmware/efi/efivars"
 
 # GRUB・ESPを更新
-OS_ID="$(grep -oP '(?<=^ID=).+(?=$)' /etc/os-release)" &&
+OS_ID="$(grep -oP '(?<=^ID=).+(?=$)' "${MOUNT_POINT}/etc/os-release")" &&
 if [ "ubuntu" = "${OS_ID}" ]; then
     UBUNTU_FINALIZE
 else
