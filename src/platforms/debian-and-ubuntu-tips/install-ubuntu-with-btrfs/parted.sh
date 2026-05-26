@@ -9,7 +9,7 @@ if ! hash mkfs.vfat 2>/dev/null; then
 fi
 
 DISK="/dev/${1}"
-ESP="${2:-512MiB}" # Debian requires 512 MiB.
+ESP="${2:-2GiB}"
 SWAP="${3:-4GiB}"
 
 # フォーマット
