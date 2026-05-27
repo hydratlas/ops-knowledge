@@ -8,9 +8,10 @@ function UBUNTU_FINALIZE () {
         local EFI_PARTS="${EFI1_PART}"
     fi
     chroot "${MOUNT_POINT}" /bin/bash -eux -- << EOS
+DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y grub-efi-amd64
 update-grub
 debconf-set-selections <<< "grub-common grub-efi/install_devices multiselect ${EFI_PARTS}"
-dpkg-reconfigure --frontend noninteractive shim-signed
+dpkg-reconfigure --frontend noninteractive grub-efi-amd64
 EOS
 }
 
