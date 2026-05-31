@@ -24,9 +24,13 @@ mkdir -p "$DST"
 
 # アクティブの NFS（$SRC に automount）からプルする。
 #   -a       : 属性・パーミッションを保持
+#   -H       : ハードリンクを保存する。vmbackup の -origin はアクティブの ext4 上で
+#              世代間の同一パートをハードリンク共有して省スペース化する。-H が無いと
+#              rsync が各リンクを独立した実ファイルに展開し、パッシブ側で世代ごとに
+#              フルコピーへ膨張してしまう。-H で共有関係を複製後も維持する。
 #   --update : 宛先のほうが新しいファイルは上書きしない（タイムスタンプの巻き戻し防止）
 #   --delete は付けない: アクティブで消えた世代を巻き添えで削除しない（世代欠落防止）
 #   --exclude='.tmp-*' : 書き込み途中の不完全な世代（最終名へ rename 前）を除外
 log "Passive node: pulling from $SRC to $DST"
-rsync -a --update --exclude='.tmp-*' "$SRC/" "$DST/"
+rsync -aH --update --exclude='.tmp-*' "$SRC/" "$DST/"
 log "Pull completed."
