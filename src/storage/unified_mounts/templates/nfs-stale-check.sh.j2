@@ -44,12 +44,28 @@ check_and_unmount() {
         return 0
     fi
 
-    # stat コマンドでアクセスを試みる
-    if timeout "$TIMEOUT_SEC" stat "$mount_path" &>/dev/null; then
+    # stat でアクセスを試み、終了コードで状況を判別する
+    #   - 成功(0): 正常。何もしない
+    #   - タイムアウト(124): サーバー無応答（ダウン/瞬断）。hard マウントは
+    #     サーバー復帰時に開いているファイルごと自然回復するため、ここで
+    #     強制アンマウントしない（lazy unmount すると回復可能なファイル
+    #     ハンドルを失い、かえって被害を広げるため）
+    #   - その他のエラー: stale file handle（ESTALE）等。サーバーは応答する
+    #     がハンドルが無効で、再マウントなしには回復しない。強制アンマウントする
+    local rc=0
+    local stat_err
+    stat_err=$(timeout "$TIMEOUT_SEC" stat "$mount_path" 2>&1 >/dev/null) || rc=$?
+
+    if [ "$rc" -eq 0 ]; then
         return 0
     fi
 
-    log_warn "Stale detected on $mount_path, forcing unmount"
+    if [ "$rc" -eq 124 ]; then
+        log_info "No response from $mount_path (timeout), leaving recovery to hard mount"
+        return 0
+    fi
+
+    log_warn "Stale detected on $mount_path (rc=${rc}): ${stat_err}, forcing unmount"
 
     # mount ユニットの failed 状態をリセット
     systemctl reset-failed "${unit_name}.mount" 2>/dev/null || true
