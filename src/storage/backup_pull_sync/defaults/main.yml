@@ -1,0 +1,20 @@
+---
+# パッシブ・プル同期と世代刈りのデフォルト変数。
+# 実値は group_vars/backup_nfs.yml で上書きする。
+
+# 自ノードがアクティブ（プル元）かどうかを判定するための VIP とインターフェース。
+backup_pull_sync_vip_address: "10.120.60.54"
+backup_pull_sync_interface: "eth0"
+
+# プル元（VIP の NFS を read-only でマウントしたパス）と、ローカルの集約先。
+backup_pull_sync_source_dir: "/mnt/backup-src"
+backup_pull_sync_local_dir: "/srv/backups"
+
+# 保持世代数。VIP 保持状態（アクティブ/パッシブ）に従って使い分ける。
+# アクティブを短く、パッシブを長くする（rsync が --delete を持たないため、
+# 世代はまずアクティブから消え、その後パッシブから消える順序を保つ）。
+backup_pull_sync_retain_active: 3
+backup_pull_sync_retain_passive: 5
+
+# プル service の実行時間上限（秒）。NFS ハング時の保険。
+backup_pull_sync_pull_timeout: "1800"

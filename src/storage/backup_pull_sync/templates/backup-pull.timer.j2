@@ -1,0 +1,12 @@
+[Unit]
+# {{ ansible_managed }}
+Description=Hourly timer to pull aggregated backups from the active NFS node
+
+[Timer]
+OnCalendar=hourly
+# パッシブ3台のプルが同一分に集中してアクティブへ負荷が偏ることを避ける。
+RandomizedDelaySec=300
+Persistent=true
+
+[Install]
+WantedBy=timers.target

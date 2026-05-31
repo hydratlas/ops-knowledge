@@ -1,0 +1,17 @@
+[Unit]
+# {{ ansible_managed }}
+Description=Pull aggregated backups from the active (VIP) NFS node
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# flock で多重起動を防止（前回のプルが長引いても重複させない）。
+ExecStart=/usr/bin/flock -n /run/backup-pull.lock /usr/local/sbin/backup-pull.sh
+TimeoutStartSec={{ backup_pull_sync_pull_timeout }}
+NoNewPrivileges=true
+LockPersonality=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

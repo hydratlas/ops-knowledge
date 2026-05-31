@@ -1,0 +1,13 @@
+[Unit]
+# {{ ansible_managed }}
+Description=Prune old backup generations according to VIP (active/passive) policy
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/flock -n /run/backup-prune.lock /usr/local/sbin/backup-prune.sh
+NoNewPrivileges=true
+LockPersonality=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

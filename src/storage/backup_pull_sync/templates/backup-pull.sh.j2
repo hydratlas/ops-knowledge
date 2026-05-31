@@ -1,0 +1,32 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# パッシブ・プル同期: 自ノードが VIP を保持していない場合にのみ、
+# VIP の NFS（アクティブ）からローカルの集約先へ rsync でプルする。
+set -euo pipefail
+
+VIP="{{ backup_pull_sync_vip_address }}"
+IFACE="{{ backup_pull_sync_interface }}"
+SRC="{{ backup_pull_sync_source_dir }}"
+DST="{{ backup_pull_sync_local_dir }}"
+LOG_TAG="backup-pull"
+
+log() { logger -t "$LOG_TAG" -- "$*" || true; echo "$*"; }
+
+# VIP を保持していれば自分がアクティブ（= プルの source）なのでプルしない。
+# keepalived の状態ファイルではなく、実体（IP の有無）だけを見てフェイルオーバーに
+# 自動追従する。
+if ip -brief address show dev "$IFACE" | grep -qw "$VIP"; then
+  log "This node holds the VIP ($VIP); active node does not pull. Skipping."
+  exit 0
+fi
+
+mkdir -p "$DST"
+
+# アクティブの NFS（$SRC に automount）からプルする。
+#   -a       : 属性・パーミッションを保持
+#   --update : 宛先のほうが新しいファイルは上書きしない（タイムスタンプの巻き戻し防止）
+#   --delete は付けない: アクティブで消えた世代を巻き添えで削除しない（世代欠落防止）
+#   --exclude='.tmp-*' : 書き込み途中の不完全な世代（最終名へ rename 前）を除外
+log "Passive node: pulling from $SRC to $DST"
+rsync -a --update --exclude='.tmp-*' "$SRC/" "$DST/"
+log "Pull completed."

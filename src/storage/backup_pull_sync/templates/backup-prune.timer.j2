@@ -1,0 +1,11 @@
+[Unit]
+# {{ ansible_managed }}
+Description=Daily timer to prune old backup generations
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=300
+Persistent=true
+
+[Install]
+WantedBy=timers.target
