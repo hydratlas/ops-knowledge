@@ -25,3 +25,9 @@ unified_mounts_stale_check_enabled: false
 unified_mounts_stale_check_interval: "30s"
 # statコマンドのタイムアウト秒数
 unified_mounts_stale_check_timeout: 5
+# stale-check サービス（oneshot）の実行時間上限（秒）。ハング対策のbackstop。
+# 空の場合は「アクティブなNFSマウント数 × stat タイムアウト + 余裕10秒」で自動算出する。
+# hardマウントのサーバーダウン時にstatがuninterruptibleにブロックし、スクリプト内の
+# timeoutでも中断できなかった場合に、systemdがサービスを強制停止して
+# timerの次回起動の滞留を防ぐ。
+unified_mounts_stale_check_runtime_max: ""

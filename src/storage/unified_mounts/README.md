@@ -207,6 +207,13 @@ unified_mounts_stale_check_enabled: true
 | `unified_mounts_stale_check_enabled` | 機能の有効化フラグ | `false` |
 | `unified_mounts_stale_check_interval` | 監視間隔（systemd timer形式） | `"30s"` |
 | `unified_mounts_stale_check_timeout` | statコマンドのタイムアウト秒数 | `5` |
+| `unified_mounts_stale_check_runtime_max` | サービス実行時間の上限秒数（ハング対策）。空なら自動算出 | `""` |
+
+### サービス実行時間の上限（ハング対策）
+
+`hard`マウントのサーバーダウン時には、`stat`がカーネル内でuninterruptibleにブロックし、スクリプト内の`timeout`でも中断できないことがある。これに備え、oneshotサービスに`TimeoutStartSec`を設定し、超過時はsystemdが`SIGTERM`→`SIGKILL`でサービスを停止する。これにより、1回のハングがtimerの次回起動を滞留させ続ける事態を防ぐ。
+
+`unified_mounts_stale_check_runtime_max`が空（デフォルト）の場合、上限は「アクティブなNFSマウント数 × `unified_mounts_stale_check_timeout` + 余裕10秒」で自動算出される。全マウントのstatが正常にタイムアウトする最悪ケースを許容しつつ、それを超えるハングのみを停止する値である。明示的に秒数を指定して上書きもできる。
 
 ### 監視間隔の設定例
 

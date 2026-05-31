@@ -10,6 +10,20 @@ After=network-online.target
 Type=oneshot
 ExecStart=/usr/local/sbin/nfs-stale-check.sh
 
+# 実行時間の上限（ハング対策のbackstop）。
+# 各マウントのstatはスクリプト内のtimeoutで個別に制限しているが、hardマウントの
+# サーバーダウン時にはstatがuninterruptibleにブロックしtimeoutで中断できない
+# ことがある。その場合に備えサービス全体の実行時間にも上限を設け、超過時は
+# systemdがSIGTERM→SIGKILLで停止してtimerの次回起動の滞留を防ぐ。
+# 既定値は「アクティブNFSマウント数 × statタイムアウト + 余裕」で自動算出する。
+{% if unified_mounts_stale_check_runtime_max %}
+TimeoutStartSec={{ unified_mounts_stale_check_runtime_max }}
+{% else %}
+TimeoutStartSec={{ (_unified_mounts_nfs_active | length) * (unified_mounts_stale_check_timeout | int) + 10 }}
+{% endif %}
+# 上限超過後はSIGTERMで止まらないハングを想定し、短時間でSIGKILLへ移行する
+TimeoutStopSec=10
+
 # セキュリティハードニング（seccomp・プロセス属性系）
 NoNewPrivileges=true
 LockPersonality=true
