@@ -1,7 +1,7 @@
 #!/bin/bash
 # {{ ansible_managed }}
 # パッシブ・プル同期: 自ノードが VIP を保持していない場合にのみ、
-# VIP の NFS（アクティブ）からローカルの集約先へ rsync でプルする。
+# VIP の NFS（アクティブ）のリポジトリ群をローカルへミラーする。
 set -euo pipefail
 
 VIP="{{ backup_pull_sync_vip_address }}"
@@ -12,25 +12,18 @@ LOG_TAG="backup-pull"
 
 log() { logger -t "$LOG_TAG" -- "$*" || true; echo "$*"; }
 
-# VIP を保持していれば自分がアクティブ（= プルの source）なのでプルしない。
+# VIP を保持していれば自分がアクティブ（= ミラーの source）なのでプルしない。
 # keepalived の状態ファイルではなく、実体（IP の有無）だけを見てフェイルオーバーに
 # 自動追従する。
 if ip -brief address show dev "$IFACE" | grep -qw "$VIP"; then
-  log "This node holds the VIP ($VIP); active node does not pull. Skipping."
+  log "This node holds the VIP ($VIP); active node is the source. Skipping."
   exit 0
 fi
 
 mkdir -p "$DST"
-
-# アクティブの NFS（$SRC に automount）からプルする。
-#   -a       : 属性・パーミッションを保持
-#   -H       : ハードリンクを保存する。vmbackup の -origin はアクティブの ext4 上で
-#              世代間の同一パートをハードリンク共有して省スペース化する。-H が無いと
-#              rsync が各リンクを独立した実ファイルに展開し、パッシブ側で世代ごとに
-#              フルコピーへ膨張してしまう。-H で共有関係を複製後も維持する。
-#   --update : 宛先のほうが新しいファイルは上書きしない（タイムスタンプの巻き戻し防止）
-#   --delete は付けない: アクティブで消えた世代を巻き添えで削除しない（世代欠落防止）
-#   --exclude='.tmp-*' : 書き込み途中の不完全な世代（最終名へ rename 前）を除外
-log "Passive node: pulling from $SRC to $DST"
-rsync -aH --update --exclude='.tmp-*' "$SRC/" "$DST/"
-log "Pull completed."
+# restic リポジトリは内容アドレスの append 構造。--delete を付けた素のミラーで安全。
+#   --delete       : アクティブで prune された pack を追従削除（重複排除の効果を維持）
+#   --exclude=locks: 転送中の一時ロックを持ち込まない（パッシブは書かないので不要）
+log "Passive node: mirroring restic repos from $SRC to $DST"
+rsync -a --delete --exclude='locks/***' "$SRC/" "$DST/"
+log "Mirror completed."

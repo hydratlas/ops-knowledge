@@ -15,15 +15,7 @@
     group: root
     mode: "0755"
 
-- name: Deploy backup prune script
-  ansible.builtin.template:
-    src: backup-prune.sh.j2
-    dest: /usr/local/sbin/backup-prune.sh
-    owner: root
-    group: root
-    mode: "0755"
-
-- name: Deploy backup pull/prune systemd units
+- name: Deploy backup pull systemd units
   ansible.builtin.template:
     src: "{{ item }}.j2"
     dest: "/etc/systemd/system/{{ item }}"
@@ -33,18 +25,13 @@
   loop:
     - backup-pull.service
     - backup-pull.timer
-    - backup-prune.service
-    - backup-prune.timer
   notify: Reload systemd daemon
 
 - name: Flush handlers to reload systemd before enabling timers
   ansible.builtin.meta: flush_handlers
 
-- name: Enable and start backup pull/prune timers
+- name: Enable and start backup pull timer
   ansible.builtin.systemd:
-    name: "{{ item }}"
+    name: backup-pull.timer
     enabled: true
     state: started
-  loop:
-    - backup-pull.timer
-    - backup-prune.timer
