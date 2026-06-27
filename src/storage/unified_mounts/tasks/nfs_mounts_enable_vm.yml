@@ -4,7 +4,7 @@
 # 変更ありのmountedマウント → automount再起動で設定変更を反映
 - name: Restart changed NFS automount units (state=mounted)
   ansible.builtin.systemd:
-    name: "{{ item.path | regex_replace('^/', '') | regex_replace('/', '-') }}.automount"
+    name: "{{ item._unit }}.automount"
     enabled: true
     state: restarted
   loop: >-
@@ -18,7 +18,7 @@
 # 変更なしのmountedマウント → automountを有効化・起動（冪等）
 - name: Enable and start unchanged NFS automount units (state=mounted)
   ansible.builtin.systemd:
-    name: "{{ item.path | regex_replace('^/', '') | regex_replace('/', '-') }}.automount"
+    name: "{{ item._unit }}.automount"
     enabled: true
     state: started
   loop: >-
@@ -30,7 +30,7 @@
 # presentマウント → 次回起動時に自動マウントされるよう有効化のみ
 - name: Enable NFS automount units without starting (state=present)
   ansible.builtin.systemd:
-    name: "{{ item.path | regex_replace('^/', '') | regex_replace('/', '-') }}.automount"
+    name: "{{ item._unit }}.automount"
     enabled: true
   loop: "{{ _unified_mounts_nfs_active | selectattr('state', 'defined') | selectattr('state', 'equalto', 'present') | list }}"
   when: not ansible_check_mode

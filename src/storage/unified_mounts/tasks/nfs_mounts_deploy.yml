@@ -13,7 +13,7 @@
 - name: Deploy NFS mount unit files
   ansible.builtin.template:
     src: nfs.mount.j2
-    dest: "/etc/systemd/system/{{ item.path | regex_replace('^/', '') | regex_replace('/', '-') }}.mount"
+    dest: "/etc/systemd/system/{{ item._unit }}.mount"
     owner: root
     group: root
     mode: "0644"
@@ -25,7 +25,7 @@
 - name: Deploy NFS automount unit files
   ansible.builtin.template:
     src: nfs.automount.j2
-    dest: "/etc/systemd/system/{{ item.path | regex_replace('^/', '') | regex_replace('/', '-') }}.automount"
+    dest: "/etc/systemd/system/{{ item._unit }}.automount"
     owner: root
     group: root
     mode: "0644"

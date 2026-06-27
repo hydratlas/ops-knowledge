@@ -35,6 +35,27 @@
     _unified_mounts_non_nfs: >-
       {{ _unified_mounts_combined | rejectattr('fstype', 'in', ['nfs', 'nfs4']) | list }}
 
+# systemdユニット名をsystemd-escapeで厳密に算出する。
+# 単純な「/→-」置換ではパス中のハイフン等がsystemdのエスケープ規則と食い違い、
+# Where=とユニット名が不一致になりロードを拒否されるため（例: /mnt/backup-src）。
+# --path は複数パスをスペース区切り1行で順序通り出力する（空白は\x20化されるため衝突しない）。
+- name: Compute systemd unit base names for NFS mounts
+  ansible.builtin.command:
+    argv: "{{ ['systemd-escape', '--path'] + (_unified_mounts_nfs | map(attribute='path') | list) }}"
+  register: _unified_mounts_escaped
+  changed_when: false
+  check_mode: false
+  when: _unified_mounts_nfs | length > 0
+
+# 算出したユニット基底名を各マウント定義に_unitとして付与（以降の全タスクで参照）
+- name: Attach systemd unit base names to NFS mounts
+  ansible.builtin.set_fact:
+    _unified_mounts_nfs: >-
+      [{% for pair in _unified_mounts_nfs | zip(_unified_mounts_escaped.stdout | default('') | split()) %}
+      {{ pair[0] | combine({'_unit': pair[1]}) | to_json }}{{ ',' if not loop.last else '' }}
+      {% endfor %}]
+  when: _unified_mounts_nfs | length > 0
+
 # LXCコンテナの検出（LXCではsystemd automountが使用不可のためmount直接管理に切替）
 - name: Detect LXC container environment
   ansible.builtin.set_fact:

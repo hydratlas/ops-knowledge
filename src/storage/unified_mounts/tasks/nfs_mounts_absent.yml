@@ -2,7 +2,7 @@
 # 削除対象のautomountユニットを停止・無効化
 - name: Stop and disable NFS automount units for absent mounts
   ansible.builtin.systemd:
-    name: "{{ item.path | regex_replace('^/', '') | regex_replace('/', '-') }}.automount"
+    name: "{{ item._unit }}.automount"
     state: stopped
     enabled: false
   loop: "{{ _unified_mounts_nfs | selectattr('state', 'defined') | selectattr('state', 'equalto', 'absent') | list }}"
@@ -12,7 +12,7 @@
 # 対応するmountユニットも停止（LXCではこちらのみ存在する）
 - name: Stop NFS mount units for absent mounts
   ansible.builtin.systemd:
-    name: "{{ item.path | regex_replace('^/', '') | regex_replace('/', '-') }}.mount"
+    name: "{{ item._unit }}.mount"
     state: stopped
   loop: "{{ _unified_mounts_nfs | selectattr('state', 'defined') | selectattr('state', 'equalto', 'absent') | list }}"
   failed_when: false
@@ -20,7 +20,7 @@
 # automountユニットファイルを削除（LXCにはautomountがないためスキップ）
 - name: Remove NFS automount unit files for absent mounts
   ansible.builtin.file:
-    path: "/etc/systemd/system/{{ item.path | regex_replace('^/', '') | regex_replace('/', '-') }}.automount"
+    path: "/etc/systemd/system/{{ item._unit }}.automount"
     state: absent
   loop: "{{ _unified_mounts_nfs | selectattr('state', 'defined') | selectattr('state', 'equalto', 'absent') | list }}"
   notify: Reload systemd daemon
@@ -29,7 +29,7 @@
 # mountユニットファイルを削除（全環境共通）
 - name: Remove NFS mount unit files for absent mounts
   ansible.builtin.file:
-    path: "/etc/systemd/system/{{ item.path | regex_replace('^/', '') | regex_replace('/', '-') }}.mount"
+    path: "/etc/systemd/system/{{ item._unit }}.mount"
     state: absent
   loop: "{{ _unified_mounts_nfs | selectattr('state', 'defined') | selectattr('state', 'equalto', 'absent') | list }}"
   notify: Reload systemd daemon

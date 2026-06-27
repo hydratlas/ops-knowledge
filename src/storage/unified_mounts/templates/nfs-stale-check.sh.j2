@@ -22,9 +22,9 @@ log_warn() {
 
 check_and_unmount() {
     local mount_path="$1"
-    local unit_name
-
-    unit_name=$(echo "$mount_path" | sed 's|^/||' | tr '/' '-')
+    # ユニット名は systemd-escape で厳密に算出済みの値を Ansible から渡す
+    # （単純な / → - 置換ではパス中のハイフン等が systemd の規則と食い違うため）
+    local unit_name="$2"
 
 {% if not _unified_mounts_is_lxc %}
     # automount が有効でない場合はスキップ
@@ -93,7 +93,7 @@ check_and_unmount() {
 
 main() {
 {% for mount in _unified_mounts_nfs_active | default([]) %}
-    check_and_unmount "{{ mount.path }}"
+    check_and_unmount "{{ mount.path }}" "{{ mount._unit }}"
 {% endfor %}
 }
 
