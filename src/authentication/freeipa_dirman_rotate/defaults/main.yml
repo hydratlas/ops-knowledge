@@ -1,0 +1,14 @@
+---
+# 389-ds インスタンス名。realm HOME.ARPA に対応し slapd-HOME-ARPA となる
+# （idm-01〜04 すべてで共通。実機 /etc/dirsrv/ で確認済み）。
+freeipa_dirman_instance: "slapd-HOME-ARPA"
+
+# LDAPI ソケットのパス。389-ds が当該インスタンス用に提供する UNIX ドメインソケット。
+freeipa_dirman_ldapi_socket: "/run/{{ freeipa_dirman_instance }}.socket"
+
+# ldapi:// URI。ソケットパスは percent-encode が必要だが urlencode フィルターは "/" を
+# 変換しないため、regex_replace で "/" を "%2F" に置換する。
+freeipa_dirman_ldapi_uri: "ldapi://{{ freeipa_dirman_ldapi_socket | regex_replace('/', '%2F') }}"
+
+# 既知の DM パスワードは Vault から供給する（group_vars/all.yml）。
+freeipa_dirman_password: "{{ vault_freeipa_dirman_password }}"

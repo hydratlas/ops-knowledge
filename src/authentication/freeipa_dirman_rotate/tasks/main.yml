@@ -1,0 +1,54 @@
+---
+# FreeIPA Directory Manager (DM) パスワードを Vault 管理の既知値へローテーションする。
+#
+# 想定実行ホスト: ipaservers (idm-01〜04) 全台。nsslapd-rootpw は cn=config 配下で
+# レプリカ間非複製のため、各インスタンスへ個別に同一の既知値を再設定する必要がある。
+#
+# 冪等性は「新パスワードでの DM bind 成否」で判定する。
+#   bind 成功 => 既にローテーション済み => 再設定をスキップ。
+#   bind 失敗 => 未ローテーション => root オートバインド経由で nsslapd-rootpw を置換。
+#
+# 平文の DM パスワードがログ・プロセス引数へ漏れるのを防ぐため全タスクに no_log を付す。
+# 詳細な背景・手動手順・break-glass は README.md を参照。
+
+- name: Ensure openldap-clients is installed (ldapwhoami / ldapmodify)
+  ansible.builtin.package:
+    name: openldap-clients
+    state: present
+
+# 1) 現状判定: 新 DM パスワードで simple bind を試行する。
+- name: Probe DM bind with the known (Vault) password
+  ansible.builtin.command:
+    cmd: >-
+      ldapwhoami -x -H {{ freeipa_dirman_ldapi_uri }}
+      -D "cn=Directory Manager" -w "{{ freeipa_dirman_password }}"
+  register: freeipa_dirman_bind
+  changed_when: false
+  failed_when: false
+  no_log: true
+
+# 2) 未ローテーション時のみ、LDAPI + SASL EXTERNAL (root オートバインド) で
+#    nsslapd-rootpw を置換する。値は平文で与え、389-ds が
+#    nsslapd-rootpwstoragescheme (PBKDF2-SHA512) に従って自動ハッシュ化する
+#    （pwdhash は不要で、ソルト差による「毎回 changed」も避けられる）。
+#    LDIF は stdin で渡し、平文をプロセス引数に乗せない。
+- name: Rotate nsslapd-rootpw to the known (Vault) password via root autobind
+  ansible.builtin.command:
+    cmd: "ldapmodify -H {{ freeipa_dirman_ldapi_uri }} -Y EXTERNAL"
+    stdin: |-
+      dn: cn=config
+      changetype: modify
+      replace: nsslapd-rootpw
+      nsslapd-rootpw: {{ freeipa_dirman_password }}
+  when: freeipa_dirman_bind.rc != 0
+  changed_when: true
+  no_log: true
+
+# 3) 反映確認: 新パスワードで再度 simple bind できること。
+- name: Verify DM bind with the known (Vault) password after rotation
+  ansible.builtin.command:
+    cmd: >-
+      ldapwhoami -x -H {{ freeipa_dirman_ldapi_uri }}
+      -D "cn=Directory Manager" -w "{{ freeipa_dirman_password }}"
+  changed_when: false
+  no_log: true
