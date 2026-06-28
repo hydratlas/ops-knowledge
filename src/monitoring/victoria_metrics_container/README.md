@@ -48,7 +48,7 @@
 | `victoria_metrics_service_restart` | `always` | コンテナの再起動ポリシー |
 | `victoria_metrics_service_restart_sec` | `5` | 再起動間隔（秒） |
 | `victoria_metrics_scrape_configs` | デフォルト設定あり | Prometheusスクレイプ設定 |
-| `victoria_metrics_snapshot_auth_key` | `""` | snapshot API（`-snapshotAuthKey`）の認証キー。空文字なら無効（フラグ・マウントとも付与しない）。環境側で `vault_vm_snapshot_auth_key` を引き渡す |
+| `victoria_metrics_snapshot_auth_key` | `""` | 管理系 API の共通認証キー。snapshot（`-snapshotAuthKey`）に加え delete_series（`-deleteAuthKey`）・force_merge（`-forceMergeAuthKey`）・flags（`-flagsAuthKey`）・pprof（`-pprofAuthKey`）へ同一キーを付与する。空文字なら無効（フラグ・マウントとも付与しない）。環境側で `vault_vm_snapshot_auth_key` を引き渡す |
 
 #### 依存関係
 - [podman_rootless_quadlet_base](../../../infrastructure/container/podman_rootless_quadlet_base/README.md)ロールを内部的に使用
@@ -246,9 +246,11 @@ sudo -u monitoring \
 ```
 
 
-## snapshot API の認証キー（アクセス制御）
+## 管理系 API の認証キー（アクセス制御）
 
 VictoriaMetrics は管理系 API（`/snapshot/create`・`/snapshot/delete`・`/snapshot/delete_all`・`/snapshot/list`）とデータ系 API（`/api/v1/write`・クエリー）を同一ポート（8428）で提供する。無認証のままだと int セグメントの任意ホストから snapshot の作成・全削除が可能になるため、`-snapshotAuthKey` で管理系 API のみを認証必須化する。認証キーはデータ書き込み・クエリー・スクレイプには影響しない。
+
+snapshot 以外にも無認証では破壊的・デバッグ用途の管理系エンドポイントが残るため、同一キーで一括して認証必須化する。`/api/v1/admin/tsdb/delete_series`（`-deleteAuthKey`。任意の HTTP メソッドを受理し GET でも削除が走る）・`/internal/force_merge`（`-forceMergeAuthKey`）・`/flags`（`-flagsAuthKey`）・`/debug/pprof/*`（`-pprofAuthKey`）の 4 つを `-snapshotAuthKey` と同じキーファイル（`/etc/snapshot-auth.key`）へ向ける。これらは人手（DR・障害解析）でのみ叩かれ自動化からは呼ばれないため、鍵を細分する権限分離の実益はなく、サービス内 1 鍵に統一する。キーファイル名は snapshot 専用に見えるが、実体は VictoriaMetrics の管理系 API 共通鍵である。`-metricsAuthKey` は設定しない。`/metrics` は vmagent のスクレイプ対象であり、認証必須化するとスクレイプが壊れるためである。
 
 キーは Vault（`vault_vm_snapshot_auth_key`）で暗号化管理し、コンテナへは `file://` でファイル経由で渡す（常駐プロセスの `ps` 引数露出を避けるため）。ホスト側キーファイルは `~/.config/victoria-metrics/snapshot-auth.key`（monitoring 所有・`0600`）に配置し、`:ro,Z`（read-only かつリラベル）でコンテナへマウントする。`UserNS=keep-id` によりコンテナ内ではホストの monitoring uid にマップされ、`0600` でも読める。
 
@@ -267,7 +269,7 @@ sudo chmod 600 /home/monitoring/.config/victoria-metrics/snapshot-auth.key
 
 ```ini
 Volume=/home/monitoring/.config/victoria-metrics/snapshot-auth.key:/etc/snapshot-auth.key:ro,Z
-Exec='-promscrape.config=/etc/prometheus.yml' '-snapshotAuthKey=file:///etc/snapshot-auth.key'
+Exec='-promscrape.config=/etc/prometheus.yml' '-snapshotAuthKey=file:///etc/snapshot-auth.key' '-deleteAuthKey=file:///etc/snapshot-auth.key' '-forceMergeAuthKey=file:///etc/snapshot-auth.key' '-flagsAuthKey=file:///etc/snapshot-auth.key' '-pprofAuthKey=file:///etc/snapshot-auth.key'
 ```
 
 ### 動作確認・復旧時の操作

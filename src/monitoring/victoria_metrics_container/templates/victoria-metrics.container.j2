@@ -17,7 +17,7 @@ Volume=/etc/localtime:/etc/localtime:ro
 {% if victoria_metrics_snapshot_auth_key | length > 0 %}
 Volume={{ victoria_metrics_snapshot_auth_key_file }}:/etc/snapshot-auth.key:ro,Z
 {% endif %}
-Exec='-promscrape.config=/etc/prometheus.yml' '-retentionPeriod={{ victoria_metrics_retention_period }}' '-dedup.minScrapeInterval={{ victoria_metrics_dedup_min_scrape_interval }}'{% if victoria_metrics_snapshot_auth_key | length > 0 %} '-snapshotAuthKey=file:///etc/snapshot-auth.key'{% endif %}
+Exec='-promscrape.config=/etc/prometheus.yml' '-retentionPeriod={{ victoria_metrics_retention_period }}' '-dedup.minScrapeInterval={{ victoria_metrics_dedup_min_scrape_interval }}'{% if victoria_metrics_snapshot_auth_key | length > 0 %} '-snapshotAuthKey=file:///etc/snapshot-auth.key' '-deleteAuthKey=file:///etc/snapshot-auth.key' '-forceMergeAuthKey=file:///etc/snapshot-auth.key' '-flagsAuthKey=file:///etc/snapshot-auth.key' '-pprofAuthKey=file:///etc/snapshot-auth.key'{% endif %}
 
 [Service]
 Restart={{ victoria_metrics_service_restart }}

@@ -16,7 +16,7 @@ Volume=/etc/localtime:/etc/localtime:ro
 {% if victorialogs_partition_auth_key | length > 0 %}
 Volume={{ victorialogs_partition_auth_key_file }}:/etc/partition-auth.key:ro,Z
 {% endif %}
-Exec='-retentionPeriod={{ victorialogs_retention_period }}'{% if victorialogs_partition_auth_key | length > 0 %} '-partitionManageAuthKey=file:///etc/partition-auth.key'{% endif %}
+Exec='-retentionPeriod={{ victorialogs_retention_period }}'{% if victorialogs_partition_auth_key | length > 0 %} '-partitionManageAuthKey=file:///etc/partition-auth.key' '-forceFlushAuthKey=file:///etc/partition-auth.key' '-forceMergeAuthKey=file:///etc/partition-auth.key' '-logNewStreamsAuthKey=file:///etc/partition-auth.key' '-flagsAuthKey=file:///etc/partition-auth.key' '-pprofAuthKey=file:///etc/partition-auth.key'{% endif %}
 
 [Service]
 Restart={{ victorialogs_service_restart }}
