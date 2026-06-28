@@ -1,0 +1,15 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# restic post-hook (VictoriaMetrics)。親の cleanup() から $STAGING 削除後に別プロセスで
+# 実行されるため $STAGING は参照しない。bind を外し snapshot を全削除する（best-effort）。
+set -euo pipefail
+
+BIND_BASE="{{ item.0.source_path }}"
+VM_URL="http://localhost:{{ victoria_metrics_container_port }}"
+# snapshot API 認証キー（pre とは別シェルのため読み直す。欠如でも空で続行）
+AUTHKEY=$(cat "{{ victoria_metrics_snapshot_auth_key_file }}" 2>/dev/null || true)
+
+for d in big small indexdb; do
+  mountpoint -q "$BIND_BASE/$d" && umount "$BIND_BASE/$d" || true
+done
+curl -s "$VM_URL/snapshot/delete_all?authKey=$AUTHKEY" >/dev/null || true

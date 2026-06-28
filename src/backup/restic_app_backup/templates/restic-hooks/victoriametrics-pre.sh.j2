@@ -1,0 +1,31 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# restic pre-hook (VictoriaMetrics)。親 restic-backup-victoriametrics.sh から別プロセスで
+# 実行され、export 済みの $STAGING を共有する（環境変数は引き継がれるがシェル変数は独立）。
+#
+# 実機検証メモ（v1.143.0）: snapshot/create は {"status","snapshot"} を返し、
+# $VMDATA/snapshots/<snap>/ が作られるが、その直下はデータ本体への「symlink ツリー」
+# （data/big -> ../../../data/big/snapshots/<snap> 等）である。restic は既定で symlink を
+# 辿らないため、この dir を直接 backup すると symlink 数バイトしか取れない。実体
+# （data/{big,small,indexdb}/snapshots/<snap>、ここはハードリンク）を安定パスへ bind する。
+set -euo pipefail
+
+VMDATA="{{ victoria_metrics_data_dir }}"
+BIND_BASE="{{ item.0.source_path }}"
+VM_URL="http://localhost:{{ victoria_metrics_container_port }}"
+# snapshot API 認証キー（コンテナと同一ホストファイルから読む。キーファイル欠如＝キー空化に
+# よるロールバックでも空 AUTHKEY となり壊れないよう、防御的に読む）
+AUTHKEY=$(cat "{{ victoria_metrics_snapshot_auth_key_file }}" 2>/dev/null || true)
+
+# 前回の安定パス bind を外す（残骸対策）
+for d in big small indexdb; do
+  mountpoint -q "$BIND_BASE/$d" && umount "$BIND_BASE/$d" || true
+done
+# 古い snapshot を一掃（part はハードリンクのため実消費は増えないが retention を阻害する）
+curl -s "$VM_URL/snapshot/delete_all?authKey=$AUTHKEY" >/dev/null
+SNAP=$(curl -s "$VM_URL/snapshot/create?authKey=$AUTHKEY" | jq -r '.snapshot')
+mkdir -p "$BIND_BASE/big" "$BIND_BASE/small" "$BIND_BASE/indexdb"
+for d in big small indexdb; do
+  mount --bind "$VMDATA/data/$d/snapshots/$SNAP" "$BIND_BASE/$d"
+done
+cp -a "$VMDATA/snapshots/$SNAP/metadata" "$BIND_BASE/metadata"

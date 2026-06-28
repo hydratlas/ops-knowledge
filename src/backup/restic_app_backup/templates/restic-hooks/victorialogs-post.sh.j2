@@ -1,0 +1,15 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# restic post-hook (VictoriaLogs)。親の cleanup() から $STAGING 削除後に別プロセスで実行
+# されるため、create の控え（$STAGING）ではなく list から取得し直して全削除する（best-effort）。
+set -euo pipefail
+
+VL_URL="http://localhost:{{ victorialogs_container_port }}"
+# partition 管理 API 認証キー（pre とは別シェルのため読み直す。欠如でも空で続行）
+AUTHKEY=$(cat "{{ victorialogs_partition_auth_key_file }}" 2>/dev/null || true)
+
+curl -s "$VL_URL/internal/partition/snapshot/list?authKey=$AUTHKEY" \
+  | jq -r '.[]?' \
+  | while read -r p; do
+      [ -n "$p" ] && curl -s "$VL_URL/internal/partition/snapshot/delete?path=$p&authKey=$AUTHKEY" >/dev/null 2>&1 || true
+    done || true

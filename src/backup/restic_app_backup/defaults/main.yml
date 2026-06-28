@@ -33,10 +33,17 @@ restic_app_backup_keep_weekly: 4
 #
 # 各要素のキー:
 #   name:         ジョブ名（= リポジトリ名・unit インスタンス名）。例: victoriametrics
-#   pre_command:  整合点を作るシェル断片（$STAGING 利用可。VM は snapshot + bind）。
+#   pre_command:  整合点を作るシェル断片（$STAGING 利用可。VM は snapshot + bind）。短い処理は
+#                 ここへ直接書いてよいが（idm-01 の ipa-backup など）、長い・複雑な手続きは
+#                 hooks でスクリプト化し、ここからは実行パスを 1 行で呼ぶ（下記 hooks 参照）。
 #   post_command: 後始末のシェル断片（省略可。VM/VL の snapshot 削除・umount など）。
 #                 注意: cleanup は post_command より先に $STAGING を rm するため、
 #                 post_command から $STAGING の中身は参照できない（API 再取得などで賄う）。
+#   hooks:        templates/restic-hooks/ 配下へ配置するフックスクリプト名のリスト（省略可）。
+#                 各 <名>.sh.j2 を /usr/local/lib/restic-hooks/<名>.sh へ展開する。整合点ロジック
+#                 を YAML へインライン展開せずファイル化し（shellcheck 可・重複解消）、
+#                 pre_command/post_command からその実行パスを呼ぶために使う。フックは親
+#                 restic-backup-<job>.sh から別プロセスで実行されるが export 済み $STAGING を共有する。
 #   source_path:  restic backup に渡すパス（省略時は $STAGING）。files_from とは排他。
 #   files_from:   restic backup --files-from に渡すパス一覧ファイル（省略可）。pre_command が
 #                 1 行 1 パスで生成する。対象が多数・可変で単一パスに束ねられない場合に使う

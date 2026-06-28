@@ -1,0 +1,49 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# restic pre-hook (VictoriaLogs)。親 restic-backup-victorialogs.sh から別プロセスで実行され、
+# export 済みの $STAGING を共有する。
+#
+# VictoriaLogs（v1.50.0）は partition snapshot モデル。create（partition_prefix 省略で全件）は
+# 単一 `.snapshot` ではなく「パーティション別 snapshot パスの配列」（JSON 文字列配列、
+# victoria-logs-data/partitions/<日付>/snapshots/<id>、保持 366 日で 1 回 ≈ 142 件）を返す。
+# 142 件を bind するのは非現実的なため、files-from 方式で全 snapshot を 1 スナップショットに収める。
+# snapshot id がパスに含まれ毎回変わるため安定パスの親照合は効かず毎回再ハッシュとなるが、VL は
+# 小容量（実測 872 MB〜見込み 2.5 GB）で SHA-NI 環境では許容範囲、storage 重複は restic の dedup で吸収。
+#
+# 全 142 パーティションの snapshot 作成は逐次で約 70 秒を要し、その間 $BACKUP_DST へ一切
+# アクセスしない。宛先 NFS は autofs（timeout=60）のため 60 秒アイドルでアンマウントされ、
+# restic-backup@.service の RequiresMountsFor 依存により systemd がジョブを SIGTERM する。
+# これを避けるため冒頭で $BACKUP_DST を明示マウントし、background で定期 stat してアイドル
+# アンマウントを防ぐ（snapshot 作成完了後に keepalive を停止する）。
+set -euo pipefail
+
+VLDATA="{{ victorialogs_data_dir }}"
+VL_URL="http://localhost:{{ victorialogs_container_port }}"
+BACKUP_DST="{{ restic_app_backup_repo_base }}"
+# partition 管理 API 認証キー（コンテナと同一ホストファイルから読む。欠如でも空で続行）
+AUTHKEY=$(cat "{{ victorialogs_partition_auth_key_file }}" 2>/dev/null || true)
+
+# 宛先 NFS（autofs timeout=60）を明示マウントし、長時間の snapshot 作成中も定期 stat で
+# アイドルアンマウントを防ぐ。background keepalive は本スクリプト末尾で停止する。
+stat "$BACKUP_DST" >/dev/null 2>&1 || true
+( while :; do sleep 20; stat "$BACKUP_DST" >/dev/null 2>&1 || true; done ) &
+KEEPALIVE_PID=$!
+# 前回ジョブの残骸 snapshot を一掃（list は ?authKey、delete は path 既存クエリーへ &authKey で連結。best-effort）
+curl -s "$VL_URL/internal/partition/snapshot/list?authKey=$AUTHKEY" \
+  | jq -r '.[]?' \
+  | while read -r p; do
+      [ -n "$p" ] && curl -s "$VL_URL/internal/partition/snapshot/delete?path=$p&authKey=$AUTHKEY" >/dev/null 2>&1 || true
+    done || true
+# 全パーティションの snapshot を作成し、返却された API パス配列を取得
+curl -s "$VL_URL/internal/partition/snapshot/create?authKey=$AUTHKEY" \
+  | jq -r '.[]?' > "$STAGING/snap-paths.txt"
+# API パス（victoria-logs-data/...）をホスト側の絶対パスへ読み替えて files-from 一覧を生成
+: > "$STAGING/files.txt"
+while read -r p; do
+  [ -n "$p" ] || continue
+  rel="${p#*victoria-logs-data/}"
+  printf '%s\n' "$VLDATA/$rel" >> "$STAGING/files.txt"
+done < "$STAGING/snap-paths.txt"
+# snapshot 作成は完了。以降は restic が $BACKUP_DST へ継続アクセスするため keepalive を停止する
+kill "$KEEPALIVE_PID" 2>/dev/null || true
+wait "$KEEPALIVE_PID" 2>/dev/null || true
