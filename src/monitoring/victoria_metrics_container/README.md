@@ -48,6 +48,7 @@
 | `victoria_metrics_service_restart` | `always` | コンテナの再起動ポリシー |
 | `victoria_metrics_service_restart_sec` | `5` | 再起動間隔（秒） |
 | `victoria_metrics_scrape_configs` | デフォルト設定あり | Prometheusスクレイプ設定 |
+| `victoria_metrics_snapshot_auth_key` | `""` | snapshot API（`-snapshotAuthKey`）の認証キー。空文字なら無効（フラグ・マウントとも付与しない）。環境側で `vault_vm_snapshot_auth_key` を引き渡す |
 
 #### 依存関係
 - [podman_rootless_quadlet_base](../../../infrastructure/container/podman_rootless_quadlet_base/README.md)ロールを内部的に使用
@@ -244,6 +245,47 @@ sudo -u monitoring \
   systemctl --user enable --now podman-auto-update.timer
 ```
 
+
+## snapshot API の認証キー（アクセス制御）
+
+VictoriaMetrics は管理系 API（`/snapshot/create`・`/snapshot/delete`・`/snapshot/delete_all`・`/snapshot/list`）とデータ系 API（`/api/v1/write`・クエリー）を同一ポート（8428）で提供する。無認証のままだと int セグメントの任意ホストから snapshot の作成・全削除が可能になるため、`-snapshotAuthKey` で管理系 API のみを認証必須化する。認証キーはデータ書き込み・クエリー・スクレイプには影響しない。
+
+キーは Vault（`vault_vm_snapshot_auth_key`）で暗号化管理し、コンテナへは `file://` でファイル経由で渡す（常駐プロセスの `ps` 引数露出を避けるため）。ホスト側キーファイルは `~/.config/victoria-metrics/snapshot-auth.key`（monitoring 所有・`0600`）に配置し、`:ro,Z`（read-only かつリラベル）でコンテナへマウントする。`UserNS=keep-id` によりコンテナ内ではホストの monitoring uid にマップされ、`0600` でも読める。
+
+鍵値はコンテナ（`file://` 読み）と restic（`$(cat ...)` 読み）で**バイト単位で一致**する必要がある。Vault 値には末尾改行を含めないこと（`ansible-vault encrypt_string "$(openssl rand -hex 32)"` は `$()` が末尾改行を除去するため安全）。
+
+### 手動設定
+
+```bash
+# キーファイルの配置（KEY は openssl rand -hex 32 などのランダム値）
+sudo -u monitoring mkdir -p /home/monitoring/.config/victoria-metrics
+printf '%s' "$KEY" | sudo -u monitoring tee /home/monitoring/.config/victoria-metrics/snapshot-auth.key > /dev/null
+sudo chmod 600 /home/monitoring/.config/victoria-metrics/snapshot-auth.key
+```
+
+コンテナ定義（`victoria-metrics.container`）の `[Container]` へ以下を追加する。
+
+```ini
+Volume=/home/monitoring/.config/victoria-metrics/snapshot-auth.key:/etc/snapshot-auth.key:ro,Z
+Exec='-promscrape.config=/etc/prometheus.yml' '-snapshotAuthKey=file:///etc/snapshot-auth.key'
+```
+
+### 動作確認・復旧時の操作
+
+snapshot API を叩く際は `authKey` クエリーを付与する（メソッドは GET でよい）。
+
+```bash
+# 無キーでは非 200（401/403）、正キーで 200 となることを確認
+curl -s -o /dev/null -w '%{http_code}' http://localhost:8428/snapshot/list
+AUTHKEY=$(cat /home/monitoring/.config/victoria-metrics/snapshot-auth.key)
+curl -s "http://localhost:8428/snapshot/list?authKey=$AUTHKEY"
+```
+
+`restic restore` 後に snapshot を操作する復旧手順でも同様に `authKey` が必要になる。
+
+### ローテーション・ロールバック
+
+ローテーションは Vault 値を更新して再適用（コンテナ再起動）するだけでよい。無認証へ戻す場合は `victoria_metrics_snapshot_auth_key` を空（`""`）にして再適用すれば、フラグ・マウントとも外れキーファイルも配置されなくなる。
 
 ## 運用管理
 

@@ -18,7 +18,7 @@
     path: /etc/dnf/automatic.conf
     section: commands
     option: reboot
-    value: "{{ 'when-needed' if auto_update_automatic_reboot | bool else 'never' }}"
+    value: "{{ auto_update_reboot_policy if auto_update_automatic_reboot | bool else 'never' }}"
     mode: "0644"
 
 - name: Ensure dnf-automatic-install.timer drop-in directory exists

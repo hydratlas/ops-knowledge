@@ -22,6 +22,12 @@ victoria_metrics_data_dir: ""
 victoria_metrics_config_dir: ""
 victoria_metrics_config_file: ""
 
+# snapshot API（-snapshotAuthKey）の認証キー。空文字なら無効（フラグ・マウントとも付与しない）。
+# 環境側で vault_vm_snapshot_auth_key を引き渡す。
+victoria_metrics_snapshot_auth_key: ""
+# ホスト側キーファイル（restic からも参照する）。tasks で quadlet_home を基に確定する。
+victoria_metrics_snapshot_auth_key_file: ""
+
 # Deduplication interval for samples with identical timestamps from multiple sources.
 # Set this to the scrape interval when multiple vmagent instances write the same metrics.
 # See: https://docs.victoriametrics.com/#deduplication

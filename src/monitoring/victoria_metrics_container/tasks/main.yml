@@ -12,6 +12,7 @@
     victoria_metrics_data_dir: "{{ quadlet_home }}/.local/share/victoria-metrics-data"
     victoria_metrics_config_dir: "{{ quadlet_home }}/.config/prometheus"
     victoria_metrics_config_file: "{{ quadlet_home }}/.config/prometheus/prometheus.yml"
+    victoria_metrics_snapshot_auth_key_file: "{{ quadlet_home }}/.config/victoria-metrics/snapshot-auth.key"
 
 - name: Create additional VictoriaMetrics directories
   ansible.builtin.file:
@@ -23,6 +24,18 @@
   loop:
     - "{{ victoria_metrics_data_dir }}"
     - "{{ victoria_metrics_config_dir }}"
+    - "{{ quadlet_home }}/.config/victoria-metrics"
+
+- name: Deploy VictoriaMetrics snapshot auth key file
+  ansible.builtin.copy:
+    content: "{{ victoria_metrics_snapshot_auth_key }}"
+    dest: "{{ victoria_metrics_snapshot_auth_key_file }}"
+    owner: "{{ victoria_metrics_user }}"
+    group: "{{ victoria_metrics_user }}"
+    mode: "0600"
+  no_log: true
+  when: victoria_metrics_snapshot_auth_key | length > 0
+  notify: restart victoria_metrics
 
 - name: Include podman_rootless_quadlet_network role
   ansible.builtin.include_role:

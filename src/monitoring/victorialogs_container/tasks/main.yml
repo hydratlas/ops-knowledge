@@ -10,6 +10,7 @@
 - name: Set VictoriaLogs directory paths
   ansible.builtin.set_fact:
     victorialogs_data_dir: "{{ quadlet_home }}/.local/share/victoria-logs-data"
+    victorialogs_partition_auth_key_file: "{{ quadlet_home }}/.config/victoria-logs/partition-auth.key"
 
 - name: Create additional VictoriaLogs directories
   ansible.builtin.file:
@@ -20,6 +21,18 @@
     mode: '0755'
   loop:
     - "{{ victorialogs_data_dir }}"
+    - "{{ quadlet_home }}/.config/victoria-logs"
+
+- name: Deploy VictoriaLogs partition auth key file
+  ansible.builtin.copy:
+    content: "{{ victorialogs_partition_auth_key }}"
+    dest: "{{ victorialogs_partition_auth_key_file }}"
+    owner: "{{ victorialogs_user }}"
+    group: "{{ victorialogs_user }}"
+    mode: "0600"
+  no_log: true
+  when: victorialogs_partition_auth_key | length > 0
+  notify: restart victoria_logs
 
 - name: Include podman_rootless_quadlet_network role
   ansible.builtin.include_role:

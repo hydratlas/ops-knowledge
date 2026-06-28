@@ -4,5 +4,9 @@ auto_update_extra_origins_patterns:
   - "site=apt.grafana.com"
   - "site=download.docker.com"
 auto_update_automatic_reboot: false
+# 再起動方針（auto_update_automatic_reboot が true のときに有効）
+#   when-needed: カーネル等フル再起動が必要なときのみ（既定・従来挙動）
+#   when-changed: パッケージ更新があれば毎回フルリブート（冗長ホスト向け）
+auto_update_reboot_policy: when-needed
 auto_update_oncalendar: "*-*-* 23:00"
 auto_update_jitter_sec: "8h"
