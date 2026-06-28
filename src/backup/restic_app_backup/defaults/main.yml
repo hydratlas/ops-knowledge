@@ -1,0 +1,40 @@
+---
+# restic アプリケーション層バックアップ・ロールのデフォルト変数。
+# 各アプリノードが「自分のリポジトリ」へ restic backup し、世代を刈るまでを担う。
+# インフラ層（宛先 NFS・ミラー）は別系統（storage/backup_pull_sync 等）で実装済み。
+
+# restic のバージョン。公式静的バイナリ（OS 非依存・単一系統）を全ノード共通で固定する。
+restic_app_backup_version: "0.18.1"
+
+# GitHub Releases の静的バイナリ（bzip2 圧縮）とチェックサム・ファイル。
+# タグは v 付き（v0.18.1）、ファイル名は v なし（restic_0.18.1_...）である点に注意。
+restic_app_backup_download_url: >-
+  https://github.com/restic/restic/releases/download/v{{ restic_app_backup_version }}/restic_{{ restic_app_backup_version }}_linux_amd64.bz2
+restic_app_backup_checksum_url: >-
+  https://github.com/restic/restic/releases/download/v{{ restic_app_backup_version }}/SHA256SUMS
+
+# restic バイナリの配置先。systemd の既定 PATH に含まれる /usr/local/bin を使う。
+restic_app_backup_binary_path: "/usr/local/bin/restic"
+
+# 各アプリノードが VIP NFS（rw）を介して自リポジトリへ書き込むベースディレクトリー。
+# 実体マウントは storage/unified_mounts をアプリ側 group_vars で併用して用意する。
+restic_app_backup_repo_base: "/mnt/backup-dst"
+
+# リポジトリ・パスワード・ファイル（全リポジトリ共通の単一鍵）。中身は vault_restic_password。
+restic_app_backup_password_file: "/etc/restic/repo.pass"
+
+# 日次 backup 後の forget で残す世代数（参照のみ刈る。pack 解放は週次 prune）。
+restic_app_backup_keep_daily: 7
+restic_app_backup_keep_weekly: 4
+
+# ジョブ定義。アプリ側の group_vars / host_vars から与える。
+# 空のホストでは restic インストール・鍵配布・unit 配置をすべてスキップする
+# （FreeIPA で idm-01 以外を no-op にするために必須）。
+#
+# 各要素のキー:
+#   name:         ジョブ名（= リポジトリ名・unit インスタンス名）。例: victoriametrics
+#   pre_command:  整合点を作るシェル断片（$STAGING 利用可。VM/VL は snapshot + bind）。
+#   post_command: 後始末のシェル断片（省略可。VM/VL の snapshot 削除・umount など）。
+#   source_path:  restic backup に渡すパス（省略時は $STAGING）。
+#   keep_daily / keep_weekly: 既定値の上書き（省略可）。
+restic_app_backup_jobs: []

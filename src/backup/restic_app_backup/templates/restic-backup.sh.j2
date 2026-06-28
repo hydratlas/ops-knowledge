@@ -1,0 +1,34 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# 日次: 整合点を作り restic backup → forget（参照のみ刈る。prune は週次へ分離）。
+# ジョブ: {{ item.name }}
+set -euo pipefail
+
+export RESTIC_REPOSITORY="{{ restic_app_backup_repo_base }}/{{ item.name }}"
+export RESTIC_PASSWORD_FILE="{{ restic_app_backup_password_file }}"
+
+STAGING="$(mktemp -d /var/tmp/restic-{{ item.name }}.XXXXXX)"
+export STAGING
+cleanup() {
+  rm -rf "$STAGING"
+{% if item.post_command is defined %}
+  {{ item.post_command | indent(2) }}
+{% endif %}
+}
+trap cleanup EXIT
+
+# 1) 整合点を用意する。dump 系は $STAGING に書き出し、スナップショット系（VM/VL）は
+#    snapshot API でハードリンク・スナップショットを作り安定パスへ mount --bind で提示する。
+{{ item.pre_command }}
+
+# 2) リポジトリ未初期化なら init（冪等）
+restic cat config >/dev/null 2>&1 || restic init
+
+# 3) スナップショット投入。安定パス＋不変データなら親照合 (path,mtime,size,inode) が効き、
+#    未変更 part は再読込・再ハッシュされない。
+restic backup --tag "{{ item.name }}" "{{ item.source_path | default('$STAGING') }}"
+
+# 4) 世代の「参照」だけを刈る（軽量。pack の再パックはしない）
+restic forget \
+  --keep-daily "{{ item.keep_daily | default(restic_app_backup_keep_daily) }}" \
+  --keep-weekly "{{ item.keep_weekly | default(restic_app_backup_keep_weekly) }}"

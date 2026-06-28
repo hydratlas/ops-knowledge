@@ -1,0 +1,12 @@
+[Unit]
+# {{ ansible_managed }}
+Description=restic daily backup timer for %i
+
+[Timer]
+OnCalendar=daily
+# 複数アプリ・複数ノードの I/O が VIP NFS（アクティブ1台）へ同時集中するのを避ける
+RandomizedDelaySec=1800
+Persistent=true
+
+[Install]
+WantedBy=timers.target

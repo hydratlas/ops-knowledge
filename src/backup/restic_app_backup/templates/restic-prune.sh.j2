@@ -1,0 +1,10 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# 週次: forget で参照を失った pack を実際に再パック・解放する（重い I/O。VIP NFS 越し）。
+# ジョブ: {{ item.name }}
+set -euo pipefail
+
+export RESTIC_REPOSITORY="{{ restic_app_backup_repo_base }}/{{ item.name }}"
+export RESTIC_PASSWORD_FILE="{{ restic_app_backup_password_file }}"
+
+restic prune

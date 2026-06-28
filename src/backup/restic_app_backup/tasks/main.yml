@@ -1,0 +1,182 @@
+---
+# restic アプリケーション層バックアップ。
+#
+# 想定実行ホスト: 自リポジトリを所有するアプリノード（monitoring / slurm_db /
+# idm-01 など）。restic_app_backup_jobs が非空のホストでのみ実体を構成し、空のホスト
+# では全タスクをスキップする（idm-02〜04 を no-op にするために必須）。
+#
+# 設計の詳細・手動手順・復旧 runbook は README.md を参照。
+# backup（日次）と prune（週次）は別スクリプト・別タイマーに分け、重い prune の
+# VIP NFS 越し I/O を日次経路から隔離する。両者は flock で同一ロックを共有する。
+
+- name: Gather minimal facts for package management
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - "!any"
+      - distribution
+  when:
+    - restic_app_backup_jobs | length > 0
+    - ansible_distribution is not defined
+
+# 整合点取得・スナップショット投入・バイナリ展開に要する共通ユーティリティ。
+# パッケージ名は Debian 系・RHEL 系で共通（curl / jq / bzip2 / util-linux の flock）。
+- name: Ensure helper utilities are installed (curl / jq / bzip2)
+  ansible.builtin.package:
+    name:
+      - curl
+      - jq
+      - bzip2
+    state: present
+  when: restic_app_backup_jobs | length > 0
+
+- name: Check whether restic binary is already present
+  ansible.builtin.stat:
+    path: "{{ restic_app_backup_binary_path }}"
+  register: _restic_binary
+  when: restic_app_backup_jobs | length > 0
+
+- name: Detect installed restic version
+  ansible.builtin.command:
+    cmd: "{{ restic_app_backup_binary_path }} version"
+  register: _restic_installed_version_raw
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when:
+    - restic_app_backup_jobs | length > 0
+    - _restic_binary.stat.exists | default(false)
+
+# `restic version` は `restic 0.18.1 compiled with go1.24 on linux/amd64` のような
+# 文字列を返す。先頭の `restic X.Y.Z` から版数だけを取り出す。
+- name: Determine whether restic must be (re)installed
+  ansible.builtin.set_fact:
+    _restic_install_required: >-
+      {{ (not (_restic_binary.stat.exists | default(false)))
+         or ((_restic_installed_version_raw.stdout | default(''))
+              | regex_search('restic\s+([0-9]+\.[0-9]+\.[0-9]+)', '\1')
+              | default([''], true) | first) != restic_app_backup_version }}
+  when: restic_app_backup_jobs | length > 0
+
+- name: Download restic static binary (bzip2) with checksum verification
+  ansible.builtin.get_url:
+    url: "{{ restic_app_backup_download_url }}"
+    dest: "/tmp/restic_{{ restic_app_backup_version }}_linux_amd64.bz2"
+    # checksum URL の SHA256SUMS から、dest のベース名に一致する行を照合する。
+    checksum: "sha256:{{ restic_app_backup_checksum_url }}"
+    mode: "0644"
+  when:
+    - restic_app_backup_jobs | length > 0
+    - _restic_install_required | bool
+
+- name: Decompress restic into place
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail &&
+      bunzip2 -c /tmp/restic_{{ restic_app_backup_version }}_linux_amd64.bz2
+      > {{ restic_app_backup_binary_path }}
+    executable: /bin/bash
+  when:
+    - restic_app_backup_jobs | length > 0
+    - _restic_install_required | bool
+
+- name: Set restic binary ownership and permissions
+  ansible.builtin.file:
+    path: "{{ restic_app_backup_binary_path }}"
+    owner: root
+    group: root
+    mode: "0755"
+  when:
+    - restic_app_backup_jobs | length > 0
+    - _restic_install_required | bool
+
+- name: Remove downloaded restic archive
+  ansible.builtin.file:
+    path: "/tmp/restic_{{ restic_app_backup_version }}_linux_amd64.bz2"
+    state: absent
+  when:
+    - restic_app_backup_jobs | length > 0
+    - _restic_install_required | bool
+
+- name: Create restic configuration directory
+  ansible.builtin.file:
+    path: "{{ restic_app_backup_password_file | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  when: restic_app_backup_jobs | length > 0
+
+- name: Deploy restic repository password file
+  ansible.builtin.copy:
+    content: "{{ vault_restic_password }}\n"
+    dest: "{{ restic_app_backup_password_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  when: restic_app_backup_jobs | length > 0
+
+- name: Deploy daily backup scripts (per job)
+  ansible.builtin.template:
+    src: restic-backup.sh.j2
+    dest: "/usr/local/sbin/restic-backup-{{ item.name }}.sh"
+    owner: root
+    group: root
+    mode: "0750"
+  loop: "{{ restic_app_backup_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: restic_app_backup_jobs | length > 0
+
+- name: Deploy weekly prune scripts (per job)
+  ansible.builtin.template:
+    src: restic-prune.sh.j2
+    dest: "/usr/local/sbin/restic-prune-{{ item.name }}.sh"
+    owner: root
+    group: root
+    mode: "0750"
+  loop: "{{ restic_app_backup_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: restic_app_backup_jobs | length > 0
+
+# systemd テンプレート unit（%i = ジョブ名）。backup と prune は同一の
+# /run/restic-%i.lock を flock で共有し、同時実行・多重起動を防ぐ。
+- name: Deploy systemd template units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - "restic-backup@.service"
+    - "restic-backup@.timer"
+    - "restic-prune@.service"
+    - "restic-prune@.timer"
+  notify: Reload systemd daemon
+  when: restic_app_backup_jobs | length > 0
+
+- name: Flush handlers to reload systemd before enabling timers
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start daily backup timers (per job)
+  ansible.builtin.systemd:
+    name: "restic-backup@{{ item.name }}.timer"
+    enabled: true
+    state: started
+  loop: "{{ restic_app_backup_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: restic_app_backup_jobs | length > 0
+
+- name: Enable and start weekly prune timers (per job)
+  ansible.builtin.systemd:
+    name: "restic-prune@{{ item.name }}.timer"
+    enabled: true
+    state: started
+  loop: "{{ restic_app_backup_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: restic_app_backup_jobs | length > 0

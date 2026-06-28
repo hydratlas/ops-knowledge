@@ -1,0 +1,12 @@
+[Unit]
+# {{ ansible_managed }}
+Description=restic daily backup for %i
+After=network-online.target remote-fs.target
+Wants=network-online.target
+# VIP NFS (/mnt/backup-dst) が利用可能になってから実行する
+RequiresMountsFor={{ restic_app_backup_repo_base }}
+
+[Service]
+Type=oneshot
+# backup と prune は同一ロックを共有し、同時実行・多重起動を防ぐ（-n: 取得不可なら即終了）
+ExecStart=/usr/bin/flock -n /run/restic-%i.lock /usr/local/sbin/restic-backup-%i.sh

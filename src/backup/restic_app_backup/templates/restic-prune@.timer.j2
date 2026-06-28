@@ -1,0 +1,11 @@
+[Unit]
+# {{ ansible_managed }}
+Description=restic weekly prune timer for %i
+
+[Timer]
+OnCalendar=weekly
+RandomizedDelaySec=3600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

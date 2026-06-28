@@ -1,0 +1,11 @@
+[Unit]
+# {{ ansible_managed }}
+Description=restic weekly prune for %i
+After=network-online.target remote-fs.target
+Wants=network-online.target
+RequiresMountsFor={{ restic_app_backup_repo_base }}
+
+[Service]
+Type=oneshot
+# backup と同一の /run/restic-%i.lock を共有し、prune と backup の同時実行を防ぐ
+ExecStart=/usr/bin/flock -n /run/restic-%i.lock /usr/local/sbin/restic-prune-%i.sh
