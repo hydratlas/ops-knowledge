@@ -25,8 +25,13 @@ trap cleanup EXIT
 restic cat config >/dev/null 2>&1 || restic init
 
 # 3) スナップショット投入。安定パス＋不変データなら親照合 (path,mtime,size,inode) が効き、
-#    未変更 part は再読込・再ハッシュされない。
+#    未変更 part は再読込・再ハッシュされない。files_from 指定時は pre_command が生成した
+#    パス一覧ファイル（VL の partition snapshot のように対象が多数・可変な場合に使う）から投入する。
+{% if item.files_from is defined %}
+restic backup --tag "{{ item.name }}" --files-from "{{ item.files_from }}"
+{% else %}
 restic backup --tag "{{ item.name }}" "{{ item.source_path | default('$STAGING') }}"
+{% endif %}
 
 # 4) 世代の「参照」だけを刈る（軽量。pack の再パックはしない）
 restic forget \

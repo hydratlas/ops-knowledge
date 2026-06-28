@@ -33,8 +33,13 @@ restic_app_backup_keep_weekly: 4
 #
 # 各要素のキー:
 #   name:         ジョブ名（= リポジトリ名・unit インスタンス名）。例: victoriametrics
-#   pre_command:  整合点を作るシェル断片（$STAGING 利用可。VM/VL は snapshot + bind）。
+#   pre_command:  整合点を作るシェル断片（$STAGING 利用可。VM は snapshot + bind）。
 #   post_command: 後始末のシェル断片（省略可。VM/VL の snapshot 削除・umount など）。
-#   source_path:  restic backup に渡すパス（省略時は $STAGING）。
+#                 注意: cleanup は post_command より先に $STAGING を rm するため、
+#                 post_command から $STAGING の中身は参照できない（API 再取得などで賄う）。
+#   source_path:  restic backup に渡すパス（省略時は $STAGING）。files_from とは排他。
+#   files_from:   restic backup --files-from に渡すパス一覧ファイル（省略可）。pre_command が
+#                 1 行 1 パスで生成する。対象が多数・可変で単一パスに束ねられない場合に使う
+#                 （VL の partition snapshot 等）。指定時は source_path より優先される。
 #   keep_daily / keep_weekly: 既定値の上書き（省略可）。
 restic_app_backup_jobs: []
