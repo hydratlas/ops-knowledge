@@ -1,0 +1,21 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# restic pre-hook (slurmdbd / MariaDB)。restic-backup.sh（systemd: restic-backup@slurmdbd）
+# から pre_command 経由で子プロセスとして実行される（export 済み $STAGING を共有）。
+# MariaDB を論理 dump して $STAGING へ出力する。
+# 宛先 NFS（$BACKUP_DST）は autofs（timeout=60）で、dump 中はアクセスしないため、長い dump
+# では 60 秒アイドルでアンマウントされ RequiresMountsFor 依存でジョブが SIGTERM される危険が
+# ある。冒頭で明示マウントし background stat で keepalive を回し、フック終了時に trap で停止する。
+set -euo pipefail
+
+BACKUP_DST="{{ restic_app_backup_repo_base }}"
+
+# 宛先 NFS（autofs timeout=60）のアイドルアンマウントを防ぐ keepalive
+stat "$BACKUP_DST" >/dev/null 2>&1 || true
+( while :; do sleep 20; stat "$BACKUP_DST" >/dev/null 2>&1 || true; done ) &
+KEEPALIVE_PID=$!
+trap 'kill "$KEEPALIVE_PID" 2>/dev/null || true' EXIT
+
+# MariaDB 論理 dump（unix_socket 認証、--single-transaction で InnoDB 無ロック整合）
+mariadb-dump --single-transaction --routines --triggers \
+  --databases slurm_acct_db > "$STAGING/slurm_acct_db.sql"
