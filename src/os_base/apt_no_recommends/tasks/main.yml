@@ -1,0 +1,18 @@
+---
+- name: Gather OS family fact
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - distribution
+  when: ansible_os_family is not defined
+
+- name: Disable APT recommends/suggests on Debian-family hosts
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/99no-recommends
+    content: |
+      APT::Install-Recommends "false";
+      APT::Install-Suggests "false";
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_os_family == "Debian"

@@ -187,7 +187,7 @@ lsmod
 - **問題**: 設定したのにモジュールがロードされる
   - **対処**: initramfsから読み込まれている可能性。`update-initramfs -u`または`dracut --force`を実行して再起動する
 - **問題**: ハンドラー`Rebuild initramfs`が`skipping`になる
-  - **対処**: 正常な挙動。initrd無しのminimalクラウドイメージ等では`update-initramfs`/`dracut`が存在せずinitramfs再生成は不要なため、ハンドラーをスキップする。modprobe.dのランタイム抑止のみでCIS目的は達成される
+  - **対処**: 正常な挙動。initrd無しのminimalクラウドイメージ等では`update-initramfs`/`dracut`が存在せずinitramfs再生成は不要なため、ハンドラーをスキップする。modprobe.dのランタイム抑止のみでCIS目的は達成される。なお`os_base/apt_no_recommends`ロールによりカーネル更新時の`initramfs-tools`流入が抑止されるため、minimalイメージでは今後も同ツールが導入されずスキップが維持される
 - **問題**: `usb-storage`まで無効化されてしまった
   - **対処**: 本ロールは`usb-storage`を対象としていない。他のロールや手動設定を確認する
 
