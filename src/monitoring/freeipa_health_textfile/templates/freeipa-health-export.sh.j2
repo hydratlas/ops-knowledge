@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+#
+# FreeIPA のヘルス状態を Prometheus textfile collector 形式で出力するスクリプト。
+# systemd timer から root 権限で定期実行される。
+#
+# 出力メトリクス:
+#   - freeipa_ipactl_status{service="..."}  : ipactl status の各サービス（1=RUNNING / 0=その他）
+#   - freeipa_ca_getstatus_code             : CA REST getStatus の HTTP コード
+#       200       = 正常
+#       4xx / 5xx = undeploy 型障害（プロセス active で Web アプリ死亡）
+#       0 (=000)  = プロセス停止・到達不可
+#   - freeipa_health_export_timestamp_seconds : 最終出力時刻（Unix 秒）
+#
+# .prom は一時ファイルへ書いてから rename（アトミック書き込み）し、
+# node_exporter による読み取り中の破損を避ける。
+set -uo pipefail
+
+PROM_FINAL="{{ freeipa_health_textfile_directory }}/{{ freeipa_health_prom_filename }}"
+PROM_TMP="$(mktemp "${PROM_FINAL}.XXXXXX")"
+trap 'rm -f "${PROM_TMP}"' EXIT
+
+{
+  echo "# HELP freeipa_ipactl_status FreeIPA core service state from ipactl status (1=RUNNING, 0=otherwise)."
+  echo "# TYPE freeipa_ipactl_status gauge"
+  # ipactl status は1サービスでも停止していると非ゼロ終了するため、終了コードは無視して出力を採取する。
+  # 出力例: "Directory Service: RUNNING" / "pki-tomcatd Service: STOPPED"
+  ipactl status 2>/dev/null | while IFS= read -r line; do
+    case "${line}" in
+      *" Service: "*)
+        svc="${line%% Service: *}"
+        state="${line##* Service: }"
+        # ラベル値のエスケープ（バックスラッシュ・ダブルクォート）
+        svc_label="$(printf '%s' "${svc}" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+        if [ "${state}" = "RUNNING" ]; then
+          value=1
+        else
+          value=0
+        fi
+        printf 'freeipa_ipactl_status{service="%s"} %d\n' "${svc_label}" "${value}"
+        ;;
+    esac
+  done
+
+  echo "# HELP freeipa_ca_getstatus_code HTTP status code of the FreeIPA CA REST getStatus endpoint (200=healthy, 4xx/5xx=undeploy, 0=unreachable)."
+  echo "# TYPE freeipa_ca_getstatus_code gauge"
+  # curl は --write-out '%{http_code}' により接続失敗時も 000 を stdout へ出力する。
+  ca_code="$(curl --silent --output /dev/null --write-out '%{http_code}' \
+    --cacert "{{ freeipa_health_ca_cacert }}" \
+    --max-time {{ freeipa_health_curl_timeout }} \
+    "{{ freeipa_health_ca_getstatus_url }}" 2>/dev/null)"
+  case "${ca_code}" in
+    '' | *[!0-9]*) ca_code="000" ;;
+  esac
+  # 先頭ゼロを10進として解釈（000 -> 0）。Grafana 側で 0 を「到達不可（赤）」として扱う。
+  printf 'freeipa_ca_getstatus_code %d\n' "$((10#${ca_code}))"
+
+  echo "# HELP freeipa_health_export_timestamp_seconds Unix timestamp of the last FreeIPA health export run."
+  echo "# TYPE freeipa_health_export_timestamp_seconds gauge"
+  printf 'freeipa_health_export_timestamp_seconds %s\n' "$(date +%s)"
+} >"${PROM_TMP}"
+
+chown "{{ freeipa_health_file_owner }}:{{ freeipa_health_file_group }}" "${PROM_TMP}"
+chmod 0644 "${PROM_TMP}"
+mv -f "${PROM_TMP}" "${PROM_FINAL}"
+trap - EXIT

@@ -1,0 +1,1 @@
+このロールはFreeIPAのヘルス状態をPrometheusのtextfile collector形式で定期的に収集・出力する役割を担う。`ipactl status`の各サービス稼働状態とCA RESTエンドポイントのHTTPステータスコードをメトリクスとして取得し、Node Exporterのtextfile collectorディレクトリーに`.prom`ファイルとして書き出す。書き込みは一時ファイル経由のアトミックrename方式を採用しており、node_exporterによる読み取り中の破損を防ぐ。実行はsystemd timerで2分間隔に管理され、スクリプト・サービスユニット・タイマーユニットをテンプレートから展開して配置する構成である。

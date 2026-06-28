@@ -1,0 +1,9 @@
+[Unit]
+Description=FreeIPA health metrics exporter (node_exporter textfile collector)
+Documentation=https://github.com/prometheus/node_exporter#textfile-collector
+After=ipa.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart={{ freeipa_health_script_path }}

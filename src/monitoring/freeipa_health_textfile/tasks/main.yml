@@ -1,0 +1,49 @@
+---
+# textfile collector ディレクトリーは monitoring/node_exporter_binary でも作成されるが、
+# 本ロール単独適用時にも成立するよう冪等に確保する（所有者は node_exporter 実行ユーザー）。
+- name: Ensure textfile collector directory exists
+  ansible.builtin.file:
+    path: "{{ freeipa_health_textfile_directory }}"
+    state: directory
+    owner: "{{ freeipa_health_file_owner }}"
+    group: "{{ freeipa_health_file_group }}"
+    mode: "0755"
+
+- name: Deploy FreeIPA health export script
+  ansible.builtin.template:
+    src: freeipa-health-export.sh.j2
+    dest: "{{ freeipa_health_script_path }}"
+    owner: root
+    group: root
+    mode: "0755"
+  notify: run freeipa health export
+
+- name: Deploy FreeIPA health export systemd service
+  ansible.builtin.template:
+    src: freeipa-health-export.service.j2
+    dest: "/etc/systemd/system/{{ freeipa_health_service_name }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - reload systemd daemon
+    - run freeipa health export
+
+- name: Deploy FreeIPA health export systemd timer
+  ansible.builtin.template:
+    src: freeipa-health-export.timer.j2
+    dest: "/etc/systemd/system/{{ freeipa_health_service_name }}.timer"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload systemd daemon
+
+- name: Flush handlers to ensure systemd is reloaded before enabling units
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start FreeIPA health export timer
+  ansible.builtin.systemd:
+    name: "{{ freeipa_health_service_name }}.timer"
+    enabled: true
+    state: started
+    daemon_reload: true

@@ -1,0 +1,29 @@
+---
+# 出力先（node_exporter の textfile collector ディレクトリーと一致させる）
+freeipa_health_textfile_directory: "/var/lib/node_exporter/textfile_collector"
+
+# 出力する .prom ファイル名
+freeipa_health_prom_filename: "freeipa_health.prom"
+
+# .prom の所有者・グループ（node_exporter 実行ユーザーに合わせ、読み取り可能にする）
+freeipa_health_file_owner: "node_exporter"
+freeipa_health_file_group: "node_exporter"
+
+# ヘルス出力スクリプトの配置先
+freeipa_health_script_path: "/usr/local/bin/freeipa-health-export.sh"
+
+# CA REST（pki-tomcatd）の getStatus エンドポイント
+# CA は自己署名のため --cacert で検証する
+freeipa_health_ca_getstatus_url: "https://localhost:8443/ca/admin/ca/getStatus"
+freeipa_health_ca_cacert: "/etc/ipa/ca.crt"
+
+# curl のタイムアウト（秒）。接続拒否・タイムアウト時は 000 を記録する
+freeipa_health_curl_timeout: 10
+
+# systemd timer の実行間隔と初回実行までの遅延
+# ipactl / CA REST を過度に叩かないよう保守的に設定する
+freeipa_health_interval: "2min"
+freeipa_health_initial_delay: "1min"
+
+# systemd ユニット名（.service / .timer 共通のベース名）
+freeipa_health_service_name: "freeipa-health-export"

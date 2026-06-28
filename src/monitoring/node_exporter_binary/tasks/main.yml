@@ -131,3 +131,28 @@
     enabled: yes
     state: started
     daemon_reload: true
+
+# firewalld 稼働ホスト（idm 等）向け: scrape 元から待受ポートを開放する。
+# node_exporter_firewalld_sources が空のホストでは no-op。
+- name: Check whether firewalld is active
+  ansible.builtin.systemd:
+    name: firewalld.service
+  register: _node_exporter_firewalld
+  failed_when: false
+  changed_when: false
+  when: node_exporter_firewalld_sources | length > 0
+
+- name: Open node_exporter port for scrape sources (firewalld)
+  ansible.posix.firewalld:
+    rich_rule: >-
+      rule family={{ 'ipv6' if (':' in item) else 'ipv4' }}
+      source address={{ item }}
+      port port={{ node_exporter_listen_address | regex_replace('^.*:', '') }} protocol=tcp
+      accept
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: "{{ node_exporter_firewalld_sources }}"
+  when:
+    - node_exporter_firewalld_sources | length > 0
+    - (_node_exporter_firewalld.status.ActiveState | default('')) == 'active'

@@ -21,6 +21,10 @@ node_exporter_listen_address: ":9100"
 # Extra CLI flags for node_exporter
 node_exporter_extra_flags: []
 
+# firewalld を稼働させているホスト（idm 等）で、scrape 元へ待受ポートを開放する送信元リスト。
+# 空（既定）の場合は何もしない。firewalld が非稼働のホストでもスキップされる。
+node_exporter_firewalld_sources: []
+
 # Legacy cleanup: files to remove after migration
 node_exporter_legacy_files: []
 
