@@ -28,4 +28,8 @@ mkdir -p "$BIND_BASE/big" "$BIND_BASE/small" "$BIND_BASE/indexdb"
 for d in big small indexdb; do
   mount --bind "$VMDATA/data/$d/snapshots/$SNAP" "$BIND_BASE/$d"
 done
+# metadata は実ファイル（minTimestampForCompositeIndex）のため bind ではなく複製する。
+# 既存ディレクトリーへの cp -a は「中へコピー」して入れ子（metadata/metadata/...）を積むため、
+# 毎回作り直して入れ子を防ぐ（既存の蓄積も自己修復的に一掃する）。
+rm -rf "$BIND_BASE/metadata"
 cp -a "$VMDATA/snapshots/$SNAP/metadata" "$BIND_BASE/metadata"
