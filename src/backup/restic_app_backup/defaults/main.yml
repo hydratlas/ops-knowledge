@@ -33,9 +33,10 @@ restic_app_backup_keep_weekly: 4
 #
 # 各要素のキー:
 #   name:         ジョブ名（= リポジトリ名・unit インスタンス名）。例: victoriametrics
-#   pre_command:  整合点を作るシェル断片（$STAGING 利用可。VM は snapshot + bind）。短い処理は
-#                 ここへ直接書いてよいが（idm-01 の ipa-backup など）、長い・複雑な手続きは
-#                 hooks でスクリプト化し、ここからは実行パスを 1 行で呼ぶ（下記 hooks 参照）。
+#   pre_command:  整合点を作るシェル断片（$STAGING 利用可。VM は snapshot + bind）。単純な dump
+#                 1 行などは直接書いてよいが、長い・複雑な手続き（VM/VL の snapshot 操作、FreeIPA の
+#                 ipa-backup + autofs keepalive など）は hooks でスクリプト化し、ここからは実行パスを
+#                 1 行で呼ぶ（下記 hooks 参照）。
 #   post_command: 後始末のシェル断片（省略可。VM/VL の snapshot 削除・umount など）。
 #                 注意: cleanup は post_command より先に $STAGING を rm するため、
 #                 post_command から $STAGING の中身は参照できない（API 再取得などで賄う）。

@@ -1,0 +1,29 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# restic pre-hook (FreeIPA)。親 restic-backup-freeipa.sh から別プロセスで実行される
+# （export 済みの環境変数は引き継がれるがシェル変数は独立）。
+#
+# フル ipa-backup（証明書・CA・/etc/dirsrv・設定・LDAP データ一式。サーバーをゼロから
+# 再構築できる唯一の DR 素材）を取得する。--data/--online/--logs は付けない。全 IPA サービスを
+# 停止→ファイル退避→ipactl start の往復を行うため数分を要し、その間 backup 先 NFS（$BACKUP_DST）
+# へは一切アクセスしない。宛先は autofs（timeout=60）のため 60 秒アイドルでアンマウントされ、
+# restic-backup@.service の RequiresMountsFor 依存により systemd が本フック（ipa-backup 実行中）を
+# SIGTERM し、ipa-backup が IPA サービス停止のまま中断される危険がある。これを避けるため冒頭で
+# $BACKUP_DST を明示マウントし、background で定期 stat してアイドルアンマウントを防ぐ（フック終了時に
+# trap で確実に keepalive を停止する。ipa-backup 後は restic 本体が $BACKUP_DST を継続アクセスする
+# ため keepalive は不要）。バックアップ実体は source_path: /var/lib/ipa/backup を restic backup する。
+set -euo pipefail
+
+BACKUP_DST="{{ restic_app_backup_repo_base }}"
+
+# 宛先 NFS（autofs timeout=60）を明示マウントし、ipa-backup の長時間処理中も定期 stat で
+# アイドルアンマウントを防ぐ。background keepalive はフック終了時に trap で確実に停止する。
+stat "$BACKUP_DST" >/dev/null 2>&1 || true
+( while :; do sleep 20; stat "$BACKUP_DST" >/dev/null 2>&1 || true; done ) &
+KEEPALIVE_PID=$!
+trap 'kill "$KEEPALIVE_PID" 2>/dev/null || true' EXIT
+
+# 既存バックアップを掃除してから取得（ipa-backup は毎回新ディレクトリーを作る）
+rm -rf /var/lib/ipa/backup/ipa-full-* /var/lib/ipa/backup/ipa-data-* || true
+# フル・バックアップ（証明書・CA・設定込み。取得中 idm-01 の IPA サービスは一時停止）
+ipa-backup
