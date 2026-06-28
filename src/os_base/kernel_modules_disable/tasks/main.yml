@@ -6,6 +6,13 @@
       - "!any"
       - distribution
 
+- name: Detect initramfs rebuild tooling (for handler guard)
+  ansible.builtin.stat:
+    path: "{{ kernel_modules_disable_initramfs_tool[ansible_os_family] | default('') }}"
+  register: kernel_modules_disable_initramfs_tool_stat
+  check_mode: false
+  when: kernel_modules_disable_initramfs_tool[ansible_os_family] is defined
+
 - name: Deploy modprobe configuration to disable CIS-listed kernel modules
   ansible.builtin.template:
     src: cis-disable-modules.conf.j2

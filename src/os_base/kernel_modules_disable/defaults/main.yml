@@ -2,6 +2,13 @@
 # 本ロールでCISモジュール無効化を有効化するかどうか
 kernel_modules_disable_enabled: false
 
+# initramfs再生成ツールのパス(os_family別)
+# minimalクラウドイメージ等でツールが存在しない場合はrebuild initramfsハンドラーを
+# スキップする(存在検出はtasks/main.yml、ガードはhandlers/main.yml)
+kernel_modules_disable_initramfs_tool:
+  Debian: /usr/sbin/update-initramfs
+  RedHat: /usr/bin/dracut
+
 # 実行中のモジュールをアンロードするかどうか
 kernel_modules_disable_unload_running: false
 
