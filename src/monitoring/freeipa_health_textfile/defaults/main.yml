@@ -13,8 +13,9 @@ freeipa_health_file_group: "node_exporter"
 freeipa_health_script_path: "/usr/local/bin/freeipa-health-export.sh"
 
 # CA REST（pki-tomcatd）の getStatus エンドポイント
-# CA は自己署名のため --cacert で検証する
-freeipa_health_ca_getstatus_url: "https://localhost:8443/ca/admin/ca/getStatus"
+# CA は自己署名のため --cacert で検証する。証明書の SAN は FQDN のため
+# localhost ではホスト名不一致で TLS 検証に失敗する。inventory_hostname（FQDN）を用いる。
+freeipa_health_ca_getstatus_url: "https://{{ inventory_hostname }}:8443/ca/admin/ca/getStatus"
 freeipa_health_ca_cacert: "/etc/ipa/ca.crt"
 
 # curl のタイムアウト（秒）。接続拒否・タイムアウト時は 000 を記録する

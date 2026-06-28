@@ -51,7 +51,7 @@ FreeIPA サーバー（idm-01〜04）のヘルス状態を、外部 exporter を
 | `freeipa_health_file_owner`       | `.prom` の所有者                                           | `node_exporter`                                         |
 | `freeipa_health_file_group`       | `.prom` の所有グループ                                     | `node_exporter`                                         |
 | `freeipa_health_script_path`      | ヘルス出力スクリプトの配置先                               | `/usr/local/bin/freeipa-health-export.sh`              |
-| `freeipa_health_ca_getstatus_url` | CA REST getStatus エンドポイント                          | `https://localhost:8443/ca/admin/ca/getStatus`         |
+| `freeipa_health_ca_getstatus_url` | CA REST getStatus エンドポイント（FQDN。証明書 SAN と一致させる） | `https://{{ inventory_hostname }}:8443/ca/admin/ca/getStatus` |
 | `freeipa_health_ca_cacert`        | CA 証明書（自己署名の検証用）                             | `/etc/ipa/ca.crt`                                       |
 | `freeipa_health_curl_timeout`     | curl のタイムアウト（秒）                                  | `10`                                                    |
 | `freeipa_health_interval`         | timer の実行間隔（`OnUnitActiveSec`）                     | `2min`                                                  |

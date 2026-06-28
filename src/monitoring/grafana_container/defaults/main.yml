@@ -64,3 +64,4 @@ grafana_dashboards:
 grafana_local_dashboards:
   - node-exporter-overview-aggregated.json
   - victorialogs-logs-overview.json
+  - freeipa-health-overview.json
