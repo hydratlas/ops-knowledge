@@ -183,8 +183,12 @@ description="Cloudflare Tunnel daemon"
 command="/usr/local/bin/cloudflared"
 command_args="tunnel run --token <TOKEN>"
 command_user="root"
-command_background="yes"
+supervisor="supervise-daemon"
 pidfile="/run/${RC_SVCNAME}.pid"
+
+respawn_delay=5
+respawn_max=0
+respawn_period=1800
 
 output_log="/var/log/cloudflared/cloudflared.log"
 error_log="/var/log/cloudflared/cloudflared.log"

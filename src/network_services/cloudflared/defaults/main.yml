@@ -13,3 +13,8 @@ cloudflared_download_url: https://github.com/cloudflare/cloudflared/releases/lat
 cloudflared_auto_update: true
 cloudflared_auto_update_hour: "3"
 cloudflared_auto_update_minute: "30"
+
+# OpenRC supervise-daemon による自動再起動（respawn）設定（Alpine のみ）
+cloudflared_respawn_delay: 5      # 異常終了から再起動までの待機秒数
+cloudflared_respawn_max: 0        # respawn_period 内の最大再起動回数（0 = 無制限）
+cloudflared_respawn_period: 1800  # respawn_max を数える時間窓（秒）

@@ -8,8 +8,12 @@ description="Cloudflare Tunnel daemon"
 command="{{ cloudflared_binary_path }}"
 command_args="tunnel run --token {{ cloudflared_token }}"
 command_user="root"
-command_background="yes"
+supervisor="supervise-daemon"
 pidfile="/run/${RC_SVCNAME}.pid"
+
+respawn_delay={{ cloudflared_respawn_delay }}
+respawn_max={{ cloudflared_respawn_max }}
+respawn_period={{ cloudflared_respawn_period }}
 
 output_log="/var/log/cloudflared/cloudflared.log"
 error_log="/var/log/cloudflared/cloudflared.log"
