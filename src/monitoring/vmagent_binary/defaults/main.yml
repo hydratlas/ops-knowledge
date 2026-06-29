@@ -15,6 +15,13 @@ vmagent_service_description: "VictoriaMetrics vmagent"
 vmagent_service_restart: "always"
 vmagent_service_restart_sec: 5
 
+# OpenRC supervise-daemon による自動再起動（respawn）設定（Alpine のみ）
+# 既存の vmagent_service_restart / vmagent_service_restart_sec は systemd 専用のため流用せず、
+# OpenRC 用に独立した変数を新設する（値は systemd 側とパリティを取る）。
+vmagent_respawn_delay: 5      # 異常終了から再起動までの待機秒数（= systemd RestartSec）
+vmagent_respawn_max: 0        # respawn_period 内の最大再起動回数（0 = 無制限、= systemd Restart=always）
+vmagent_respawn_period: 1800  # respawn_max を数える時間窓（秒）
+
 # Directory paths
 vmagent_config_dir: "/etc/vmagent"
 vmagent_config_file: "{{ vmagent_config_dir }}/prometheus.yml"

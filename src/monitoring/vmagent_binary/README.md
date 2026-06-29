@@ -45,3 +45,44 @@ vmagent_scrape_configs:
 1. GitHub Releasesからvmutilsアーカイブをダウンロードし、`vmagent-prod`バイナリーを`/opt/vmagent/`に配置する
 2. `/etc/vmagent/prometheus.yml`にスクレイプ設定を記述する
 3. systemdサービスファイルを作成し、`-promscrape.config`と`-remoteWrite.url`を指定して起動する
+
+**Alpine Linux の場合（OpenRC）:**
+
+`supervise-daemon` を `supervisor` に指定することで、プロセスが異常終了しても自動的に再起動（respawn）される。`command_background="yes"`（start-stop-daemon による単発起動）は監視・自動再起動を持たないため使用しない。
+
+```bash
+# init スクリプトを作成（<...> は環境に合わせて置換する）
+cat << 'EOF' | doas tee /etc/init.d/vmagent
+#!/sbin/openrc-run
+
+name="vmagent"
+description="VictoriaMetrics vmagent"
+
+command="/usr/local/bin/vmagent-prod"
+command_args="-httpListenAddr=:8429 -promscrape.config=/etc/vmagent/prometheus.yml -remoteWrite.tmpDataPath=/var/lib/vmagent/remote-write-tmp -remoteWrite.maxDiskUsagePerURL=1GB -promscrape.cluster.name=<HOSTNAME> -remoteWrite.url=<REMOTE_WRITE_URL>"
+command_user="monitoring:monitoring"
+supervisor="supervise-daemon"
+pidfile="/run/${RC_SVCNAME}.pid"
+
+respawn_delay=5
+respawn_max=0
+respawn_period=1800
+
+output_log="/var/log/vmagent/vmagent.log"
+error_log="/var/log/vmagent/vmagent.log"
+
+depend() {
+    need net
+    after firewall
+}
+
+start_pre() {
+    checkpath --directory --owner monitoring:monitoring --mode 0755 /var/log/vmagent
+}
+EOF
+doas chmod 755 /etc/init.d/vmagent
+
+# サービスを起動
+doas rc-update add vmagent default
+doas rc-service vmagent start
+```

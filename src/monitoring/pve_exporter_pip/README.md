@@ -149,6 +149,47 @@ sudo systemctl enable --now pve-exporter.service
 sudo systemctl status pve-exporter.service
 ```
 
+#### ステップ4-5（Alpine の場合）: OpenRC サービスの作成と起動
+
+`supervise-daemon` を `supervisor` に指定することで、プロセスが異常終了しても自動的に再起動（respawn）される。`command_background="yes"`（start-stop-daemon による単発起動）は監視・自動再起動を持たないため使用しない。なお `prometheus-pve-exporter` は親プロセスとワーカーの2プロセス構成で動作し、`supervise-daemon` は親プロセス（pidfile 記録対象）を監視する。
+
+```bash
+# init スクリプトを作成
+cat << 'EOF' | doas tee /etc/init.d/pve-exporter
+#!/sbin/openrc-run
+
+name="pve-exporter"
+description="Prometheus PVE Exporter Service"
+
+command="/opt/pve-exporter/bin/pve_exporter"
+command_args="--config.file /etc/pve-exporter/pve.yml --web.listen-address :9221"
+command_user="monitoring:monitoring"
+supervisor="supervise-daemon"
+pidfile="/run/${RC_SVCNAME}.pid"
+
+respawn_delay=5
+respawn_max=0
+respawn_period=1800
+
+output_log="/var/log/pve-exporter/pve-exporter.log"
+error_log="/var/log/pve-exporter/pve-exporter.log"
+
+depend() {
+    need net
+    after firewall
+}
+
+start_pre() {
+    checkpath --directory --owner monitoring:monitoring --mode 0755 /var/log/pve-exporter
+}
+EOF
+doas chmod 755 /etc/init.d/pve-exporter
+
+# サービスを起動
+doas rc-update add pve-exporter default
+doas rc-service pve-exporter start
+```
+
 ## 運用管理
 
 ### 基本操作

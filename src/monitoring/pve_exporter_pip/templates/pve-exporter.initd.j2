@@ -8,8 +8,12 @@ description="{{ pve_exporter_service_description }}"
 command="{{ pve_exporter_venv_dir }}/bin/pve_exporter"
 command_args="--config.file {{ pve_exporter_config_file }} --web.listen-address :{{ pve_exporter_port }}{% if not pve_exporter_collector_config %} --no-collector.config{% endif %}"
 command_user="{{ pve_exporter_user }}:{{ pve_exporter_group }}"
-command_background="yes"
+supervisor="supervise-daemon"
 pidfile="/run/${RC_SVCNAME}.pid"
+
+respawn_delay={{ pve_exporter_respawn_delay }}
+respawn_max={{ pve_exporter_respawn_max }}
+respawn_period={{ pve_exporter_respawn_period }}
 
 output_log="/var/log/pve-exporter/pve-exporter.log"
 error_log="/var/log/pve-exporter/pve-exporter.log"

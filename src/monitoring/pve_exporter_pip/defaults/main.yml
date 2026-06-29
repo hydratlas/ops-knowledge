@@ -14,6 +14,13 @@ pve_exporter_service_description: "Prometheus PVE Exporter Service"
 pve_exporter_service_restart: "always"
 pve_exporter_service_restart_sec: 5
 
+# OpenRC supervise-daemon による自動再起動（respawn）設定（Alpine のみ）
+# 既存の pve_exporter_service_restart / pve_exporter_service_restart_sec は systemd 専用のため流用せず、
+# OpenRC 用に独立した変数を新設する（値は systemd 側とパリティを取る）。
+pve_exporter_respawn_delay: 5      # 異常終了から再起動までの待機秒数（= systemd RestartSec）
+pve_exporter_respawn_max: 0        # respawn_period 内の最大再起動回数（0 = 無制限、= systemd Restart=always）
+pve_exporter_respawn_period: 1800  # respawn_max を数える時間窓（秒）
+
 # Directory paths
 pve_exporter_config_dir: "/etc/pve-exporter"
 pve_exporter_config_file: "/etc/pve-exporter/pve.yml"
